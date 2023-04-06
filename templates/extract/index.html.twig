@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Hello ExtractController!{% endblock %}
+
+{% block body %}
+    {{ form_start(form) }}
+    <div>
+        {% for fc in form.choice %}
+            <p>
+                {% for key,reference in references.ref %}
+                    {% if key|trans is same as(fc.vars.value) %}
+                        <div class="mt-3">
+                            <div class="shadow-xl">
+                                {% if reference.analytic is defined %}
+                                    <p class="text-center">{{ reference.analytic['title'] }}</p>
+                                    {% if reference.analytic.author is defined %}
+                                        {% for authorInfo in getAuthors(reference.analytic.author) %}
+                                            <div class="flex">
+                                                {% if authorInfo.orcid is not null %}
+                                                    <a class="inline" href="https://orcid.org/{{ authorInfo.orcid }}" rel="noopener" target="_blank">
+                                                        <img alt="ORCID logo" src="{{ asset('img/ORCID_Logo.svg') }}" width="16" height="16"/>
+                                                    </a>
+                                                {% endif %}
+                                                <span class="ml-0.5">{{ authorInfo.forename }} {{ authorInfo.surname }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {{ form_widget(fc, {'attr': {"class":"accent-emerald-500/75"}}) }}
+            </p>
+        {% endfor %}
+    </div>
+    {{ form_end(form) }}
+{% endblock %}
