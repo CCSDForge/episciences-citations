@@ -17,8 +17,8 @@ class References {
 
             foreach ($form['choice'] as $choiceRef) {
                 $ref = $this->entityManager->getRepository(PaperReferences::class)->findOneBy(['id' => $choiceRef]);
-                if (!is_null($ref) && $ref->getSourceId() !== PaperReferences::SOURCE_METADATA_EPI_USER) {
-                    $ref->setSourceId(PaperReferences::SOURCE_METADATA_EPI_USER);
+                if (!is_null($ref) && $ref->getSource() !== PaperReferences::SOURCE_METADATA_EPI_USER) {
+                    $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                     $ref->setUpdatedAt(new \DateTimeImmutable());
                     $this->entityManager->flush();
                     ++$row;
