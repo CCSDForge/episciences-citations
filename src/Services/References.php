@@ -6,7 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class References {
 
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager,private Grobid $grobid)
     {
     }
 
@@ -26,5 +26,26 @@ class References {
             }
         }
         return $row;
+    }
+
+    /**
+     * @param int $docId
+     * @param string $format
+     * @return string|array
+     * @throws \JsonException
+     */
+    public function getReferences(int $docId,string $format = "json"|"array"): string|array
+    {
+        $references = $this->grobid->getGrobidReferencesFromDB($docId);
+        $rawReferences = [];
+        /** @var PaperReferences $references,$reference */
+        foreach ($references as $reference) {
+            foreach ($reference->getReference() as $allReferences) {
+                $rawReferences['ref'][$reference->getId()] = ($format === 'json') ?
+                    $allReferences :
+                    json_decode($allReferences, true, 512, JSON_THROW_ON_ERROR);
+            }
+        }
+        return ($format === 'json') ? json_encode($rawReferences, JSON_THROW_ON_ERROR) : $rawReferences;
     }
 }

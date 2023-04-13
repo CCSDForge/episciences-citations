@@ -48,7 +48,7 @@ class ExtractController extends AbstractController
 
     public function extract(EntityManagerInterface $entityManager,int $docId, Request $request) : RedirectResponse
     {
-        $this->grobid->insertReferences($this->getParameter("deposit_pdf")."/6816.pdf");
+        $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
 
@@ -58,14 +58,7 @@ class ExtractController extends AbstractController
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
-        $references = $this->grobid->getGrobidReferencesFromDB($docId);
-        $rawReferences = [];
-        foreach ($references as $reference) {
-            /** @var PaperReferences $reference */
-            foreach ($reference->getReference() as $allReferences) {
-                $rawReferences['ref'][$reference->getId()] = json_decode($allReferences, true, 512, JSON_THROW_ON_ERROR);
-            }
-        }
+
         $form = $this->createForm(ReferencesFormType::class, $references);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
@@ -73,7 +66,7 @@ class ExtractController extends AbstractController
         }
         return $this->render('extract/index.html.twig',[
             'form' => $form->createView(),
-            'references' => $rawReferences
+            'references' => $this->references->getReferences($docId)
         ]);
     }
 

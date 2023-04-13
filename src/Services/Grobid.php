@@ -35,12 +35,12 @@ class Grobid {
      * @throws ClientExceptionInterface
      * @throws \JsonException
      */
-    public function insertReferences($pdf): void
+    public function insertReferences(int $docId,string $pathPdf): void
     {
-        $referencesExist = $this->getGrobidReferencesInCache("6816.pdf");
+        $referencesExist = $this->getGrobidReferencesInCache($docId.".pdf");
         if (!$referencesExist) {
             $data = new FormDataPart([
-                'input' => DataPart::fromPath($pdf, 'r'),
+                'input' => DataPart::fromPath($pathPdf, 'r'),
                 'includeRawCitations' => '1',
                 'consolidateCitations' => '1',
             ]);
@@ -49,13 +49,18 @@ class Grobid {
                 'body' => $data->bodyToIterable(),
             ])->getContent();
             $references = $this->tei->getReferencesInTei($response);
-            $this->putGrobidReferencesInCache("6816.pdf",$response);
+            $this->putGrobidReferencesInCache($docId.".pdf",$response);
         }else{
             $references = $this->tei->getReferencesInTei($referencesExist);
         }
-        $this->tei->insertReferencesInDB($references,'6816',PaperReferences::SOURCE_METADATA_GROBID);
+        $this->tei->insertReferencesInDB($references,$docId,PaperReferences::SOURCE_METADATA_GROBID);
     }
 
+    /**
+     * @param $name
+     * @param $response
+     * @return void
+     */
     public function putGrobidReferencesInCache($name, $response) {
         $cache = new FilesystemAdapter('grobidReferences',0,$this->cacheFolder);
         try {
@@ -68,6 +73,11 @@ class Grobid {
             $cache->save($sets);
         }
     }
+
+    /**
+     * @param $name
+     * @return false|mixed|void
+     */
     public function getGrobidReferencesInCache($name) {
 
         $cache = new FilesystemAdapter('grobidReferences',0,$this->cacheFolder);
@@ -82,6 +92,11 @@ class Grobid {
         }
         return $sets->get();
     }
+
+    /**
+     * @param $docId
+     * @return PaperReferences[]|array|object[]
+     */
     public function getGrobidReferencesFromDB($docId) {
         return $this->entityManager->getRepository(PaperReferences::class)->findBy(['docid' => $docId]);
     }
