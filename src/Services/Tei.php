@@ -22,7 +22,17 @@ class Tei {
         $info = [];
         foreach ($tei->text as $teInfo) {
             foreach ($teInfo->back->div->listBibl->biblStruct as $value) {
-                $info[] = json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+                $raw_reference = [];
+                foreach ($value->note as $note) {
+                    if (!is_null($note->attributes()) && (string) $note->attributes() === 'raw_reference') {
+                        $raw_reference['raw_reference'] = (string) $note;
+                    }
+                }
+
+                if ($value->analytic && $value->analytic->idno && (string) $value->analytic->idno->attributes() === 'DOI') {
+                    $raw_reference['doi'] = (string) $value->analytic->idno;
+                }
+                $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
             }
         }
         return $info;

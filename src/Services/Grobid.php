@@ -6,6 +6,10 @@ use App\Entity\PaperReferences;
 use Doctrine\ORM\EntityManagerInterface;
 use http\Url;
 use Psr\Cache\InvalidArgumentException;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
@@ -23,6 +27,14 @@ class Grobid {
         private string $grobidUrl
     ) {
     }
+
+    /**
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws \JsonException
+     */
     public function insertReferences($pdf): void
     {
         $referencesExist = $this->getGrobidReferencesInCache("6816.pdf");
@@ -32,7 +44,7 @@ class Grobid {
                 'includeRawCitations' => '1',
                 'consolidateCitations' => '1',
             ]);
-            $response = $this->client->request('POST', '', [
+            $response = $this->client->request('POST', $this->grobidUrl, [
                 'headers' => $data->getPreparedHeaders()->toArray(),
                 'body' => $data->bodyToIterable(),
             ])->getContent();

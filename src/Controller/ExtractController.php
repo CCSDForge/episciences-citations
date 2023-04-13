@@ -42,6 +42,7 @@ class ExtractController extends AbstractController
      * @param EntityManagerInterface $entityManager
      * @param int $docId
      * @param Request $request
+     * @return RedirectResponse
      */
     #[Route('/extract/{docId}', name: 'app_extract')]
 
@@ -51,10 +52,13 @@ class ExtractController extends AbstractController
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
 
+    /**
+     * @throws \JsonException
+     */
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
-        $references = $this->grobid->getGrobidReferencesFromDB(6816);
+        $references = $this->grobid->getGrobidReferencesFromDB($docId);
         $rawReferences = [];
         foreach ($references as $reference) {
             /** @var PaperReferences $reference */
@@ -78,7 +82,8 @@ class ExtractController extends AbstractController
      * @return BinaryFileResponse
      */
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
-    public function getpdf(int $docId) {
+    public function getpdf(int $docId): BinaryFileResponse
+    {
         return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/6816.pdf", Response::HTTP_OK))
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,"6816.pdf");
     }
