@@ -10,6 +10,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class EpisciencesController extends AbstractController {
 
@@ -19,19 +23,31 @@ class EpisciencesController extends AbstractController {
     }
 
     /**
-     * @param string rvCode
+     * @param string $rvCode
      * @param int $docId
      * @return Response
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
+     * @throws \JsonException
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
 
     #[Route('/get-citations/{rvCode}/{docId}', name: 'app_epi_service_get_references')]
-    public function getCitationEpisciences(string $rvCode,int $docId)
+    public function getCitationEpisciences(string $rvCode,int $docId): Response
     {
         $getPdf = $this->episciences->getPaperPDF($rvCode, $docId);
-        if ($getPdf === true){
+        if ($getPdf === true) {
             $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+        }
+        if (is_array($getPdf)) {
+            return new Response(
+                json_encode($getPdf, JSON_THROW_ON_ERROR),
+                $getPdf['status'],
+                ['content-type' => 'text/json']
+            );
         }
         return new Response(
             $this->references->getReferences($docId,"json"),

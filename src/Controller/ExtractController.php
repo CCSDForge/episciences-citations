@@ -58,7 +58,7 @@ class ExtractController extends AbstractController
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
-
+        $references = $this->grobid->getGrobidReferencesFromDB($docId);
         $form = $this->createForm(ReferencesFormType::class, $references);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {

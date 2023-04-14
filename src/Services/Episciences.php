@@ -33,7 +33,6 @@ class Episciences {
     public function getPaperPDF(string $rvCode, int $docId): array|bool
     {
         if (!file_exists($this->pdfFolder.$docId.'.pdf')) {
-
         if ($this->params->get('kernel.environment') === "dev") {
             $domain = "http://";
         } else {
@@ -46,7 +45,8 @@ class Episciences {
                 ]
             ])->getContent();
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
-            return ['status' => $e->getCode(), 'message' => $e->getMessage()];
+            $message = $this->manageHttpErrorMessagePDF($e->getCode(),$e->getMessage());
+            return ['status' => $e->getCode(), 'message' => $message];
         }
             return $this->putPdfInCache($docId, $response);
         }
@@ -60,5 +60,12 @@ class Episciences {
         }
         fclose($fp);
         return true;
+    }
+    public function manageHttpErrorMessagePDF(int $status, string $message) {
+
+        if ($status === 404) {
+            $message = "PDF not found at the destined address";
+        }
+        return $message;
     }
 }
