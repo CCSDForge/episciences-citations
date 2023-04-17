@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\PaperReferences;
 use App\Form\ReferencesFormType;
+use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +23,7 @@ class ExtractController extends AbstractController
      * @param References $references
      */
 
-    public function __construct(private Grobid $grobid,private References $references)
+    public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences)
     {
     }
 
@@ -44,10 +45,11 @@ class ExtractController extends AbstractController
      * @param Request $request
      * @return RedirectResponse
      */
-    #[Route('/extract/{docId}', name: 'app_extract')]
+    #[Route('/extract/{rvCode}/{docId}', name: 'app_extract')]
 
-    public function extract(EntityManagerInterface $entityManager,int $docId, Request $request) : RedirectResponse
+    public function extract(EntityManagerInterface $entityManager,string $rvCode,int $docId, Request $request) : RedirectResponse
     {
+        $getPdf = $this->episciences->getPaperPDF($rvCode, $docId);
         $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
@@ -58,6 +60,7 @@ class ExtractController extends AbstractController
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
+        $session = $request->getSession();
         $references = $this->grobid->getGrobidReferencesFromDB($docId);
         $form = $this->createForm(ReferencesFormType::class, $references);
         $form->handleRequest($request);
@@ -66,7 +69,8 @@ class ExtractController extends AbstractController
         }
         return $this->render('extract/index.html.twig',[
             'form' => $form->createView(),
-            'references' => $this->references->getReferences($docId)
+            'references' => $this->references->getReferences($docId),
+            'rvCode' => $session->get('rvCode')
         ]);
     }
 
@@ -77,8 +81,8 @@ class ExtractController extends AbstractController
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
     public function getpdf(int $docId): BinaryFileResponse
     {
-        return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/6816.pdf", Response::HTTP_OK))
-            ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,"6816.pdf");
+        return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/".$docId.".pdf", Response::HTTP_OK))
+            ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,$docId.".pdf");
     }
 
 }
