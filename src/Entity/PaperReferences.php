@@ -8,16 +8,13 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PaperReferencesRepository::class)]
 class PaperReferences
 {
-    public CONST SOURCE_METADATA_GROBID = 'GROBID';
-    public CONST SOURCE_METADATA_EPI_USER = 'USER';
+    public const SOURCE_METADATA_GROBID = 'GROBID';
+    public const SOURCE_METADATA_EPI_USER = 'USER';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
-    #[ORM\Column]
-    private ?int $docid = null;
 
     #[ORM\Column]
     private ?string $source = null;
@@ -28,29 +25,29 @@ class PaperReferences
     #[ORM\Column]
     private array $reference = [];
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $uid = null;
 
     #[ORM\Column]
     private ?int $reference_order = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $accepted = null;
+
+    #[ORM\ManyToOne(cascade: ['persist'], inversedBy: 'paperReferences')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Document $document = null;
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getDocid(): ?int
+    public function setId($id): self
     {
-        return $this->docid;
-    }
-
-    public function setDocid(int $docid): self
-    {
-        $this->docid = $docid;
-
+        $this->id = $id;
         return $this;
     }
-
     public function getSource(): string
     {
         return $this->source;
@@ -94,7 +91,7 @@ class PaperReferences
         return $this->uid;
     }
 
-    public function setUid(int $uid): self
+    public function setUid(?int $uid): self
     {
         $this->uid = $uid;
 
@@ -109,6 +106,30 @@ class PaperReferences
     public function setReferenceOrder(int $reference_order): self
     {
         $this->reference_order = $reference_order;
+
+        return $this;
+    }
+
+    public function getAccepted(): ?int
+    {
+        return $this->accepted;
+    }
+
+    public function setAccepted(?int $accepted): self
+    {
+        $this->accepted = $accepted;
+
+        return $this;
+    }
+
+    public function getDocument(): ?Document
+    {
+        return $this->document;
+    }
+
+    public function setDocument(?Document $document): self
+    {
+        $this->document = $document;
 
         return $this;
     }

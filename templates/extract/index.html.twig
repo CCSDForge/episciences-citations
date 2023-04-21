@@ -4,25 +4,33 @@
 
 {% block body %}
     {{ form_start(form) }}
-    <div>
-        {% for fc in form.choice %}
-            {% for key,reference in references.ref %}
-                {% if key|trans is same as(fc.vars.value) %}
-                    <div class="mt-3">
-                        <div class="shadow-xl">
-                            {% if reference.raw_reference is defined %}<p>{{ reference.raw_reference }}</p>{% endif %}
-                            {% if reference.doi is defined %}
-                                <p class="mb-1">Doi : <a
-                                            class="text-blue-600 hover:text-blue-800 visited:text-purple-600"
-                                            href="https://doi.org/{{ reference.doi }}" rel="noopener"
-                                            target="_blank">{{ reference.doi }}</a></p>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
-            {% endfor %}
-            {{ form_widget(fc, {'attr': {"class":"accent-emerald-500/75"}}) }}
-        {% endfor %}
-    </div>
+    {% for paperReferences in form.paperReferences %}
+        <div class="shadow-xl">
+            {{ form_widget(paperReferences.reference,{'attr':{'class': "hidden"}}) }}
+            {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
+            <p>
+                {{ jsonDecodedRef['raw_reference'] }}
+            </p>
+            {% if jsonDecodedRef['doi'] is defined %}
+                <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}" class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener" target="_blank">{{ jsonDecodedRef['doi'] }}</a>
+            {% endif %}
+            <p>{{ form_widget(paperReferences.accepted) }}</p>
+        </div>
+        <span>{{ form_row(paperReferences.reference_order) }}</span>
+        <span>{{ form_row(paperReferences.id) }}</span>
+    {% endfor %}
+
+    {{ form_row(form.save,{'attr': {'class':
+    "w-screen
+    bg-transparent
+    hover:bg-emerald-500
+    text-emerald-400
+    font-semibold
+    hover:text-white
+    py-2 px-4 border
+    border-emerald-500
+    hover:border-transparent
+    rounded"}})}}
     {{ form_end(form) }}
 {% endblock %}
+

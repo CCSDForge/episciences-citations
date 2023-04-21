@@ -1,115 +1,124 @@
 <?php
-
 namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Security\Core\User\EquatableInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-
-class User implements UserInterface, EquatableInterface
+#[ORM\Entity(repositoryClass: UserRepository::class)]
+class User implements UserInterface
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
     private $id;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
+    #[ORM\Column(type: 'string', unique: true)]
+    private $username;
+    #[ORM\Column(type: 'string')]
+    private $email;
+    #[ORM\Column(type: 'integer')]
     private $uid;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $name;
-
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $username;
+    #[ORM\Column(type: 'json')]
+    private $roles = [];
 
     public function getId(): ?int
     {
-        return $this->id;
+    return $this->id;
     }
 
-    public function getUid(): ?string
+    public function getEmail(): ?string
+    {
+    return $this->email;
+    }
+
+    public function setEmail(string $email): self
+    {
+    $this->email = $email;
+
+    return $this;
+    }
+
+    /**
+    * The public representation of the user (e.g. a username, an email address, etc.)
+    *
+    * @see UserInterface
+    */
+    public function getUserIdentifier(): string
+    {
+    return (string) $this->username;
+    }
+
+    /**
+    * @see UserInterface
+    */
+    public function getRoles(): array
+    {
+    $roles = $this->roles;
+    // guarantee every user at least has ROLE_USER
+    $roles[] = 'ROLE_USER';
+
+    return array_unique($roles);
+    }
+
+    public function setRoles(array $roles): self
+    {
+    $this->roles = $roles;
+
+    return $this;
+    }
+
+    /**
+    * Returning a salt is only needed if you are not using a modern
+    * hashing algorithm (e.g. bcrypt or sodium) in your security.yaml.
+    *
+    * @see UserInterface
+    */
+    public function getSalt(): ?string
+    {
+    return null;
+    }
+
+    /**
+    * @see UserInterface
+    */
+    public function eraseCredentials()
+    {
+    // If you store any temporary, sensitive data on the user, clear it here
+    // $this->plainPassword = null;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUid()
     {
         return $this->uid;
     }
 
-    public function setUid(string $uid): self
+    /**
+     * @param mixed $uid
+     */
+    public function setUid($uid): void
     {
         $this->uid = $uid;
-
-        return $this;
     }
 
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
-
-    public function setName(string $name): self
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    public function getUsername(): ?string
+    /**
+     * @return mixed
+     */
+    public function getUsername()
     {
         return $this->username;
     }
 
-    public function setUsername(string $username): self
+    /**
+     * @param mixed $username
+     */
+    public function setUsername($username): void
     {
         $this->username = $username;
-
-        return $this;
-    }
-
-    public function isEqualTo(UserInterface $user): bool
-    {
-        // TODO: Implement isEqualTo() method.
-        return $user->getUserIdentifier() === $this->getUid();
-    }
-
-    public function  getRoles(): array
-    {
-        // TODO: Implement getRoles() method.
-
-        return ($this->username === '__NO_USER__') ? ['ROLE_ANO'] :  ['ROLE_USER'] ;
-
-    }
-
-    public function getPassword()
-    {
-        // TODO: Implement getPassword() method.
-    }
-
-    public function getSalt()
-    {
-        // TODO: Implement getSalt() method.
-    }
-
-    public function eraseCredentials()
-    {
-        // TODO: Implement eraseCredentials() method.
-    }
-//    public function getUserIdentifier(): string {
-//    }
-
-    /**
-     * Returns the identifier for this user (e.g. username or email address).
-     */
-    public function getUserIdentifier(): string
-    {
-        // TODO: Implement getUserIdentifier() method.
-        return $this->getUid() ?? '';
     }
 }

@@ -2,12 +2,16 @@
 
 namespace App\Controller;
 
+use App\Entity\Document;
 use App\Entity\PaperReferences;
-use App\Form\ReferencesFormType;
+use App\Form\PaperReferenceType;
+use App\Form\DocumentType;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -15,12 +19,17 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class ExtractController extends AbstractController
 {
     /**
      * @param Grobid $grobid
      * @param References $references
+     * @param Episciences $episciences
      */
 
     public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences)
@@ -41,9 +50,17 @@ class ExtractController extends AbstractController
 
     /**
      * @param EntityManagerInterface $entityManager
+     * @param string $rvCode
      * @param int $docId
      * @param Request $request
      * @return RedirectResponse
+     * @throws \JsonException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
     #[Route('/extract/{rvCode}/{docId}', name: 'app_extract')]
 
@@ -55,21 +72,24 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @throws \JsonException
+     * @param EntityManagerInterface $entityManager
+     * @param int $docId
+     * @param Request $request
+     * @return Response
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
         $session = $request->getSession();
-        $references = $this->grobid->getGrobidReferencesFromDB($docId);
-        $form = $this->createForm(ReferencesFormType::class, $references);
+        $form = $this->createForm(DocumentType::class,$this->references->getDocument($docId));
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()));
+            $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
         }
         return $this->render('extract/index.html.twig',[
             'form' => $form->createView(),
-            'references' => $this->references->getReferences($docId),
             'rvCode' => $session->get('rvCode')
         ]);
     }

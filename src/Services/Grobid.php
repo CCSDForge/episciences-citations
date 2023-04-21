@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Entity\Document;
 use App\Entity\PaperReferences;
 use Doctrine\ORM\EntityManagerInterface;
 use http\Url;
@@ -98,6 +99,6 @@ class Grobid {
      * @return PaperReferences[]|array|object[]
      */
     public function getGrobidReferencesFromDB($docId) {
-        return $this->entityManager->getRepository(PaperReferences::class)->findBy(['docid' => $docId]);
+        return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
     }
 }

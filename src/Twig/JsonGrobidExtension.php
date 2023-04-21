@@ -16,6 +16,7 @@ class JsonGrobidExtension extends AbstractExtension
             new TwigFunction('getAuthors', [$this, 'getAuthors']),
             new TwigFunction('getDateInJson', [$this, 'getDateInJson']),
             new TwigFunction('getJournalIdentifier', [$this, 'getJournalIdentifier']),
+            new TwigFunction('prettyReference', [$this, 'prettyReference']),
         ];
     }
 
@@ -93,5 +94,17 @@ class JsonGrobidExtension extends AbstractExtension
         }
         return $identifier;
 
+    }
+
+    public function prettyReference(string $jsonRawReference): array {
+        if ($jsonRawReference !== ""){
+            $jsonRawReference = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
+            if (is_array($jsonRawReference)){
+                foreach ($jsonRawReference as $jsonReference) {
+                    return json_decode($jsonReference, true, 512, JSON_THROW_ON_ERROR);
+                }
+            }
+        }
+        return [];
     }
 }

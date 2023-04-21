@@ -1,5 +1,6 @@
 <?php
 namespace App\Services;
+use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\PaperReferencesRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -10,22 +11,35 @@ class References {
     {
     }
 
-    public function validateChoicesReferencesByUser(array $form) : int
+    public function validateChoicesReferencesByUser(array $form, string $uid) : void
     {
-        $row = 0;
-        if (array_key_exists("choice",$form)){
-
-            foreach ($form['choice'] as $choiceRef) {
-                $ref = $this->entityManager->getRepository(PaperReferences::class)->findOneBy(['id' => $choiceRef]);
-                if (!is_null($ref) && $ref->getSource() !== PaperReferences::SOURCE_METADATA_EPI_USER) {
-                    $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
-                    $ref->setUpdatedAt(new \DateTimeImmutable());
+        foreach ($form['paperReferences'] as $paperReference) {
+               $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
+               if (!is_null($ref)) {
+                   if ($paperReference['accepted'] !== 0) {
+                       $ref->setAccepted($paperReference['accepted']);
+                       $ref->setUid($uid);
+                       $ref->setUpdatedAt(new \DateTimeImmutable());
+                    }
                     $this->entityManager->flush();
-                    ++$row;
-                }
-            }
+           }
+//
         }
-        return $row;
+//        $row = 0;
+//        if (array_key_exists("choice",$form)){
+//            foreach ($form['choice'] as $choiceRef) {
+//                $ref = $this->entityManager->getRepository(PaperReferences::class)->findOneBy(['id' => $choiceRef]);
+//                if (!is_null($ref) && $ref->getSource() !== PaperReferences::SOURCE_METADATA_EPI_USER) {
+//                    $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+//                    $ref->setUpdatedAt(new \DateTimeImmutable());
+//                    $ref->setUid($uid);
+//                    $ref->setAccepted(1);
+//                    $this->entityManager->flush();
+//                    ++$row;
+//                }
+//            }
+//        }
+//        return $row;
     }
 
     /**
@@ -47,5 +61,14 @@ class References {
             }
         }
         return ($format === 'json') ? json_encode($rawReferences, JSON_THROW_ON_ERROR) : $rawReferences;
+    }
+
+    /**
+     * @param $docId
+     * @return Document
+     */
+    public function getDocument($docId): Document
+    {
+        return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 }
