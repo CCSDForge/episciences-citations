@@ -43,37 +43,40 @@ class Tei {
 
     public function insertReferencesInDB(array $references, int $docId, string $source): void
     {
-        //$this->removeAllRefGrobidSource($docId);
-        $doc = $this->documentRepository->find($docId);
-        if (is_null($doc)) {
+        $this->removeAllRefGrobidSource($docId);
+        $docExisting = $this->documentRepository->find($docId);
+        if (is_null($docExisting)){
             $doc = new Document();
             $doc->setId($docId);
-            foreach ($references as $orderRef => $reference) {
-                $refs = new PaperReferences();
-                $refs->setReference((array)($reference));
-                $refs->setDocument($doc);
-                $refs->setSource($source);
-                $refs->setUpdatedAt(new \DateTimeImmutable());
-                $refs->setReferenceOrder($orderRef);
-                $doc->addPaperReference($refs);
-                $this->entityManager->persist($refs);
-            }
-            $this->entityManager->flush();
         }
+        foreach ($references as $orderRef => $reference) {
+            $refs = new PaperReferences();
+            $refs->setReference((array)($reference));
+            $refs->setSource($source);
+            $refs->setUpdatedAt(new \DateTimeImmutable());
+            $refs->setReferenceOrder($orderRef);
+            if (is_null($docExisting)){
+                $refs->setDocument($doc);
+                $doc->addPaperReference($refs);
+            } else {
+                $refs->setDocument($docExisting);
+                $docExisting->addPaperReference($refs);
+            }
+            $this->entityManager->persist($refs);
+        }
+        $this->entityManager->flush();
     }
-//    private function removeAllRefGrobidSource(int $docId): void
-//    {
-//        $refs = $this->entityManager->getRepository(PaperReferences::class)->findBy(
-//            [
-//                'documents_id' => $docId,
-//                'source' => PaperReferences::SOURCE_METADATA_GROBID
-//            ]);
-//        if (!empty($refs)){
-//            foreach ($refs as $ref){
-//                $this->entityManager->remove($ref);
-//            }
-//
-//        }
-//        $this->entityManager->flush();
-//    }
+    private function removeAllRefGrobidSource(int $docId): void
+    {
+        $refs = $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
+        if (!empty($refs)){
+            foreach ($refs as $ref){
+                if (($ref->getAccepted() === 0 || is_null($ref->getAccepted()))){
+                    $this->entityManager->remove($ref);
+                }
+            }
+
+        }
+        $this->entityManager->flush();
+    }
 }

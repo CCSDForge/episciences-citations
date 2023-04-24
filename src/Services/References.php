@@ -19,6 +19,7 @@ class References {
                    if ($paperReference['accepted'] !== 0) {
                        $ref->setAccepted($paperReference['accepted']);
                        $ref->setUid($uid);
+                       $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                        $ref->setUpdatedAt(new \DateTimeImmutable());
                     }
                     $this->entityManager->flush();

@@ -33,11 +33,6 @@ class Episciences {
     {
         $docId = $this->getDocIdFromUrl($url);
         if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
-        if ($this->params->get('kernel.environment') === "dev") {
-            $domain = "http://";
-        } else {
-            $domain = "https://";
-        }
         try {
             $response = $this->client->request('GET', $url, [
                 'headers' => [
