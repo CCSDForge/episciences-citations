@@ -62,11 +62,12 @@ class ExtractController extends AbstractController
      * @throws ServerExceptionInterface
      * @throws TransportExceptionInterface
      */
-    #[Route('/extract/{rvCode}/{docId}', name: 'app_extract')]
+    #[Route('/extract', name: 'app_extract')]
 
-    public function extract(EntityManagerInterface $entityManager,string $rvCode,int $docId, Request $request) : RedirectResponse
+    public function extract(EntityManagerInterface $entityManager, Request $request) : RedirectResponse
     {
-        $getPdf = $this->episciences->getPaperPDF($rvCode, $docId);
+        $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
         $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }

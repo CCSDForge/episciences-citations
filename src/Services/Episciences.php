@@ -24,22 +24,22 @@ class Episciences {
     }
 
     /**
-     * @param string $rvCode
-     * @param int $docId
+     * @param string $url
      * @return array|bool
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function getPaperPDF(string $rvCode, int $docId): array|bool
+    public function getPaperPDF(string $url): array|bool
     {
-        if (!file_exists($this->pdfFolder.$docId.'.pdf')) {
+        $docId = $this->getDocIdFromUrl($url);
+        if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
         if ($this->params->get('kernel.environment') === "dev") {
             $domain = "http://";
         } else {
             $domain = "https://";
         }
         try {
-            $response = $this->client->request('GET', $domain . $rvCode . '.episciences.org/' . $docId . '/pdf', [
+            $response = $this->client->request('GET', $url, [
                 'headers' => [
                     "Accept" => "application/octet-stream"
                 ]
@@ -60,12 +60,33 @@ class Episciences {
         }
         fclose($fp);
         return true;
+
     }
+
+    /**
+     * @param int $status
+     * @param string $message
+     * @return string
+     */
     public function manageHttpErrorMessagePDF(int $status, string $message) {
 
         if ($status === 404) {
             $message = "PDF not found at the destined address";
         }
         return $message;
+    }
+
+    /**
+     * @param string $url
+     * @return string
+     */
+    public function getDocIdFromUrl(string $url) :string {
+        $explodeUrl = explode('/',$url);
+        foreach ($explodeUrl as $item) {
+            if (preg_match('/^\d*$/', $item) && $item !== ""){
+                return $item;
+            }
+        }
+        return '';
     }
 }

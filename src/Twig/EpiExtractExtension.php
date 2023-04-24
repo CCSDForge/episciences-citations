@@ -12,12 +12,6 @@ class EpiExtractExtension extends AbstractExtension
      */
     public function getFunctions() : array
     {
-        return [
-            new TwigFunction('getLogOutUrl', [$this, 'getLogOutUrl']),
-        ];
-    }
-    public function getLogOutUrl(string $rvCode, string $env):string {
-        $url = ($env === 'dev') ? "http://" : "https://";
-        return $url.$rvCode.'.episciences.org';
+        return [];
     }
 }

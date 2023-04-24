@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -9,17 +10,23 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DefaultController extends AbstractController
 {
+    /**
+     * @param Request $request
+     * @return RedirectResponse
+     */
     #[Route('/login', name: 'login')]
-    public function login(Request $request) {
-        $session = $request->getSession();
-        $session->set('docId', $request->query->get('docid'));
-        $session->set('rvCode',  $request->query->get('rvcode'));
+    public function login(Request $request) : RedirectResponse {
+
         $target = urlencode($this->getParameter('cas_login_target'));
         $url = 'https://'
             . $this->getParameter('cas_host')
             . '/login?service=';
-        return $this->redirect($url . $target . '/force');
+        return $this->redirect($url . $target . '/force?url='.$request->get('url'));
     }
+
+    /**
+     * @return void
+     */
     #[Route('/logout', name: 'logout')]
     public function logout() {
         if (($this->getParameter('cas_logout_target') !== null) && (!empty($this->getParameter('cas_logout_target')))) {
@@ -29,9 +36,12 @@ class DefaultController extends AbstractController
         }
     }
 
+    /**
+     * @param Request $request
+     * @return RedirectResponse
+     */
     #[Route('/force', name: 'force')]
     public function force(Request $request) {
-        $session = $request->getSession();
         if ($this->getParameter("cas_gateway")) {
             if (!isset($_SESSION)) {
                 session_start();
@@ -40,7 +50,7 @@ class DefaultController extends AbstractController
             session_destroy();
         }
 
-        return $this->redirect($this->generateUrl('app_extract',['docId'=>$session->get('docId'),'rvCode'=>$session->get('rvCode')]));
+        return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
     }
 
 
