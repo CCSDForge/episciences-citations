@@ -25,9 +25,6 @@ class PaperReferences
     #[ORM\Column]
     private array $reference = [];
 
-    #[ORM\Column(nullable: true)]
-    private ?int $uid = null;
-
     #[ORM\Column]
     private ?int $reference_order = null;
 
@@ -37,6 +34,10 @@ class PaperReferences
     #[ORM\ManyToOne(cascade: ['persist'], inversedBy: 'paperReferences')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Document $document = null;
+
+    #[ORM\ManyToOne(targetEntity: UserInformations::class, cascade: ['persist'], inversedBy: 'paperReferences')]
+    #[ORM\JoinColumn(name: 'uid', referencedColumnName: 'id',nullable: true)]
+    private ?UserInformations $uid = null;
 
     public function getId(): ?int
     {
@@ -86,18 +87,6 @@ class PaperReferences
         return $this;
     }
 
-    public function getUid(): ?int
-    {
-        return $this->uid;
-    }
-
-    public function setUid(?int $uid): self
-    {
-        $this->uid = $uid;
-
-        return $this;
-    }
-
     public function getReferenceOrder(): ?int
     {
         return $this->reference_order;
@@ -130,6 +119,18 @@ class PaperReferences
     public function setDocument(?Document $document): self
     {
         $this->document = $document;
+
+        return $this;
+    }
+
+    public function getUid(): ?UserInformations
+    {
+        return $this->uid;
+    }
+
+    public function setUid(?UserInformations $uid): self
+    {
+        $this->uid = $uid;
 
         return $this;
     }

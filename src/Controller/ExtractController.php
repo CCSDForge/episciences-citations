@@ -87,7 +87,7 @@ class ExtractController extends AbstractController
         $form = $this->createForm(DocumentType::class,$this->references->getDocument($docId));
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
+            $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
         }
         return $this->render('extract/index.html.twig',[
             'form' => $form->createView(),
