@@ -66,4 +66,29 @@ class References {
     {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
+
+    /**
+     * @param int $docId
+     * @param int $refId
+     * @param int $uid
+     * @return bool
+     */
+    public function archiveReference(int $docId,int $refId,int $uid): bool
+    {
+        $ref = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id'=>$refId,'document'=>$docId])    ;
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($uid);
+        if (!empty($ref)) {
+            foreach ($ref as $info){
+                $info->setIsArchived(true);
+                //todo check if user exist
+                $info->setUid($user);
+                $info->setUpdatedAt(new \DateTimeImmutable());
+                $info->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+                $this->entityManager->persist($info);
+            }
+            $this->entityManager->flush();
+            return true;
+        }
+        return false;
+    }
 }

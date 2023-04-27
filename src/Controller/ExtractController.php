@@ -44,14 +44,13 @@ class ExtractController extends AbstractController
 
     #[Route('/before-extract/{docId}', name: 'app_before_extract')]
 
-    public function index(EntityManagerInterface $entityManager, int $docId) {
+    public function index(EntityManagerInterface $entityManager, int $docId): Response
+    {
         return $this->render('extract/beforeextract.html.twig');
     }
 
     /**
      * @param EntityManagerInterface $entityManager
-     * @param string $rvCode
-     * @param int $docId
      * @param Request $request
      * @return RedirectResponse
      * @throws \JsonException
@@ -82,7 +81,8 @@ class ExtractController extends AbstractController
      */
     #[Route('/viewref/{docId}', name: 'app_view_ref')]
 
-    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response {
+    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response
+    {
         $session = $request->getSession();
         $form = $this->createForm(DocumentType::class,$this->references->getDocument($docId));
         $form->handleRequest($request);
@@ -106,4 +106,30 @@ class ExtractController extends AbstractController
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,$docId.".pdf");
     }
 
+    /**
+     * @param Request $request
+     * @return Response
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws \JsonException
+     */
+    #[Route('/removeref', name: 'app_remove_ref')]
+    public function removeRef(Request $request): Response
+    {
+        $body = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        if (isset($body['idRef'], $body['docId']) && $body['idRef'] !== '' && $body['docId'] !== '') {
+            $archiveRef = $this->references->archiveReference($body['docId'],$body['idRef'],$this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
+            if($archiveRef === true) {
+                return new Response(json_encode(["status" => Response::HTTP_OK, 'message' => 'Reference removed'], JSON_THROW_ON_ERROR),
+                    Response::HTTP_OK,
+                    ['content-type' => 'text/json']);
+            }
+            return new Response(json_encode(["status" => Response::HTTP_BAD_REQUEST, 'message' => 'Reference not found'], JSON_THROW_ON_ERROR),
+                Response::HTTP_BAD_REQUEST,
+                ['content-type' => 'text/json']);
+        }
+        return new Response(json_encode(["status" => Response::HTTP_BAD_REQUEST, 'message' => 'Reference not found'], JSON_THROW_ON_ERROR),
+            Response::HTTP_BAD_REQUEST,
+            ['content-type' => 'text/json']);
+    }
 }

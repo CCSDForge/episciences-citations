@@ -49,11 +49,7 @@ class User implements UserInterface
     */
     public function getRoles(): array
     {
-    $roles = $this->roles;
-    // guarantee every user at least has ROLE_USER
-    $roles[] = 'ROLE_USER';
-
-    return array_unique($roles);
+        return ($this->username === '__NO_USER__') ? ['ROLE_ANO'] :  ['ROLE_USER'] ;
     }
 
     public function setRoles(array $roles): self

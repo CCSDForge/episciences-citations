@@ -38,6 +38,17 @@ class EpisciencesController extends AbstractController {
     #[Route('/get-citations', name: 'app_epi_service_get_references')]
     public function getCitationEpisciences(Request $request): Response
     {
+        if(is_null($request->get('url')) || $request->get('url') === '') {
+            return new Response(
+                json_encode([
+                    "status"=> Response::HTTP_BAD_REQUEST,
+                    "message"=> 'Something is missing' ],
+                    JSON_THROW_ON_ERROR),
+                Response::HTTP_BAD_REQUEST,
+                ['content-type' => 'text/json']
+            );
+
+        }
         $getPdf = $this->episciences->getPaperPDF($request->get('url'));
         $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
         if ($getPdf === true) {

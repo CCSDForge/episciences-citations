@@ -55,6 +55,7 @@ class Tei {
             $refs->setSource($source);
             $refs->setUpdatedAt(new \DateTimeImmutable());
             $refs->setReferenceOrder($orderRef);
+            $refs->setIsArchived(false);
             if (is_null($docExisting)){
                 $refs->setDocument($doc);
                 $doc->addPaperReference($refs);

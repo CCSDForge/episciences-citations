@@ -2,26 +2,40 @@
 
 {% block title %}Hello ExtractController!{% endblock %}
 
+{% block javascripts %}
+    {{ parent() }}
+    {{ encore_entry_script_tags('extract') }}
+{% endblock %}
 {% block body %}
     {{ form_start(form) }}
     {% for paperReferences in form.paperReferences %}
-        <div class="shadow-xl">
+        {% if not paperReferences.vars.value.isArchived %}
+            <div class="shadow-xl">
+        {% else %}
+            <div class="hidden">
+        {% endif %}
             {{ form_widget(paperReferences.reference,{'attr':{'class': "hidden"}}) }}
             {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
             <p>
                 {{ jsonDecodedRef['raw_reference'] }}
             </p>
             {% if jsonDecodedRef['doi'] is defined %}
-                <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}" class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener" target="_blank">{{ jsonDecodedRef['doi'] }}</a>
+                <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}"
+                   class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
+                   target="_blank">{{ jsonDecodedRef['doi'] }}</a>
             {% endif %}
             <p>{{ form_widget(paperReferences.accepted) }}</p>
+            <p>{{ form_widget(paperReferences.delete_ref,{'attr':
+                    {'data-idref':paperReferences.id.vars.value,
+                        'data-iddoc':form.id.vars.value,
+                        'class':"h-8 px-5 text-red-100 transition-colors duration-150 bg-red-700 rounded-lg focus:shadow-outline hover:bg-red-800 remove-ref"}}) }}</p>
         </div>
         <span>{{ form_row(paperReferences.reference_order) }}</span>
         <span>{{ form_row(paperReferences.id) }}</span>
     {% endfor %}
 
     {{ form_row(form.save,{'attr': {'class':
-    "w-screen
+        "w-screen
     bg-transparent
     hover:bg-emerald-500
     text-emerald-400
@@ -30,7 +44,7 @@
     py-2 px-4 border
     border-emerald-500
     hover:border-transparent
-    rounded"}})}}
+    rounded"}}) }}
     {{ form_end(form) }}
 {% endblock %}
 
