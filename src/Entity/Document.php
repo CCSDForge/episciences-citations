@@ -15,6 +15,7 @@ class Document
     private ?int $id = null;
 
     #[ORM\OneToMany(mappedBy: 'document', targetEntity: PaperReferences::class)]
+    #[ORM\OrderBy(["referenceOrder" => "ASC"])]
     private Collection $paperReferences;
 
     public function __construct()

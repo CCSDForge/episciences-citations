@@ -25,6 +25,7 @@ class DocumentType extends AbstractType
         $builder->add('paperReferences',CollectionType::class,[
             'entry_type' => PaperReferenceType::class,
         ]);
+        $builder->add('orderRef', HiddenType::class, ['attr' => ['data-order-ref' => ''],'mapped' => false]);
         $builder->add('save',SubmitType::class);
     }
 

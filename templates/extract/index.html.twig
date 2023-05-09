@@ -1,50 +1,47 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}Hello ExtractController!{% endblock %}
-
 {% block javascripts %}
     {{ parent() }}
     {{ encore_entry_script_tags('extract') }}
 {% endblock %}
 {% block body %}
-    {{ form_start(form) }}
-    {% for paperReferences in form.paperReferences %}
-        {% if not paperReferences.vars.value.isArchived %}
-            <div class="shadow-xl">
-        {% else %}
-            <div class="hidden">
-        {% endif %}
-            {{ form_widget(paperReferences.reference,{'attr':{'class': "hidden"}}) }}
-            {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
-            <p>
-                {{ jsonDecodedRef['raw_reference'] }}
-            </p>
-            {% if jsonDecodedRef['doi'] is defined %}
-                <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}"
-                   class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
-                   target="_blank">{{ jsonDecodedRef['doi'] }}</a>
-            {% endif %}
-            <p>{{ form_widget(paperReferences.accepted) }}</p>
-            <p>{{ form_widget(paperReferences.delete_ref,{'attr':
-                    {'data-idref':paperReferences.id.vars.value,
-                        'data-iddoc':form.id.vars.value,
-                        'class':"h-8 px-5 text-red-100 transition-colors duration-150 bg-red-700 rounded-lg focus:shadow-outline hover:bg-red-800 remove-ref"}}) }}</p>
+    <div class="flex w-full">
+        <iframe class="w-screen h-full min-h-screen " src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
+                allow="fullscreen"></iframe>
+        {{ form_start(form) }}
+        <div id="sortref" class="flex-1 w-auto">
+            {% for paperReferences in form.paperReferences %}
+                <div class="list-none{% if paperReferences.vars.value.isArchived %} hidden{% endif %}"
+                     data-idref="{{ paperReferences.id.vars.value }}">
+                    <i class="fa-solid fa-up-down-left-right handle" aria-hidden="true"></i>
+                    {{ form_widget(paperReferences.reference,{'attr':{'class': "hidden"}}) }}
+                    {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
+                    <p>{{ jsonDecodedRef['raw_reference'] }}</p>
+                    {% if jsonDecodedRef['doi'] is defined %}
+                        <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}"
+                           class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
+                           target="_blank">{{ jsonDecodedRef['doi'] }}</a>
+                    {% endif %}
+                    <p>{{ form_widget(paperReferences.accepted) }}</p>
+                    <p>{{ form_widget(paperReferences.delete_ref,{'attr':
+                            {'data-idref':paperReferences.id.vars.value,
+                                'data-iddoc':form.id.vars.value,
+                                'class':"h-8 px-5 text-red-100 transition-colors duration-150 bg-red-700 rounded-lg focus:shadow-outline hover:bg-red-800 remove-ref"}}) }}</p>
+                    <span>{{ form_row(paperReferences.reference_order) }}</span>
+                    <span>{{ form_row(paperReferences.id) }}</span>
+                </div>
+            {% endfor %}
+            {{ form_row(form.save,{'attr': {'class':"bg-transparent
+            hover:bg-emerald-500
+            text-emerald-400
+            font-semibold
+            hover:text-white
+            py-2 px-4 border
+            border-emerald-500
+            hover:border-transparent
+            rounded"}}) }}
         </div>
-        <span>{{ form_row(paperReferences.reference_order) }}</span>
-        <span>{{ form_row(paperReferences.id) }}</span>
-    {% endfor %}
-
-    {{ form_row(form.save,{'attr': {'class':
-        "w-screen
-    bg-transparent
-    hover:bg-emerald-500
-    text-emerald-400
-    font-semibold
-    hover:text-white
-    py-2 px-4 border
-    border-emerald-500
-    hover:border-transparent
-    rounded"}}) }}
-    {{ form_end(form) }}
+        {{ form_end(form) }}
+    </div>
 {% endblock %}
-

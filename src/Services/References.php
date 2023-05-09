@@ -35,27 +35,39 @@ class References {
                 $this->entityManager->flush();
             }
         }
+        $orderRefArray = explode(";",$form['orderRef']);
+        foreach ($orderRefArray as $order => $pkRef) {
+
+            $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
+            if (!is_null($ref)) {
+                $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
+                $ref->setReferenceOrder($order);
+            }
+            $this->entityManager->persist($ref);
+        }
+        $this->entityManager->flush();
     }
 
     /**
      * @param int $docId
-     * @param string $format
      * @return string|array
      * @throws \JsonException
      */
-    public function getReferences(int $docId,string $format = "json"|"array"): string|array
+    public function getReferences(int $docId): array
     {
         $references = $this->grobid->getGrobidReferencesFromDB($docId);
         $rawReferences = [];
         /** @var PaperReferences $references,$reference */
         foreach ($references as $reference) {
+            /** @var PaperReferences $reference */
             foreach ($reference->getReference() as $allReferences) {
-                $rawReferences['ref'][$reference->getId()] = ($format === 'json') ?
-                    $allReferences :
-                    json_decode($allReferences, true, 512, JSON_THROW_ON_ERROR);
+                $rawReferences[$reference->getId()]['ref'] = $allReferences;
             }
+            $rawReferences[$reference->getId()]['isAccepted'] = $reference->getAccepted();
+            $rawReferences[$reference->getId()]['referenceOrder'] = $reference->getReferenceOrder();
+            $rawReferences[$reference->getId()]['isArchived'] = $reference->getIsArchived();
         }
-        return ($format === 'json') ? json_encode($rawReferences, JSON_THROW_ON_ERROR) : $rawReferences;
+        return $rawReferences;
     }
 
     /**
@@ -67,28 +79,48 @@ class References {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 
-    /**
-     * @param int $docId
-     * @param int $refId
-     * @param int $uid
-     * @return bool
-     */
-    public function archiveReference(int $docId,int $refId,int $uid): bool
+    public function UpdateOrderByIdRef(array $idRefs): bool
     {
-        $ref = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id'=>$refId,'document'=>$docId])    ;
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($uid);
-        if (!empty($ref)) {
-            foreach ($ref as $info){
-                $info->setIsArchived(true);
-                //todo check if user exist
-                $info->setUid($user);
-                $info->setUpdatedAt(new \DateTimeImmutable());
-                $info->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
-                $this->entityManager->persist($info);
+        foreach ($idRefs as $order => $idRef){
+            $ref = $this->entityManager->getRepository(PaperReferences::class)->find(['id'=> $idRef]);
+            if (!is_null($ref)){
+                $ref->setReferenceOrder($order);
+                $ref->setUpdatedAt(new \DateTimeImmutable());
+                $this->entityManager->persist($ref);
+            } else {
+                return false;
             }
-            $this->entityManager->flush();
-            return true;
         }
-        return false;
+        $this->entityManager->flush();
+        return true;
+    }
+
+    public function filterOnlyAcceptedRef(array $referencesArray): array
+    {
+        return array_filter($referencesArray, static function ($var) {
+            return ($var['isAccepted'] === 1);
+        });
+    }
+
+    public function filterNotArchived(array $referencesArray): array
+    {
+        $new = array_filter($referencesArray, static function ($var) {
+            return ($var['isArchived'] === false);
+        });
+        return $new;
+    }
+
+    public function removeArchivedKey(array $referencesArray): array
+    {
+        foreach ($referencesArray as $key => $value){
+            unset($value['isArchived']);
+        }
+        return $referencesArray;
+    }
+    public function filterReferenceForService(array $referencesArray): array
+    {
+        $referencesArray = $this->filterOnlyAcceptedRef($referencesArray);
+        $referencesArray = $this->filterNotArchived($referencesArray);
+        return $this->removeArchivedKey($referencesArray);
     }
 }

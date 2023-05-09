@@ -55,7 +55,6 @@ class Tei {
             $refs->setSource($source);
             $refs->setUpdatedAt(new \DateTimeImmutable());
             $refs->setReferenceOrder($orderRef);
-            $refs->setIsArchived(false);
             if (is_null($docExisting)){
                 $refs->setDocument($doc);
                 $doc->addPaperReference($refs);
@@ -70,8 +69,8 @@ class Tei {
     private function removeAllRefGrobidSource(int $docId): void
     {
         $refs = $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
-        if (!empty($refs)){
-            foreach ($refs as $ref){
+        if (!empty($refs)) {
+            foreach ($refs as $ref) {
                 if (($ref->getAccepted() === 0 || is_null($ref->getAccepted()))){
                     $this->entityManager->remove($ref);
                 }

@@ -35,14 +35,14 @@ class EpisciencesController extends AbstractController {
      * @throws \JsonException
      */
 
-    #[Route('/get-citations', name: 'app_epi_service_get_references')]
-    public function getCitationEpisciences(Request $request): Response
+    #[Route('/process-citations', name: 'app_epi_service_get_references')]
+    public function processReferencesEpisciences(Request $request): Response
     {
         if(is_null($request->get('url')) || $request->get('url') === '') {
             return new Response(
                 json_encode([
                     "status"=> Response::HTTP_BAD_REQUEST,
-                    "message"=> 'Something is missing' ],
+                    "message"=> 'Something is missing'],
                     JSON_THROW_ON_ERROR),
                 Response::HTTP_BAD_REQUEST,
                 ['content-type' => 'text/json']
@@ -62,7 +62,33 @@ class EpisciencesController extends AbstractController {
             );
         }
         return new Response(
-            $this->references->getReferences($docId,"json"),
+            json_encode($this->references->getReferences($docId), JSON_THROW_ON_ERROR),
+            Response::HTTP_OK,
+            ['content-type' => 'text/json']
+        );
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    #[Route('/visualize-citations', name: 'app_epi_service_visualize_citations')]
+    public function visualizeCitations(Request $request): Response {
+        if(is_null($request->get('url')) || $request->get('url') === '') {
+            return new Response(
+                json_encode([
+                    "status"=> Response::HTTP_BAD_REQUEST,
+                    "message"=> 'Something is missing'],
+                    JSON_THROW_ON_ERROR),
+                Response::HTTP_BAD_REQUEST,
+                ['content-type' => 'text/json']
+            );
+
+        }
+        $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
+        $refs = $this->references->getReferences($docId);
+        $refs = $this->references->filterReferenceForService($refs);
+        return new Response(
+            json_encode($refs,JSON_THROW_ON_ERROR),
             Response::HTTP_OK,
             ['content-type' => 'text/json']
         );

@@ -26,7 +26,7 @@ class PaperReferences
     private array $reference = [];
 
     #[ORM\Column]
-    private ?int $reference_order = null;
+    private ?int $referenceOrder = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $accepted = null;
@@ -38,9 +38,6 @@ class PaperReferences
     #[ORM\ManyToOne(targetEntity: UserInformations::class, cascade: ['persist'], inversedBy: 'paperReferences')]
     #[ORM\JoinColumn(name: 'uid', referencedColumnName: 'id',nullable: true)]
     private ?UserInformations $uid = null;
-
-    #[ORM\Column]
-    private ?bool $isArchived = null;
 
     public function getId(): ?int
     {
@@ -92,12 +89,12 @@ class PaperReferences
 
     public function getReferenceOrder(): ?int
     {
-        return $this->reference_order;
+        return $this->referenceOrder;
     }
 
-    public function setReferenceOrder(int $reference_order): self
+    public function setReferenceOrder(int $referenceOrder): self
     {
-        $this->reference_order = $reference_order;
+        $this->referenceOrder = $referenceOrder;
 
         return $this;
     }
@@ -134,18 +131,6 @@ class PaperReferences
     public function setUid(?UserInformations $uid): self
     {
         $this->uid = $uid;
-
-        return $this;
-    }
-
-    public function isIsArchived(): ?bool
-    {
-        return $this->isArchived;
-    }
-
-    public function setIsArchived(bool $isArchived): self
-    {
-        $this->isArchived = $isArchived;
 
         return $this;
     }
