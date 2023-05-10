@@ -22,26 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
     changeValueFormByToggled();
 });
 
-function remove () {
-    let removesBtns = document.querySelectorAll("button.remove-ref");
-    let removeBtn;
-    for (removeBtn of removesBtns) {
-        removeBtn.addEventListener("click", (event) =>
-        {
-            let ref = {
-                idRef: event.target.dataset.idref,
-                docId: event.target.dataset.iddoc
-            };
-            postData("/removeref", ref).then((data) => {
-                if (data.status === 200) {
-                    event.target.parentElement.parentElement.remove();
-                }
-            }).catch((error) => {
-                console.log(error);
-            })
-        })
-    }
-}
 function changeValueFormByToggled() {
     let toggles = document.querySelectorAll("#toggle-input");
     for (let toggle of toggles) {
