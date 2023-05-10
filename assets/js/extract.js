@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
             hiddenRefNode.value = strOrder;
         }
     });
-
+    changeValueFormByToggled();
 });
 
 function remove () {
@@ -42,6 +42,26 @@ function remove () {
         })
     }
 }
+function changeValueFormByToggled() {
+    let toggles = document.querySelectorAll("#toggle-input");
+    for (let toggle of toggles) {
+        toggle.addEventListener("click", (event) =>
+        {
+            let radiosBtns = document.querySelector("#radio-group-choice-"+toggle.value).getElementsByTagName('input');
+            for (let radioBtn of radiosBtns){
+                if (Number(radioBtn.value) === Number(toggle.checked)){
+                    radioBtn.setAttribute('checked','true');
+                } else {
+                    radioBtn.removeAttribute('checked');
+
+                }
+
+            }
+            // //document.querySelectorAll("[data-foo='1']")
+        })
+    }
+}
+
 
 async function postData(url = "", data = {}) {
     const response = await fetch(url, {

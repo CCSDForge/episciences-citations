@@ -133,25 +133,4 @@ class ExtractController extends AbstractController
             Response::HTTP_BAD_REQUEST,
             ['content-type' => 'text/json']);
     }
-
-    /**
-     * @param Request $request
-     * @return Response
-     * @throws \JsonException
-     */
-//    #[Route('/update-ref-order', name: 'app_update_order')]
-//    public function updateOrderRef(Request $request): Response
-//    {
-//        $orderByIdRefArray = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR)['arrayOrder'];
-//        if (!empty($orderByIdRefArray)) {
-//            $this->references->UpdateOrderByIdRef($orderByIdRefArray);
-//            return new Response(json_encode(["status" => Response::HTTP_OK, 'message' => 'Order of references are updated'], JSON_THROW_ON_ERROR),
-//                Response::HTTP_OK,
-//                ['content-type' => 'text/json']);
-//        }
-//        return new Response(json_encode(["status" => Response::HTTP_BAD_REQUEST, 'message' => 'References not found'], JSON_THROW_ON_ERROR),
-//            Response::HTTP_BAD_REQUEST,
-//            ['content-type' => 'text/json']);
-//    }
-
 }

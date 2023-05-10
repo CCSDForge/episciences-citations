@@ -13,7 +13,6 @@ class References {
 
     public function validateChoicesReferencesByUser(array $form, array $userInfo) : void
     {
-
         foreach ($form['paperReferences'] as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -24,7 +23,7 @@ class References {
                 $user->setName($userInfo['LASTNAME']);
             }
             if (!is_null($ref)) {
-               if ($paperReference['accepted'] !== "0") {
+               if ( isset($paperReference['accepted']) && $paperReference['accepted'] !== "0") {
                    $ref->setAccepted($paperReference['accepted']);
                    $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                    $ref->setUpdatedAt(new \DateTimeImmutable());
@@ -37,13 +36,11 @@ class References {
         }
         $orderRefArray = explode(";",$form['orderRef']);
         foreach ($orderRefArray as $order => $pkRef) {
-
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
             if (!is_null($ref)) {
-                $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
                 $ref->setReferenceOrder($order);
+                $this->entityManager->persist($ref);
             }
-            $this->entityManager->persist($ref);
         }
         $this->entityManager->flush();
     }
@@ -65,7 +62,6 @@ class References {
             }
             $rawReferences[$reference->getId()]['isAccepted'] = $reference->getAccepted();
             $rawReferences[$reference->getId()]['referenceOrder'] = $reference->getReferenceOrder();
-            $rawReferences[$reference->getId()]['isArchived'] = $reference->getIsArchived();
         }
         return $rawReferences;
     }
@@ -101,26 +97,9 @@ class References {
             return ($var['isAccepted'] === 1);
         });
     }
-
-    public function filterNotArchived(array $referencesArray): array
-    {
-        $new = array_filter($referencesArray, static function ($var) {
-            return ($var['isArchived'] === false);
-        });
-        return $new;
-    }
-
-    public function removeArchivedKey(array $referencesArray): array
-    {
-        foreach ($referencesArray as $key => $value){
-            unset($value['isArchived']);
-        }
-        return $referencesArray;
-    }
     public function filterReferenceForService(array $referencesArray): array
     {
-        $referencesArray = $this->filterOnlyAcceptedRef($referencesArray);
-        $referencesArray = $this->filterNotArchived($referencesArray);
-        return $this->removeArchivedKey($referencesArray);
+        return $this->filterOnlyAcceptedRef($referencesArray);
+
     }
 }

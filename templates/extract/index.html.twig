@@ -12,7 +12,7 @@
         {{ form_start(form) }}
         <div id="sortref" class="flex-1 w-auto">
             {% for paperReferences in form.paperReferences %}
-                <div class="list-none{% if paperReferences.vars.value.isArchived %} hidden{% endif %}"
+                <div class="list-none{% if paperReferences.vars.value.accepted is same as(0) %} hidden{% endif %}"
                      data-idref="{{ paperReferences.id.vars.value }}">
                     <i class="fa-solid fa-up-down-left-right handle" aria-hidden="true"></i>
                     {{ form_widget(paperReferences.reference,{'attr':{'class': "hidden"}}) }}
@@ -23,11 +23,15 @@
                            class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
                            target="_blank">{{ jsonDecodedRef['doi'] }}</a>
                     {% endif %}
-                    <p>{{ form_widget(paperReferences.accepted) }}</p>
-                    <p>{{ form_widget(paperReferences.delete_ref,{'attr':
-                            {'data-idref':paperReferences.id.vars.value,
-                                'data-iddoc':form.id.vars.value,
-                                'class':"h-8 px-5 text-red-100 transition-colors duration-150 bg-red-700 rounded-lg focus:shadow-outline hover:bg-red-800 remove-ref"}}) }}</p>
+                    <div class="hidden" id="radio-group-choice-{{ paperReferences.id.vars.value }}">{{ form_widget(paperReferences.accepted) }}</div>
+                    <label class="relative inline-flex items-center mr-5 cursor-pointer">
+                        <input id="toggle-input" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% endif %}>
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-red-700 peer-focus:ring-4
+                        peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full
+                        peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                        after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
+                        dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    </label>
                     <span>{{ form_row(paperReferences.reference_order) }}</span>
                     <span>{{ form_row(paperReferences.id) }}</span>
                 </div>
