@@ -86,6 +86,8 @@ function changeValueOfReference() {
                     linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
                     linkDoiTag.text = referenceDoiWished.value;
                     linkDoiTag.textContent = referenceDoiWished.value;
+                } else {
+                    linkDoiTag.remove();
                 }
                 let modifiedInformations = JSON.stringify({'raw_reference':showedText.value,'doi':linkDoiTag.textContent});
                 let referenceValueForm = document.getElementById('reference-'+event.target.dataset.idref);

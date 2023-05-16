@@ -44,13 +44,13 @@ class PaperReferenceType extends AbstractType
             'attr' => ['class' => 'tinymce'],
             'mapped' => false,
             'required' => false,
-            'label' => 'modify the reference',
+            'label' => false,
         ]);
         $builder->add("modifyReferenceDoi",TextType::class,[
             'attr' => ['class' => 'tinymce'],
             'mapped' => false,
             'required' => false,
-            'label' => 'modify the doi',
+            'label' => false,
         ]);
         $builder->add('modifyBtn', ButtonType::class,[
             'label' => 'Change reference'
