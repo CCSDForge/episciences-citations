@@ -6,16 +6,16 @@
     {{ encore_entry_script_tags('extract') }}
 {% endblock %}
 {% block body %}
-    <div class="flex w-full">
-        <iframe class="w-screen h-full min-h-screen " src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
+    <div class="flex w-full gap-x-10 mt-2">
+        <iframe class="h-screen min-h-screen flex-1" src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
                 allow="fullscreen"></iframe>
-        {{ form_start(form) }}
-        <div id="sortref" class="flex-1 w-auto">
+        {{ form_start(form,{'attr':{'class': "flex-1"}}) }}
+        <div id="sortref">
             {% for paperReferences in form.paperReferences %}
-                <div class="list-none{% if paperReferences.vars.value.accepted is same as(0) %} hidden{% endif %}"
+                <div class="border-solid border-2 border-black mb-2 {% if paperReferences.vars.value.accepted is same as(0) %} hidden{% endif %}"
                      data-idref="{{ paperReferences.id.vars.value }}">
                     <i class="fa-solid fa-up-down-left-right handle" aria-hidden="true"></i>
-                    {{ form_widget(paperReferences.reference,{'id':"reference-"~paperReferences.id.vars.value,'attr':{'class': "hidden"}}) }}
+                    {{ form_widget(paperReferences.reference,{'id':"reference-"~paperReferences.id.vars.value,'attr':{'class': "hidden block text-gray-700 text-sm font-bold mb-2"}}) }}
                     {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
                     {% set doiDecodedRef = '' %}
                     <p id="textReference-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['raw_reference'] }}</p>
@@ -50,6 +50,14 @@
                     hover:border-transparent
                     rounded"}}) }}</div>
                     <div class="hidden" id="radio-group-choice-{{ paperReferences.id.vars.value }}">{{ form_widget(paperReferences.accepted) }}</div>
+                    <br>
+                    {{ form_widget(paperReferences.modifyBtn,{'id':'modifyBtn','attr':{'data-idref': paperReferences.id.vars.value,'class':
+                        "w-1/2 bg-transparent
+                        hover:bg-cyan-300 text-cyan-300
+                        font-semibold hover:text-white py-2 px-4
+                        border border-cyan-500 hover:border-transparent
+                        rounded mb-2"
+                    }}) }}
                     <label class="relative inline-flex items-center mr-5 cursor-pointer">
                         <input id="toggle-input" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% endif %}>
                         <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-red-700 peer-focus:ring-4
@@ -58,13 +66,6 @@
                         after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
                         dark:border-gray-600 peer-checked:bg-green-600"></div>
                     </label>
-                    {{ form_widget(paperReferences.modifyBtn,{'id':'modifyBtn','attr':{'data-idref': paperReferences.id.vars.value,'class':
-                        "w-full bg-transparent
-                        hover:bg-cyan-300 text-cyan-300
-                        font-semibold hover:text-white py-2 px-4
-                        border border-cyan-500 hover:border-transparent
-                        rounded"
-                    }}) }}
                     <span>{{ form_row(paperReferences.reference_order) }}</span>
                     <span>{{ form_row(paperReferences.id) }}</span>
                 </div>
@@ -79,7 +80,8 @@
             py-2 px-4 border
             border-emerald-500
             hover:border-transparent
-            rounded"}}) }}
+            rounded
+            mt-4"}}) }}
         </div>
         {{ form_end(form) }}
     </div>

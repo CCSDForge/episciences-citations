@@ -61,14 +61,14 @@ function changeValueOfReference() {
                 modifyReferenceDoi.style.display = 'none';
                 acceptModifyBtn.style.display = 'none';
                 cancelModifyBtn.style.display = 'none';
-                btnModify.style.display = 'block';
+                btnModify.style.display = 'inline-block';
             });
             acceptModifyBtn.addEventListener('click', (ev) => {
                 modifyReferenceText.style.display = 'none';
                 modifyReferenceDoi.style.display = 'none';
                 acceptModifyBtn.style.display = 'none';
                 cancelModifyBtn.style.display = 'none';
-                btnModify.style.display = 'block';
+                btnModify.style.display = 'inline-block';
                 let referenceWished = document.getElementById('textareaRef-'+event.target.dataset.idref);
                 let showedText = document.getElementById("textReference-"+event.target.dataset.idref);
                 showedText.textContent = referenceWished.value;
@@ -95,16 +95,4 @@ function changeValueOfReference() {
             });
         });
     }
-}
-
-
-async function postData(url = "", data = {}) {
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-    });
-    return response.json();
 }
