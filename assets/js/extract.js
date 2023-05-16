@@ -76,7 +76,6 @@ function changeValueOfReference() {
                 let referenceDoiWished = document.getElementById('textDoiRef-'+event.target.dataset.idref);
                 let linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
                 if (linkDoiTag === null && referenceDoiWished.value !== "") {
-                    console.log("toto");
                     let newNode = document.createElement('a');
                     newNode.id = 'linkDoiRef-'+event.target.dataset.idref;
                     newNode.className = 'underline text-blue-600 hover:text-blue-800 visited:text-purple-600';
