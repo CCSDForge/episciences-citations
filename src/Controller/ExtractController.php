@@ -2,9 +2,6 @@
 
 namespace App\Controller;
 
-use App\Entity\Document;
-use App\Entity\PaperReferences;
-use App\Form\PaperReferenceType;
 use App\Form\DocumentType;
 use App\Services\Episciences;
 use App\Services\Grobid;

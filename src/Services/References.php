@@ -50,9 +50,14 @@ class References {
      * @return string|array
      * @throws \JsonException
      */
-    public function getReferences(int $docId): array
+    public function getReferences(int $docId,string $type = "all"|"accepted"): array
     {
-        $references = $this->grobid->getGrobidReferencesFromDB($docId);
+        if ($type === "all"){
+            $references = $this->grobid->getAllGrobidReferencesFromDB($docId);
+        }
+        if ($type === 'accepted'){
+            $references = $this->grobid->getAcceptedReferencesFromDB($docId);
+        }
         $rawReferences = [];
         /** @var PaperReferences $references,$reference */
         foreach ($references as $reference) {
@@ -89,17 +94,5 @@ class References {
         }
         $this->entityManager->flush();
         return true;
-    }
-
-    public function filterOnlyAcceptedRef(array $referencesArray): array
-    {
-        return array_filter($referencesArray, static function ($var) {
-            return ($var['isAccepted'] === 1);
-        });
-    }
-    public function filterReferenceForService(array $referencesArray): array
-    {
-        return $this->filterOnlyAcceptedRef($referencesArray);
-
     }
 }

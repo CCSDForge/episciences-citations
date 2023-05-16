@@ -98,7 +98,11 @@ class Grobid {
      * @param $docId
      * @return PaperReferences[]|array|object[]
      */
-    public function getGrobidReferencesFromDB($docId) {
+    public function getAllGrobidReferencesFromDB($docId) {
         return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
+    }
+    public function getAcceptedReferencesFromDB($docId){
+        return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId, 'accepted'=>1], ['referenceOrder'=>'ASC']);
+
     }
 }

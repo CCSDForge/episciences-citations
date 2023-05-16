@@ -62,7 +62,7 @@ class EpisciencesController extends AbstractController {
             );
         }
         return new Response(
-            json_encode($this->references->getReferences($docId), JSON_THROW_ON_ERROR),
+            json_encode($this->references->getReferences($docId,'all'), JSON_THROW_ON_ERROR),
             Response::HTTP_OK,
             ['content-type' => 'text/json']
         );
@@ -85,8 +85,7 @@ class EpisciencesController extends AbstractController {
 
         }
         $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
-        $refs = $this->references->getReferences($docId);
-        $refs = $this->references->filterReferenceForService($refs);
+        $refs = $this->references->getReferences($docId,'accepted');
         return new Response(
             json_encode($refs,JSON_THROW_ON_ERROR),
             Response::HTTP_OK,

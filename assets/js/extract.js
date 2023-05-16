@@ -2,7 +2,6 @@
 import { Sortable, Swap } from 'sortablejs/modular/sortable.core.esm';
 Sortable.mount(new Swap());
 document.addEventListener("DOMContentLoaded", () => {
-    remove();
     Sortable.create(document.getElementById('sortref'),{
         handle: '.handle', // handle's class
         swap: true, // Enable swap plugin
@@ -20,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     changeValueFormByToggled();
+    changeValueOfReference();
 });
 
 function changeValueFormByToggled() {
@@ -37,8 +37,62 @@ function changeValueFormByToggled() {
                 }
 
             }
-            // //document.querySelectorAll("[data-foo='1']")
+
         })
+    }
+}
+
+function changeValueOfReference() {
+    let btnModifys = document.querySelectorAll("#modifyBtn");
+    for (let btnModify of btnModifys) {
+        btnModify.addEventListener("click", (event) =>
+        {
+            let modifyReferenceText = document.querySelector("#modifyTextArea-"+event.target.dataset.idref);
+            let modifyReferenceDoi = document.querySelector("#modifyReferenceDoi-"+event.target.dataset.idref);
+            let acceptModifyBtn = document.querySelector("#acceptModifyBtn-"+event.target.dataset.idref);
+            let cancelModifyBtn = document.querySelector("#cancelModifyBtn-"+event.target.dataset.idref);
+            modifyReferenceText.style.display = 'block';
+            modifyReferenceDoi.style.display = 'block';
+            acceptModifyBtn.style.display = 'block';
+            cancelModifyBtn.style.display = 'block';
+            btnModify.style.display = 'none';
+            cancelModifyBtn.addEventListener('click', (event) => {
+                modifyReferenceText.style.display = 'none';
+                modifyReferenceDoi.style.display = 'none';
+                acceptModifyBtn.style.display = 'none';
+                cancelModifyBtn.style.display = 'none';
+                btnModify.style.display = 'block';
+            });
+            acceptModifyBtn.addEventListener('click', (ev) => {
+                modifyReferenceText.style.display = 'none';
+                modifyReferenceDoi.style.display = 'none';
+                acceptModifyBtn.style.display = 'none';
+                cancelModifyBtn.style.display = 'none';
+                btnModify.style.display = 'block';
+                let referenceWished = document.getElementById('textareaRef-'+event.target.dataset.idref);
+                let showedText = document.getElementById("textReference-"+event.target.dataset.idref);
+                showedText.textContent = referenceWished.value;
+                showedText.value = referenceWished.value;
+                let referenceDoiWished = document.getElementById('textDoiRef-'+event.target.dataset.idref);
+                let linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
+                if (linkDoiTag === null && referenceDoiWished.value !== "") {
+                    console.log("toto");
+                    let newNode = document.createElement('a');
+                    newNode.id = 'linkDoiRef-'+event.target.dataset.idref;
+                    newNode.className = 'underline text-blue-600 hover:text-blue-800 visited:text-purple-600';
+                    showedText.after(newNode);
+                    linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
+                }
+                if (referenceDoiWished.value !== ""){
+                    linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
+                    linkDoiTag.text = referenceDoiWished.value;
+                    linkDoiTag.textContent = referenceDoiWished.value;
+                }
+                let modifiedInformations = JSON.stringify({'raw_reference':showedText.value,'doi':linkDoiTag.textContent});
+                let referenceValueForm = document.getElementById('reference-'+event.target.dataset.idref);
+                referenceValueForm.value = '['+JSON.stringify(modifiedInformations)+']';
+            });
+        });
     }
 }
 
