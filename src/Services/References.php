@@ -95,4 +95,36 @@ class References {
         $this->entityManager->flush();
         return true;
     }
+
+    /**
+     * @throws \JsonException
+     */
+    public function addNewReference(array $form, array $userInfo)
+    {
+        if ($form['addReference'] !== ""){
+            $ref = new PaperReferences();
+            $refInfo = ['raw_reference'=>$form['addReference']];
+            if ($form['addReferenceDoi'] !== ""){
+                $refInfo['doi'] = $form['addReferenceDoi'];
+            }
+            $ref->setReference([json_encode($refInfo,JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)]);
+            $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+            $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+            if (is_null($user)) {
+                $user = new UserInformations();
+                $user->setId($userInfo['UID']);
+                $user->setSurname($userInfo['FIRSTNAME']);
+                $user->setName($userInfo['LASTNAME']);
+            }
+            $ref->setUid($user);
+            $ref->setAccepted(1);
+            $ref->setUpdatedAt(new \DateTimeImmutable());
+            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($form['id']));
+            $ref->setReferenceOrder(count($form['paperReferences'])+1);
+            $this->entityManager->persist($ref);
+            $this->entityManager->flush();
+            return true;
+        }
+        return false;
+    }
 }
