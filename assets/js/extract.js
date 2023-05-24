@@ -29,16 +29,9 @@ function changeValueFormByToggled() {
         {
             let radiosBtns = document.querySelector("#radio-group-choice-"+toggle.value).getElementsByTagName('input');
             for (let radioBtn of radiosBtns){
-                if (Number(radioBtn.value) === Number(toggle.checked)){
-                    radioBtn.setAttribute('checked','true');
-                } else {
-                    radioBtn.removeAttribute('checked');
-
-                }
-
+                radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
             }
-
-        })
+        });
     }
 }
 
