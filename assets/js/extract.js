@@ -2,7 +2,7 @@
 import { Sortable, Swap } from 'sortablejs/modular/sortable.core.esm';
 Sortable.mount(new Swap());
 document.addEventListener("DOMContentLoaded", () => {
-    Sortable.create(document.getElementById('sortref'),{
+    let sortEl = Sortable.create(document.getElementById('sortref'),{
         easing: "cubic-bezier(0.11, 0, 0.5, 0)",
         animation: 150,
         ghostClass: 'highlighted',
@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
             hiddenRefNode.value = strOrder;
         }
     });
+    disabledSortWhenChangeRef(sortEl);
     changeValueFormByToggled();
     changeValueOfReference();
     openModalAddBtn();
@@ -34,7 +35,25 @@ function changeValueFormByToggled() {
         });
     }
 }
-
+function disabledSortWhenChangeRef(sortEl) {
+    let btnModifys = document.querySelectorAll("#modifyBtn");
+    for (let btnModify of btnModifys) {
+        btnModify.addEventListener("click", (event) =>
+        {
+            sortEl.option("disabled",true); // set
+            console.log(sortEl);
+            let acceptModifyBtn = document.querySelector("#acceptModifyBtn-"+event.target.dataset.idref);
+            let cancelModifyBtn = document.querySelector("#cancelModifyBtn-"+event.target.dataset.idref);
+            cancelModifyBtn.addEventListener('click', (event) => {
+                sortEl.option("disabled",false); // set
+                console.log("toto");
+            });
+            acceptModifyBtn.addEventListener('click', (ev) => {
+                sortEl.option("disabled",false); // set
+            });
+        });
+    }
+}
 function changeValueOfReference() {
     let btnModifys = document.querySelectorAll("#modifyBtn");
     for (let btnModify of btnModifys) {

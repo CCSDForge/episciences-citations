@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello ExtractController!{% endblock %}
+{% block title %}Episciences - References extractor{% endblock %}
 {% block javascripts %}
     {{ parent() }}
     {{ encore_entry_script_tags('extract') }}
@@ -38,8 +38,8 @@
                            target="_blank" id="linkDoiRef-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['doi'] }}</a>
                         {% set doiDecodedRef = jsonDecodedRef['doi'] %}
                     {% endif %}
-                    <div class="hidden mt-2" id="modifyTextArea-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReference,{'id':"textareaRef-"~paperReferences.id.vars.value,'value': jsonDecodedRef['raw_reference']}) }}</div>
-                    <div class="hidden" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReferenceDoi,{'id':"textDoiRef-"~paperReferences.id.vars.value,'value': doiDecodedRef}) }}</div>
+                    <div class="hidden mt-2 z-50" id="modifyTextArea-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReference,{'id':"textareaRef-"~paperReferences.id.vars.value,'value': jsonDecodedRef['raw_reference']}) }}</div>
+                    <div class="hidden z-50" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReferenceDoi,{'id':"textDoiRef-"~paperReferences.id.vars.value,'value': doiDecodedRef}) }}</div>
                     <div class="w-full mt-2">
                         <div class="hidden" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.acceptModifyBtn,{'attr': {'class':"
                         bg-transparent
