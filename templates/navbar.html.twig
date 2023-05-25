@@ -4,7 +4,7 @@
                 src="{{ asset('/img/Episciences_Logo.svg') }}"
                 alt="Episciences logo"
                 class="w-10 h-10"/>
-        <span class="text-xl tracking-tight text-black">Episciences Extractor</span>
+        <span class="text-xl tracking-tight text-black">{{ 'Episciences Extractor'|trans }}</span>
     </div>
     <div class="flex">
         <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'en'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">en</a>

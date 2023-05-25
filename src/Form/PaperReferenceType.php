@@ -59,10 +59,10 @@ class PaperReferenceType extends AbstractType
             'label' => 'Change reference'
         ]);
         $builder->add('acceptModifyBtn', ButtonType::class,[
-            'label' => 'Confirm changes'
+            'label' => 'Confirm'
         ]);
         $builder->add('cancelModifyBtn', ButtonType::class,[
-            'label' => 'Cancel Changes'
+            'label' => 'Cancel'
         ]);
         $builder->get('reference')
             ->addModelTransformer($this->jsonTransformer);

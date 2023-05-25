@@ -20,6 +20,7 @@ use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ExtractController extends AbstractController
 {
@@ -78,7 +79,7 @@ class ExtractController extends AbstractController
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
 
-    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response
+    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator) : Response
     {
         $session = $request->getSession();
         $form = $this->createForm(DocumentType::class,$this->references->getDocument($docId));
@@ -89,17 +90,17 @@ class ExtractController extends AbstractController
                 if ($newRef) {
                     $this->addFlash(
                         'success',
-                        'New Reference Added'
+                        $translator->trans('New Reference Added')
                     );
                 } else {
                     $this->addFlash(
                         'error',
-                        'Title missing to add new reference'
+                        $translator->trans('Title missing to add new reference')
                     );
                 }
             } elseif ($form->get('save')->isClicked()) {
                 $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
-                $this->flashMessageForChoices($userChoice);
+                $this->flashMessageForChoices($userChoice,$translator);
             }
             return $this->redirect($request->getUri());
         }
@@ -124,27 +125,27 @@ class ExtractController extends AbstractController
      * @param array $userChoice
      * @return void
      */
-    public function flashMessageForChoices(array $userChoice): void
+    public function flashMessageForChoices(array $userChoice, TranslatorInterface $translator): void
     {
         if ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                'References and order saved'
+                $translator->trans('References and order saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                'References saved'
+                $translator->trans('References saved')
             );
         } elseif ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'success',
-                'Order saved'
+                $translator->trans('Order saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'notice',
-                'Nothing change'
+                $translator->trans('Nothing change')
             );
         }
     }
