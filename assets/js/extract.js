@@ -1,6 +1,4 @@
-// import Sortable from 'sortablejs/modular/sortable.complete.esm.js';
-import { Sortable, Swap } from 'sortablejs/modular/sortable.core.esm';
-Sortable.mount(new Swap());
+import { Sortable } from 'sortablejs/modular/sortable.core.esm';
 document.addEventListener("DOMContentLoaded", () => {
     let sortEl = Sortable.create(document.getElementById('sortref'),{
         easing: "cubic-bezier(0.11, 0, 0.5, 0)",
@@ -21,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     changeValueOfReference();
     openModalAddBtn();
     closeInfoAlert();
+    closeFlashMessage();
 });
 
 function changeValueFormByToggled() {
@@ -41,15 +40,13 @@ function disabledSortWhenChangeRef(sortEl) {
         btnModify.addEventListener("click", (event) =>
         {
             sortEl.option("disabled",true); // set
-            console.log(sortEl);
             let acceptModifyBtn = document.querySelector("#acceptModifyBtn-"+event.target.dataset.idref);
             let cancelModifyBtn = document.querySelector("#cancelModifyBtn-"+event.target.dataset.idref);
             cancelModifyBtn.addEventListener('click', (event) => {
-                sortEl.option("disabled",false); // set
-                console.log("toto");
+                sortEl.option("disabled",false);
             });
             acceptModifyBtn.addEventListener('click', (ev) => {
-                sortEl.option("disabled",false); // set
+                sortEl.option("disabled",false);
             });
         });
     }
@@ -157,5 +154,13 @@ function closeInfoAlert() {
     document.querySelector("button#alert-drag-drop").addEventListener('click',(event)=>{
         event.preventDefault();
         document.querySelector("div#alert-drag-drop").classList.add('hidden');
+    });
+}
+
+function closeFlashMessage(){
+    document.querySelectorAll('#flash-message').forEach(function(e) {
+        setTimeout(function () {
+            e.remove();
+        },5000);
     });
 }

@@ -85,9 +85,22 @@ class ExtractController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             if ($form->get('submitNewRef')->isClicked()) {
-                $this->references->addNewReference($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
+                $newRef = $this->references->addNewReference($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
+                if ($newRef){
+                    $this->addFlash(
+                        'success',
+                        'New Reference Added'
+                    );
+                }else{
+                    $this->addFlash(
+                        'error',
+                        'Title missing to add new reference'
+                    );
+
+                }
             } elseif ($form->get('save')->isClicked()){
-                $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
+                $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
+                $this->flashMessageForChoices($userChoice);
             }
             return $this->redirect($request->getUri());
         }
@@ -106,5 +119,34 @@ class ExtractController extends AbstractController
     {
         return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/".$docId.".pdf", Response::HTTP_OK))
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,$docId.".pdf");
+    }
+
+    /**
+     * @param array $userChoice
+     * @return void
+     */
+    public function flashMessageForChoices(array $userChoice): void
+    {
+        if ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] > 0) {
+            $this->addFlash(
+                'success',
+                'References and order saved'
+            );
+        } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] > 0) {
+            $this->addFlash(
+                'success',
+                'References saved'
+            );
+        } elseif ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] === 0) {
+            $this->addFlash(
+                'success',
+                'Order saved'
+            );
+        } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] === 0) {
+            $this->addFlash(
+                'notice',
+                'Nothing change'
+            );
+        }
     }
 }

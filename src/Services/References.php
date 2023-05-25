@@ -11,8 +11,15 @@ class References {
     {
     }
 
-    public function validateChoicesReferencesByUser(array $form, array $userInfo) : void
+    /**
+     * @param array $form
+     * @param array $userInfo
+     * @return int[]
+     */
+    public function validateChoicesReferencesByUser(array $form, array $userInfo) : array
     {
+        $refChanged = 0;
+        $orderChanged = 0;
         foreach ($form['paperReferences'] as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -30,19 +37,14 @@ class References {
                    $ref->setUid($user);
                    $user->addPaperReferences($ref);
                    $this->entityManager->persist($ref);
+                   $refChanged++;
                 }
                 $this->entityManager->flush();
             }
         }
-        $orderRefArray = explode(";",$form['orderRef']);
-        foreach ($orderRefArray as $order => $pkRef) {
-            $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
-            if (!is_null($ref)) {
-                $ref->setReferenceOrder($order);
-                $this->entityManager->persist($ref);
-            }
-        }
+        $orderChanged = $this->persistOrderRef($form['orderRef'], $orderChanged);
         $this->entityManager->flush();
+        return ['orderPersisted' => $orderChanged,'referencePersisted' => $refChanged];
     }
 
     /**
@@ -80,26 +82,10 @@ class References {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 
-    public function UpdateOrderByIdRef(array $idRefs): bool
-    {
-        foreach ($idRefs as $order => $idRef){
-            $ref = $this->entityManager->getRepository(PaperReferences::class)->find(['id'=> $idRef]);
-            if (!is_null($ref)){
-                $ref->setReferenceOrder($order);
-                $ref->setUpdatedAt(new \DateTimeImmutable());
-                $this->entityManager->persist($ref);
-            } else {
-                return false;
-            }
-        }
-        $this->entityManager->flush();
-        return true;
-    }
-
     /**
      * @throws \JsonException
      */
-    public function addNewReference(array $form, array $userInfo)
+    public function addNewReference(array $form, array $userInfo): bool
     {
         if ($form['addReference'] !== ""){
             $ref = new PaperReferences();
@@ -126,5 +112,25 @@ class References {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @param $orderRef
+     * @param int $orderChanged
+     * @return int
+     */
+    public function persistOrderRef($orderRef, int $orderChanged): int
+    {
+        $orderRefArray = explode(";", $orderRef);
+        foreach ($orderRefArray as $order => $pkRef) {
+            $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
+            if (!is_null($ref)) {
+                $ref->setReferenceOrder($order);
+                $this->entityManager->persist($ref);
+                $orderChanged++;
+            }
+
+        }
+        return $orderChanged;
     }
 }
