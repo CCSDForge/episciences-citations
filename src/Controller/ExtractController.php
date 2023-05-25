@@ -76,7 +76,7 @@ class ExtractController extends AbstractController
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    #[Route('/viewref/{docId}', name: 'app_view_ref')]
+    #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request) : Response
     {
@@ -86,19 +86,18 @@ class ExtractController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             if ($form->get('submitNewRef')->isClicked()) {
                 $newRef = $this->references->addNewReference($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
-                if ($newRef){
+                if ($newRef) {
                     $this->addFlash(
                         'success',
                         'New Reference Added'
                     );
-                }else{
+                } else {
                     $this->addFlash(
                         'error',
                         'Title missing to add new reference'
                     );
-
                 }
-            } elseif ($form->get('save')->isClicked()){
+            } elseif ($form->get('save')->isClicked()) {
                 $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
                 $this->flashMessageForChoices($userChoice);
             }

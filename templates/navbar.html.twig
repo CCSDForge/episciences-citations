@@ -6,6 +6,10 @@
                 class="w-10 h-10"/>
         <span class="text-xl tracking-tight text-black">Episciences Extractor</span>
     </div>
+    <div class="flex">
+        <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'en'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">en</a>
+        <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'fr'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">fr</a>
+    </div>
 </nav>
 {% for message in app.flashes('success') %}
     <div id="flash-message" class="flex items-center align-middle gap-x-1 justify-center sticky top-0 bg-emerald-100 border border-emerald-100 text-emerald-600 px-4 py-3 rounded z-10" role="alert">
