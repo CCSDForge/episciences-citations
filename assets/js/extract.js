@@ -118,6 +118,7 @@ function changeValueOfReference() {
                     linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
                     linkDoiTag.text = referenceDoiWished.value;
                     linkDoiTag.textContent = referenceDoiWished.value;
+                    doiContent = linkDoiTag.textContent
                 } else if (referenceDoiWished.value === "" && linkDoiTag !== null) {
                     linkDoiTag.remove();
                 }
