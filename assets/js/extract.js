@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function changeValueFormByToggled() {
-    let toggles = document.querySelectorAll("#toggle-input");
+    let toggles = document.querySelectorAll("[id^=toggle-input-]");
     for (let toggle of toggles) {
         toggle.addEventListener("click", (event) =>
         {
@@ -105,25 +105,35 @@ function changeValueOfReference() {
                 showedText.value = referenceWished.value;
                 let referenceDoiWished = document.getElementById('textDoiRef-'+event.target.dataset.idref);
                 let linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
+                let doiContent = '';
                 if (linkDoiTag === null && referenceDoiWished.value !== "") {
                     let newNode = document.createElement('a');
                     newNode.id = 'linkDoiRef-'+event.target.dataset.idref;
                     newNode.className = 'underline text-blue-600 hover:text-blue-800 visited:text-purple-600';
                     showedText.after(newNode);
                     linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
+                    doiContent = linkDoiTag.textContent
                 }
                 if (referenceDoiWished.value !== ""){
                     linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
                     linkDoiTag.text = referenceDoiWished.value;
                     linkDoiTag.textContent = referenceDoiWished.value;
-                } else {
+                } else if (referenceDoiWished.value === "" && linkDoiTag !== null) {
                     linkDoiTag.remove();
                 }
-                let modifiedInformations = JSON.stringify({'raw_reference':showedText.value,'doi':linkDoiTag.textContent});
+                acceptRefModificationsDone(event.target.dataset.idref);
+                let modifiedInformations = JSON.stringify({'raw_reference':showedText.value,'doi':doiContent});
                 let referenceValueForm = document.getElementById('reference-'+event.target.dataset.idref);
                 referenceValueForm.value = '['+JSON.stringify(modifiedInformations)+']';
             });
         });
+    }
+}
+
+function acceptRefModificationsDone(idRef){
+    let toggle = document.querySelector("#toggle-input-"+idRef);
+    if (!toggle.checked){
+        toggle.click();
     }
 }
 function openModalAddBtn(){
@@ -174,13 +184,12 @@ function closeFlashMessage(){
 function acceptAllReference(){
     document.querySelector("#accept-all").addEventListener('click',(event) => {
         event.preventDefault();
-        let toggles = document.querySelectorAll("#toggle-input");
+        let toggles = document.querySelectorAll("[id^=toggle-input-]");
         for (let toggle of toggles) {
             toggle.addEventListener("click", (event) =>
             {
                 let radiosBtns = document.querySelector("#radio-group-choice-"+toggle.value).getElementsByTagName('input');
                 for (let radioBtn of radiosBtns){
-                    console.log(radioBtn);
                     radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
                 }
             });
@@ -194,7 +203,7 @@ function acceptAllReference(){
 function declineAllReference(){
     document.querySelector("#decline-all").addEventListener('click',(event) => {
         event.preventDefault();
-        let toggles = document.querySelectorAll("#toggle-input");
+        let toggles = document.querySelectorAll("[id^=toggle-input-]");
         for (let toggle of toggles) {
             toggle.addEventListener("click", (event) =>
             {
