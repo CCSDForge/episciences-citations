@@ -7,9 +7,17 @@
 {% endblock %}
 {% block body %}
     <div class="flex w-full gap-x-10 mt-2">
+        <div id="loading-screen" class="hidden">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-25 z-50"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="z-50 flex items-center justify-center rounded-full w-14 h-14 bg-gradient-to-tr from-emerald-500 to-cyan-200 animate-spin">
+                    <div class="h-9 w-9 rounded-full bg-gray-50"></div>
+                </div>
+            </div>
+        </div>
         <iframe class="h-screen min-h-screen flex-1" src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
                 allow="fullscreen"></iframe>
-        {{ form_start(form,{'attr':{'class': "flex-1"}}) }}
+        {{ form_start(form,{'attr':{'id':'form-extraction','class': "flex-1"}}) }}
         {% include("extract/popupaddref.html.twig") with form %}
         <div id="alert-drag-drop" class="bg-blue-50 text-blue-500 px-4 py-3 shadow-md w-11/12 mb-2 relative" role="alert">
             <div class="flex">

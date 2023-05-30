@@ -22,6 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
     closeFlashMessage();
     acceptAllReference();
     declineAllReference();
+    showLoadingScreen();
+    hidePopUpAdding();
 });
 
 function changeValueFormByToggled() {
@@ -218,4 +220,26 @@ function declineAllReference(){
             }
         }
     });
+}
+function showLoadingScreen(){
+    document.getElementById("form-extraction").addEventListener("submit", (event) => {
+        document.getElementById('loading-screen').classList.remove('hidden');
+    });
+}
+
+function hidePopUpAdding(){
+    document.getElementById('confirm-adding').addEventListener('click',(event) => {
+        let container = document.getElementById("modal-container");
+        let boxcontainer = document.getElementById("box-container");
+        let greybg = document.getElementById("greybg");
+
+        greybg.classList.add("-z-50","opacity-0");
+        greybg.classList.remove("z-49","opacity-1");
+
+        container.classList.add("-z-50","opacity-0");
+        container.classList.remove("z-50","opacity-1");
+
+        boxcontainer.classList.add("-z-50","opacity-0");
+        boxcontainer.classList.remove("z-50","opacity-1");
+    })
 }
