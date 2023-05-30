@@ -10,3 +10,26 @@
     transition: all 0.6s cubic-bezier(0.68, -0.6, 0.32, 1.6);
     --webkit-transform: translateZ(0);
 }
+.emerald-outline-btn {
+    @apply bg-transparent
+    hover:bg-emerald-500
+    text-emerald-400
+    font-semibold
+    hover:text-white
+    py-2 px-4 border
+    border-emerald-500
+    hover:border-transparent
+    rounded
+}
+.rose-outline-btn{
+    @apply
+    bg-transparent
+    hover:bg-rose-500
+    text-rose-400
+    font-semibold
+    hover:text-white
+    py-2 px-4 border
+    border-rose-500
+    hover:border-transparent
+    rounded
+}

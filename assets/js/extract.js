@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openModalAddBtn();
     closeInfoAlert();
     closeFlashMessage();
+    acceptAllReference();
+    declineAllReference();
 });
 
 function changeValueFormByToggled() {
@@ -60,6 +62,7 @@ function changeValueOfReference() {
             let modifyReferenceDoi = document.querySelector("#modifyReferenceDoi-"+event.target.dataset.idref);
             let acceptModifyBtn = document.querySelector("#acceptModifyBtn-"+event.target.dataset.idref);
             let cancelModifyBtn = document.querySelector("#cancelModifyBtn-"+event.target.dataset.idref);
+            let containerInfo = document.querySelector("#container-reference-informations-"+event.target.dataset.idref);
             modifyReferenceText.classList.remove("hidden");
             modifyReferenceDoi.classList.remove("hidden");
             acceptModifyBtn.classList.remove("hidden");
@@ -70,6 +73,7 @@ function changeValueOfReference() {
             cancelModifyBtn.classList.add("inline-block");
             btnModify.classList.remove("inline-block");
             btnModify.classList.add("hidden");
+            containerInfo.classList.add("hidden");
             cancelModifyBtn.addEventListener('click', (event) => {
                 modifyReferenceText.classList.remove("w-full");
                 modifyReferenceDoi.classList.remove("w-1/2");
@@ -81,8 +85,10 @@ function changeValueOfReference() {
                 cancelModifyBtn.classList.add("hidden");
                 btnModify.classList.remove("hidden");
                 btnModify.classList.add("inline-block");
+                containerInfo.classList.remove("hidden");
             });
             acceptModifyBtn.addEventListener('click', (ev) => {
+                containerInfo.classList.remove("hidden");
                 modifyReferenceText.classList.remove("w-full");
                 modifyReferenceDoi.classList.remove("w-1/2");
                 acceptModifyBtn.classList.remove("inline-block");
@@ -162,5 +168,44 @@ function closeFlashMessage(){
         setTimeout(function () {
             e.remove();
         },5000);
+    });
+}
+
+function acceptAllReference(){
+    document.querySelector("#accept-all").addEventListener('click',(event) => {
+        event.preventDefault();
+        let toggles = document.querySelectorAll("#toggle-input");
+        for (let toggle of toggles) {
+            toggle.addEventListener("click", (event) =>
+            {
+                let radiosBtns = document.querySelector("#radio-group-choice-"+toggle.value).getElementsByTagName('input');
+                for (let radioBtn of radiosBtns){
+                    console.log(radioBtn);
+                    radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
+                }
+            });
+            if (!toggle.checked){
+                toggle.click();
+            }
+        }
+    });
+}
+
+function declineAllReference(){
+    document.querySelector("#decline-all").addEventListener('click',(event) => {
+        event.preventDefault();
+        let toggles = document.querySelectorAll("#toggle-input");
+        for (let toggle of toggles) {
+            toggle.addEventListener("click", (event) =>
+            {
+                let radiosBtns = document.querySelector("#radio-group-choice-"+toggle.value).getElementsByTagName('input');
+                for (let radioBtn of radiosBtns){
+                    radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
+                }
+            });
+            if (toggle.checked){
+                toggle.click();
+            }
+        }
     });
 }

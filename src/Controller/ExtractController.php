@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -32,19 +33,6 @@ class ExtractController extends AbstractController
 
     public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences)
     {
-    }
-
-    /**
-     * @param EntityManagerInterface $entityManager
-     * @param int $docId
-     * @return Response
-     */
-
-    #[Route('/before-extract/{docId}', name: 'app_before_extract')]
-
-    public function index(EntityManagerInterface $entityManager, int $docId): Response
-    {
-        return $this->render('extract/beforeextract.html.twig');
     }
 
     /**
@@ -78,6 +66,7 @@ class ExtractController extends AbstractController
      * @throws NotFoundExceptionInterface
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
+    #[IsGranted('ROLE_USER')]
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator) : Response
     {

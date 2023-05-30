@@ -30,7 +30,7 @@ class References {
                 $user->setName($userInfo['LASTNAME']);
             }
             if (!is_null($ref)) {
-               if (isset($paperReference['accepted']) && ($ref->getAccepted() !== '0' && $paperReference['accepted'] === '0')) {
+               if (isset($paperReference['accepted'])) {
                    $ref->setAccepted($paperReference['accepted']);
                    $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                    $ref->setUpdatedAt(new \DateTimeImmutable());

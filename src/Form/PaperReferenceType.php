@@ -56,7 +56,7 @@ class PaperReferenceType extends AbstractType
         ]);
 
         $builder->add('modifyBtn', ButtonType::class,[
-            'label' => 'Change reference'
+            'label' => 'Edit'
         ]);
         $builder->add('acceptModifyBtn', ButtonType::class,[
             'label' => 'Confirm'
