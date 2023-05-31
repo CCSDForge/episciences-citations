@@ -85,7 +85,25 @@ class EpisciencesController extends AbstractController {
 
         }
         $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
+        if ($docId === "") {
+            return new Response(
+                json_encode([
+                    "status"=> Response::HTTP_BAD_REQUEST,
+                    "message"=> 'Something is missing'],
+                    JSON_THROW_ON_ERROR),
+                Response::HTTP_BAD_REQUEST,
+                ['content-type' => 'text/json']
+            );
+        }
         $refs = $this->references->getReferences($docId,'accepted');
+        if(empty($refs)){
+            return new Response(
+                json_encode(["status"=> Response::HTTP_OK,
+                    "message"=> 'No References Found'],JSON_THROW_ON_ERROR),
+                Response::HTTP_OK,
+                ['content-type' => 'text/json']
+            );
+        }
         return new Response(
             json_encode($refs,JSON_THROW_ON_ERROR),
             Response::HTTP_OK,

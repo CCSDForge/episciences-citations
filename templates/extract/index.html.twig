@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Episciences - References extractor{% endblock %}
+{% block title %}Episciences - Citations{% endblock %}
 {% block javascripts %}
     {{ parent() }}
     {{ encore_entry_script_tags('extract') }}
@@ -38,7 +38,7 @@
         </div>
         <div id="sortref" class="w-11/12">
             {% for paperReferences in form.paperReferences %}
-                <div id="container-reference" class="grid grid-rows-2 grid-flow-col gap-2 border-solid border-2 border-grey-200 mb-2 p-4 {% if paperReferences.vars.value.accepted is same as(0) %} hidden{% endif %}"
+                <div id="container-reference" class="grid grid-rows-2 grid-flow-col gap-2 border-solid border-2 border-grey-200 mb-2 p-4 {% if paperReferences.vars.value.accepted is same as(0) %} filtered declinedRef {% endif %}"
                      data-idref="{{ paperReferences.id.vars.value }}">
                     {{ form_widget(paperReferences.reference,{'id':"reference-"~paperReferences.id.vars.value,'attr':{'class': "hidden block text-gray-700 text-sm font-bold mb-2"}}) }}
                     {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
@@ -69,7 +69,7 @@
                         rounded mb-2 text-center"
                         }}) }}
                         <label class="relative inline-flex items-center mr-5 cursor-pointer align-middle col-span-1">
-                            <input id="toggle-input-{{ paperReferences.id.vars.value }}" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% elseif paperReferences.accepted.vars.data is same as(0) %} disabled {% endif %}>
+                            <input id="toggle-input-{{ paperReferences.id.vars.value }}" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% endif %}>
                             <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-red-700 peer-focus:ring-4
                         peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full
                         peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px]

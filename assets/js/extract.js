@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
         easing: "cubic-bezier(0.11, 0, 0.5, 0)",
         animation: 150,
         ghostClass: 'highlighted',
+        filter: '.filtered',
         onEnd(event){
             let arrayOrder = [];
             for (let el of document.querySelectorAll("#container-reference")){
@@ -35,6 +36,14 @@ function changeValueFormByToggled() {
             for (let radioBtn of radiosBtns){
                 radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
             }
+            let idRef = toggle.value;
+            let containerBox = document.querySelector(`div[data-idref="${idRef}"]`);
+            if (toggle.checked){
+                classWhenConfirmDecline(containerBox,true);
+            } else {
+                classWhenConfirmDecline(containerBox,false);
+            }
+
         });
     }
 }
@@ -138,6 +147,8 @@ function acceptRefModificationsDone(idRef){
     if (!toggle.checked){
         toggle.click();
     }
+    let containerBox = document.querySelector(`div[data-idref="${idRef}"]`);
+    classWhenConfirmDecline(containerBox,true);
 }
 function openModalAddBtn(){
     document.getElementById("btn-modal-addref").addEventListener('click',(event) => {
@@ -200,6 +211,9 @@ function acceptAllReference(){
                 toggle.click();
             }
         }
+        (document.querySelectorAll(".declinedRef")).forEach((el) => {
+            classWhenConfirmDecline(el,true);
+        });
     });
 }
 
@@ -219,6 +233,9 @@ function declineAllReference(){
                 toggle.click();
             }
         }
+        (document.querySelectorAll("#container-reference")).forEach((el) => {
+            classWhenConfirmDecline(el,false);
+        });
     });
 }
 function showLoadingScreen(){
@@ -242,4 +259,15 @@ function hidePopUpAdding(){
         boxcontainer.classList.add("-z-50","opacity-0");
         boxcontainer.classList.remove("z-50","opacity-1");
     })
+}
+
+function classWhenConfirmDecline(el, confirm = true){
+    if (typeof confirm === 'undefined') { confirm = true; }
+    if (confirm){
+        el.classList.remove("declinedRef");
+        el.classList.remove("filtered");
+    } else {
+        el.classList.add("declinedRef");
+        el.classList.add("filtered");
+    }
 }
