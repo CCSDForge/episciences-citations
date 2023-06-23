@@ -12,6 +12,7 @@ parameters:
     cas_port: '%env(int:CAS_PORT)%'
     cas_path: '%env(string:CAS_PATH)%'
     cas_gateway: '%env(bool:CAS_GATEWAY)%'
+    cors_site: '%env(string:DOMAIN_CORS)%'
 l3_cas_guard:
     host: '%env(string:CAS_HOST)%'
     path: '%env(string:CAS_PATH)%'

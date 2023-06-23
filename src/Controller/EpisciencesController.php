@@ -38,33 +38,44 @@ class EpisciencesController extends AbstractController {
     #[Route('/process-citations', name: 'app_epi_service_get_references')]
     public function processReferencesEpisciences(Request $request): Response
     {
-        if(is_null($request->get('url')) || $request->get('url') === '') {
-            return new Response(
-                json_encode([
-                    "status"=> Response::HTTP_BAD_REQUEST,
-                    "message"=> 'Something is missing'],
-                    JSON_THROW_ON_ERROR),
-                Response::HTTP_BAD_REQUEST,
-                ['content-type' => 'text/json']
-            );
+        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('origin'),$matchesOrigin);
+        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('host'),$matchesHost);
+        if (!empty($matchesOrigin) || !empty($matchesHost)) {
+            header('Access-Control-Allow-Origin: '.$request->headers->get('origin'));
+            if(is_null($request->get('url')) || $request->get('url') === '') {
+                return new Response(
+                    json_encode([
+                        "status"=> Response::HTTP_BAD_REQUEST,
+                        "message"=> 'Something is missing'],
+                        JSON_THROW_ON_ERROR),
+                    Response::HTTP_BAD_REQUEST,
+                    ['content-type' => 'application/json']
+                );
 
-        }
-        $getPdf = $this->episciences->getPaperPDF($request->get('url'));
-        $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
-        if ($getPdf === true) {
-            $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
-        }
-        if (is_array($getPdf)) {
+            }
+            $getPdf = $this->episciences->getPaperPDF($request->get('url'));
+            $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
+            if ($getPdf === true) {
+                $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+            }
+            if (is_array($getPdf)) {
+                return new Response(
+                    json_encode($getPdf, JSON_THROW_ON_ERROR),
+                    $getPdf['status'],
+                    ['content-type' => 'application/json']
+                );
+            }
             return new Response(
-                json_encode($getPdf, JSON_THROW_ON_ERROR),
-                $getPdf['status'],
-                ['content-type' => 'text/json']
+                json_encode($this->references->getReferences($docId,'all'), JSON_THROW_ON_ERROR),
+                Response::HTTP_OK,
+                ['content-type' => 'application/json']
             );
         }
         return new Response(
-            json_encode($this->references->getReferences($docId,'all'), JSON_THROW_ON_ERROR),
-            Response::HTTP_OK,
-            ['content-type' => 'text/json']
+            json_encode(["status"=> Response::HTTP_FORBIDDEN,
+                "message"=> 'Forbidden'],JSON_THROW_ON_ERROR),
+            Response::HTTP_FORBIDDEN,
+            ['content-type' => 'application/json']
         );
     }
 
@@ -73,41 +84,52 @@ class EpisciencesController extends AbstractController {
      */
     #[Route('/visualize-citations', name: 'app_epi_service_visualize_citations')]
     public function visualizeCitations(Request $request): Response {
-        if(is_null($request->get('url')) || $request->get('url') === '') {
-            return new Response(
-                json_encode([
-                    "status"=> Response::HTTP_BAD_REQUEST,
-                    "message"=> 'Something is missing'],
-                    JSON_THROW_ON_ERROR),
-                Response::HTTP_BAD_REQUEST,
-                ['content-type' => 'text/json']
-            );
+        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('origin'),$matchesOrigin);
+        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('host'),$matchesHost);
+        if (!empty($matchesOrigin) || !empty($matchesHost)) {
+            header('Access-Control-Allow-Origin: '.$request->headers->get('origin'));
+            if(is_null($request->get('url')) || $request->get('url') === '') {
+                return new Response(
+                    json_encode([
+                        "status"=> Response::HTTP_BAD_REQUEST,
+                        "message"=> 'Something is missing'],
+                        JSON_THROW_ON_ERROR),
+                    Response::HTTP_BAD_REQUEST,
+                    ['content-type' => 'application/json']
+                );
 
-        }
-        $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
-        if ($docId === "") {
+            }
+            $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
+            if ($docId === "") {
+                return new Response(
+                    json_encode([
+                        "status"=> Response::HTTP_BAD_REQUEST,
+                        "message"=> 'Something is missing'],
+                        JSON_THROW_ON_ERROR),
+                    Response::HTTP_BAD_REQUEST,
+                    ['content-type' => 'application/json']
+                );
+            }
+            $refs = $this->references->getReferences($docId,'accepted');
+            if(empty($refs)) {
+                return new Response(
+                    json_encode(["status"=> Response::HTTP_OK,
+                        "message"=> 'No References Found'],JSON_THROW_ON_ERROR),
+                    Response::HTTP_OK,
+                    ['content-type' => 'application/json']
+                );
+            }
             return new Response(
-                json_encode([
-                    "status"=> Response::HTTP_BAD_REQUEST,
-                    "message"=> 'Something is missing'],
-                    JSON_THROW_ON_ERROR),
-                Response::HTTP_BAD_REQUEST,
-                ['content-type' => 'text/json']
-            );
-        }
-        $refs = $this->references->getReferences($docId,'accepted');
-        if(empty($refs)){
-            return new Response(
-                json_encode(["status"=> Response::HTTP_OK,
-                    "message"=> 'No References Found'],JSON_THROW_ON_ERROR),
+                json_encode($refs,JSON_THROW_ON_ERROR),
                 Response::HTTP_OK,
-                ['content-type' => 'text/json']
+                ['content-type' => 'application/json']
             );
         }
         return new Response(
-            json_encode($refs,JSON_THROW_ON_ERROR),
-            Response::HTTP_OK,
-            ['content-type' => 'text/json']
+            json_encode(["status"=> Response::HTTP_FORBIDDEN,
+                "message"=> 'Forbidden'],JSON_THROW_ON_ERROR),
+            Response::HTTP_FORBIDDEN,
+            ['content-type' => 'application/json']
         );
     }
 }

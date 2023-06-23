@@ -35,7 +35,7 @@ class Tei {
                 if ($value->analytic && $value->analytic->idno && (string) $value->analytic->idno->attributes() === 'DOI') {
                     $raw_reference['doi'] = (string) $value->analytic->idno;
                 }
-                $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+                $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
             }
         }
         return $info;
