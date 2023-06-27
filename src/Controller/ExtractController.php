@@ -70,7 +70,7 @@ class ExtractController extends AbstractController
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator) : Response
     {
-        if ($this->isAuthorizeForApp($docId) !== true) {
+        if ($this->isAuthorizeForApp($docId) === true) {
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
