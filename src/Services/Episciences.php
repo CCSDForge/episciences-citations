@@ -1,12 +1,8 @@
 <?php
 namespace App\Services;
-use App\Entity\PaperReferences;
-use App\Repository\PaperReferencesRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Cache\InvalidArgumentException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -19,7 +15,8 @@ class Episciences {
     public function __construct(private EntityManagerInterface $entityManager,
                                 private HttpClientInterface $client,
                                 private ContainerBagInterface $params,
-                                private string $pdfFolder)
+                                private string $pdfFolder,
+                                private string $apiRight)
     {
     }
 
@@ -84,4 +81,21 @@ class Episciences {
         }
         return '';
     }
+
+    /**
+     * @throws TransportExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ClientExceptionInterface
+     */
+    public function getRightUser($docId, $uid): bool {
+        try {
+            $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
+            return $response;
+        } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
+            return false;
+        }
+    }
+
+
 }

@@ -38,9 +38,8 @@ class EpisciencesController extends AbstractController {
     #[Route('/process-citations', name: 'app_epi_service_get_references')]
     public function processReferencesEpisciences(Request $request): Response
     {
-        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('origin'),$matchesOrigin);
-        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('host'),$matchesHost);
-        if (!empty($matchesOrigin) || !empty($matchesHost)) {
+
+        if ($this->checkCors($request) === true) {
             header('Access-Control-Allow-Origin: '.$request->headers->get('origin'));
             if(is_null($request->get('url')) || $request->get('url') === '') {
                 return new Response(
@@ -51,7 +50,6 @@ class EpisciencesController extends AbstractController {
                     Response::HTTP_BAD_REQUEST,
                     ['content-type' => 'application/json']
                 );
-
             }
             $getPdf = $this->episciences->getPaperPDF($request->get('url'));
             $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
@@ -84,9 +82,7 @@ class EpisciencesController extends AbstractController {
      */
     #[Route('/visualize-citations', name: 'app_epi_service_visualize_citations')]
     public function visualizeCitations(Request $request): Response {
-        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('origin'),$matchesOrigin);
-        preg_match('/('.$this->getParameter("cors_site").')/',$request->headers->get('host'),$matchesHost);
-        if (!empty($matchesOrigin) || !empty($matchesHost)) {
+        if ($this->checkCors($request) === true) {
             header('Access-Control-Allow-Origin: '.$request->headers->get('origin'));
             if(is_null($request->get('url')) || $request->get('url') === '') {
                 return new Response(
@@ -131,5 +127,21 @@ class EpisciencesController extends AbstractController {
             Response::HTTP_FORBIDDEN,
             ['content-type' => 'application/json']
         );
+    }
+
+    /**
+     * @param Request $request
+     * @param $matchesOrigin
+     * @param $matchesHost
+     * @return array
+     */
+    public function checkCors(Request $request): bool
+    {
+        preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('origin'), $matchesOrigin);
+        preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('host'), $matchesHost);
+        if (!empty($matchesOrigin) || !empty($matchesHost)) {
+            return true;
+        }
+        return false;
     }
 }

@@ -70,33 +70,38 @@ class ExtractController extends AbstractController
 
     public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator) : Response
     {
-        $session = $request->getSession();
-        $form = $this->createForm(DocumentType::class,$this->references->getDocument($docId));
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            if ($form->get('submitNewRef')->isClicked()) {
-                $newRef = $this->references->addNewReference($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
-                if ($newRef) {
-                    $this->addFlash(
-                        'success',
-                        $translator->trans('New Reference Added')
-                    );
-                } else {
-                    $this->addFlash(
-                        'error',
-                        $translator->trans('Title missing to add new reference')
-                    );
+        if ($this->isAuthorizeForApp($docId) !== true) {
+            $session = $request->getSession();
+            $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
+            $form->handleRequest($request);
+            if ($form->isSubmitted() && $form->isValid()) {
+                if ($form->get('submitNewRef')->isClicked()) {
+                    $newRef = $this->references->addNewReference($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
+                    if ($newRef) {
+                        $this->addFlash(
+                            'success',
+                            $translator->trans('New Reference Added')
+                        );
+                    } else {
+                        $this->addFlash(
+                            'error',
+                            $translator->trans('Title missing to add new reference')
+                        );
+                    }
+                } elseif ($form->get('save')->isClicked()) {
+                    $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
+                    $this->flashMessageForChoices($userChoice, $translator);
                 }
-            } elseif ($form->get('save')->isClicked()) {
-                $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),$this->container->get('security.token_storage')->getToken()->getAttributes());
-                $this->flashMessageForChoices($userChoice,$translator);
+                return $this->redirect($request->getUri());
             }
-            return $this->redirect($request->getUri());
+            return $this->render('extract/index.html.twig', [
+                'form' => $form->createView(),
+                'rvCode' => $session->get('rvCode')
+            ]);
+        } else {
+            return $this->render('error/unauthorizedtemplate.html.twig', [
+            ]);
         }
-        return $this->render('extract/index.html.twig',[
-            'form' => $form->createView(),
-            'rvCode' => $session->get('rvCode')
-        ]);
     }
 
     /**
@@ -137,5 +142,9 @@ class ExtractController extends AbstractController
                 $translator->trans('Nothing change')
             );
         }
+    }
+
+    public function isAuthorizeForApp(int $docId){
+        return $this->episciences->getRightUser($docId, $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 }

@@ -13,6 +13,7 @@ parameters:
     cas_path: '%env(string:CAS_PATH)%'
     cas_gateway: '%env(bool:CAS_GATEWAY)%'
     cors_site: '%env(string:DOMAIN_CORS)%'
+    api_right: '%env(string:API_RIGHT_URL)%'
 l3_cas_guard:
     host: '%env(string:CAS_HOST)%'
     path: '%env(string:CAS_PATH)%'
@@ -42,5 +43,6 @@ services:
     App\Services\Episciences:
         arguments:
             $pdfFolder: '%kernel.project_dir%/var/data/'
+            $apiRight: '%env(string:API_RIGHT_URL)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
