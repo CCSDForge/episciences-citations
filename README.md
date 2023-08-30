@@ -1,5 +1,8 @@
 # Episciences Citations
 
+![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
+![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
+
 ---
 
 **Application and service to manage/visualize citations**
