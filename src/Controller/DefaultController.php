@@ -53,13 +53,13 @@ class DefaultController extends AbstractController
         return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
     }
 
-
-//    /**
-//     * @Route("/", name="index")
-//     */
-//    public function index(Request $request) : Response
-//    {
-//        dd($attributes = $this->container->get('security.token_storage')->getToken()->getAttributes());
-//        return $this->render('base.html.twig', []);
-//    }
+    /**
+     * @param Request $request
+     * @return Response
+     */
+    #[Route('/', name: 'index')]
+    public function index(Request $request) : Response
+    {
+        return $this->render('base.html.twig', []);
+    }
 }
