@@ -28,6 +28,7 @@ class Episciences {
      */
     public function getPaperPDF(string $url): array|bool
     {
+        $this->createDirDataPdf();
         $docId = $this->getDocIdFromUrl($url);
         if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
         try {
@@ -97,5 +98,13 @@ class Episciences {
         }
     }
 
-
+    /**
+     * @return void
+     */
+    public function createDirDataPdf(): void
+    {
+        if (!file_exists($this->pdfFolder) && !mkdir($concurrentDirectory = $this->pdfFolder) && !is_dir($concurrentDirectory)) {
+            exit();
+        }
+    }
 }

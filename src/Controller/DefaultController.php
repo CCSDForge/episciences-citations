@@ -19,9 +19,10 @@ class DefaultController extends AbstractController
 
         $target = urlencode($this->getParameter('cas_login_target'));
         $url = 'https://'
-            . $this->getParameter('cas_host')
+            . $this->getParameter('cas_host') . $this->getParameter('cas_path')
             . '/login?service=';
-        return $this->redirect($url . $target . '/force?url='.$request->get('url'));
+        $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
+        return $this->redirect($url . $target . '/force?url='.$journalUrl);
     }
 
     /**
@@ -57,9 +58,28 @@ class DefaultController extends AbstractController
      * @param Request $request
      * @return Response
      */
-    #[Route('/', name: 'index')]
+    #[Route(path: ['en' => '/', 'fr' => '/fr'], name: 'index')]
     public function index(Request $request) : Response
     {
         return $this->render('base.html.twig', []);
+    }
+
+    /**
+     * @param string $url
+     * @return string
+     */
+    private function loadHttpsOrHttp(string $url): string
+    {
+
+        if ($this->getParameter('force_https') === true) {
+            if (preg_match("/^(http:\/\/)/",$url)) {
+                return str_replace('http','https',$url);
+            }
+
+            if (preg_match("/^(https:\/\/)/",$url)) {
+                return $url;
+            }
+        }
+        return $url;
     }
 }
