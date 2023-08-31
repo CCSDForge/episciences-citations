@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,13 +16,16 @@ class DefaultController extends AbstractController
      * @return RedirectResponse
      */
     #[Route('/login', name: 'login')]
-    public function login(Request $request) : RedirectResponse {
+    public function login(Request $request,LoggerInterface $logger) : RedirectResponse {
 
         $target = urlencode($this->getParameter('cas_login_target'));
         $url = 'https://'
             . $this->getParameter('cas_host') . $this->getParameter('cas_path')
             . '/login?service=';
         $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
+        $logger->info('page CAS');
+        $logger->info("journal_url",[$journalUrl]);
+        $logger->info("url complete",[$url . $target . '/force?url='.$journalUrl]);
         return $this->redirect($url . $target . '/force?url='.$journalUrl);
     }
 
@@ -42,7 +46,11 @@ class DefaultController extends AbstractController
      * @return RedirectResponse
      */
     #[Route('/force', name: 'force')]
-    public function force(Request $request) {
+    public function force(Request $request, LoggerInterface $logger) {
+        $logger->notice('force page');
+        $logger->info('cas_gateway',[$this->getParameter("cas_gateway")]);
+        $logger->info('session before gateway',[$_SESSION]);
+        $logger->info("USER INFO AFTER FORCE", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->getParameter("cas_gateway")) {
             if (!isset($_SESSION)) {
                 session_start();
@@ -50,7 +58,7 @@ class DefaultController extends AbstractController
 
             session_destroy();
         }
-
+        $logger->info('SESSION',[$_SESSION]);
         return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
     }
 
@@ -59,8 +67,11 @@ class DefaultController extends AbstractController
      * @return Response
      */
     #[Route(path: ['en' => '/', 'fr' => '/fr'], name: 'index')]
-    public function index(Request $request) : Response
+    public function index(Request $request, LoggerInterface $logger) : Response
     {
+        $logger->info("USER INFO", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        $logger->info('ROLE CAS',[$this->getUser()->getRoles()]);
+        $logger->info('index page',[$_SESSION]);
         return $this->render('base.html.twig', []);
     }
 

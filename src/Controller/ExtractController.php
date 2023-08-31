@@ -9,6 +9,7 @@ use App\Services\References;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -68,9 +69,10 @@ class ExtractController extends AbstractController
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
 
-    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator) : Response
+    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator,LoggerInterface $logger) : Response
     {
-        if ($this->isAuthorizeForApp($docId) === true) {
+        $logger->info('view ref page',['docId' => $docId,'attribute cas'=>$this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        if ($this->isAuthorizeForApp($docId) !== true) {
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
