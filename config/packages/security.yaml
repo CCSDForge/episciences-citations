@@ -33,8 +33,9 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-            - { path: ^/login, roles: [ROLE_USER,ROLE_ANO] }
-            - { path: ^/(en|fr)/viewref, roles: [ROLE_USER] }
+            - { path: ^/login, roles: [ROLE_USER,ROLE_ANO], requires_channel: '%env(SECURE_SCHEME)%' }
+            - { path: ^/force, requires_channel: '%env(SECURE_SCHEME)%' }
+            - { path: ^/(en|fr)/viewref, roles: [ROLE_USER], requires_channel: '%env(SECURE_SCHEME)%' }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 
