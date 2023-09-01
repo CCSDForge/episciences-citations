@@ -18,7 +18,7 @@ class DefaultController extends AbstractController
     #[Route('/login', name: 'login')]
     public function login(Request $request,LoggerInterface $logger) : RedirectResponse {
 
-        $target = urlencode($this->getParameter('cas_login_target'));
+        $target = urlencode($this->loadHttpsOrHttp($this->getParameter('cas_login_target')));
         $url = 'https://'
             . $this->getParameter('cas_host') . $this->getParameter('cas_path')
             . '/login?service=';
