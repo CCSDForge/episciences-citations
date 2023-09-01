@@ -15,7 +15,6 @@ parameters:
     cors_site: '%env(string:DOMAIN_CORS)%'
     api_right: '%env(string:API_RIGHT_URL)%'
     force_https: '%env(bool:FORCE_HTTPS)%'
-    require_channel: '%env(SECURE_SCHEME)%'
 l3_cas_guard:
     host: '%env(string:CAS_HOST)%'
     path: '%env(string:CAS_PATH)%'
