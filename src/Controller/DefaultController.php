@@ -19,9 +19,7 @@ class DefaultController extends AbstractController
     public function login(Request $request,LoggerInterface $logger) : RedirectResponse {
 
         $target = urlencode($this->loadHttpsOrHttp($this->getParameter('cas_login_target')));
-        $url = 'https://'
-            . $this->getParameter('cas_host') . $this->getParameter('cas_path')
-            . '/login?service=';
+        $url = 'https://'.$this->getParameter('cas_host') . ((($this->getParameter('cas_port') != 80) || ($this->getParameter('cas_port') != 443)) ? ":".$this->getParameter('cas_port') : "") . $this->getParameter('cas_path') . '/login?service=';
         $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
         $logger->info('page CAS');
         $logger->info("journal_url",[$journalUrl]);
