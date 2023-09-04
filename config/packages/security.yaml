@@ -34,7 +34,7 @@ security:
     # Note: Only the *first* access control that matches will be used
     access_control:
             - { path: ^/login, roles: [ROLE_USER,ROLE_ANO] }
-            - { path: ^/force, roles: [ROLE_USER,ROLE_ANO], requires_channel: "https" }
+            - { path: ^/force, roles: [ROLE_USER,ROLE_ANO] }
             - { path: ^/(en|fr)/viewref, roles: [ROLE_USER] }
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }

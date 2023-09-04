@@ -19,12 +19,12 @@ class DefaultController extends AbstractController
     public function login(Request $request,LoggerInterface $logger) : RedirectResponse {
 
         $target = urlencode($this->loadHttpsOrHttp($this->getParameter('cas_login_target')));
-        $url = 'https://'.$this->getParameter('cas_host') . ((($this->getParameter('cas_port') != 80) || ($this->getParameter('cas_port') != 443)) ? ":".$this->getParameter('cas_port') : "") . $this->getParameter('cas_path') . '/login?service=';
-        $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
+        $url = 'https://' . $this->getParameter('cas_host') . $this->getParameter('cas_path') . '/login?service=';
+//        $journalUrl = urlencode($this->loadHttpsOrHttp($request->get('url')));
         $logger->info('page CAS');
-        $logger->info("journal_url",[$journalUrl]);
-        $logger->info("url complete",[$url . $target . '/force?url='.$journalUrl]);
-        return $this->redirect($url . $target . '/force?url='.$journalUrl);
+//        $logger->info("journal_url",[$journalUrl]);
+        $logger->info("url complete",[$url . $target . '/force']);
+        return $this->redirect($url . $target . '/force');
     }
 
     /**
@@ -57,7 +57,7 @@ class DefaultController extends AbstractController
             session_destroy();
         }
         $logger->info('SESSION',[$_SESSION]);
-        return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
+        return $this->redirect("/"); //$this->generateUrl('app_extract',['url'=>$request->get('url')])
     }
 
     /**
