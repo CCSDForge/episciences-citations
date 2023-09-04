@@ -39,10 +39,6 @@ class DefaultController extends AbstractController
         }
     }
 
-    /**
-     * @param Request $request
-     * @return RedirectResponse
-     */
     #[Route('/force', name: 'force')]
     public function force(Request $request, LoggerInterface $logger) {
         $logger->notice('force page');
@@ -56,8 +52,9 @@ class DefaultController extends AbstractController
 
             session_destroy();
         }
+
         $logger->info('SESSION',[$_SESSION]);
-        return $this->redirect("/"); //$this->generateUrl('app_extract',['url'=>$request->get('url')])
+        return $this->redirectToRoute("index"); //$this->generateUrl('app_extract',['url'=>$request->get('url')])
     }
 
     /**
