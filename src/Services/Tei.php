@@ -45,24 +45,32 @@ class Tei {
     {
         $this->removeAllRefGrobidSource($docId);
         $docExisting = $this->documentRepository->find($docId);
+        $referenceAlreadyAcceptedByUser = [];
+        if ($docExisting !== null){
+            foreach ($docExisting->getPaperReferences() as $doc){
+                $referenceAlreadyAcceptedByUser[] = serialize(json_decode($doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR));
+            }
+        }
         if (is_null($docExisting)){
             $doc = new Document();
             $doc->setId($docId);
         }
         foreach ($references as $orderRef => $reference) {
-            $refs = new PaperReferences();
-            $refs->setReference((array)($reference));
-            $refs->setSource($source);
-            $refs->setUpdatedAt(new \DateTimeImmutable());
-            $refs->setReferenceOrder($orderRef);
-            if (is_null($docExisting)){
-                $refs->setDocument($doc);
-                $doc->addPaperReference($refs);
-            } else {
-                $refs->setDocument($docExisting);
-                $docExisting->addPaperReference($refs);
+            if (!in_array(serialize(json_decode($reference, true, 512, JSON_THROW_ON_ERROR)),$referenceAlreadyAcceptedByUser,true)){
+                $refs = new PaperReferences();
+                $refs->setReference((array)($reference));
+                $refs->setSource($source);
+                $refs->setUpdatedAt(new \DateTimeImmutable());
+                $refs->setReferenceOrder($orderRef);
+                if (is_null($docExisting)){
+                    $refs->setDocument($doc);
+                    $doc->addPaperReference($refs);
+                } else {
+                    $refs->setDocument($docExisting);
+                    $docExisting->addPaperReference($refs);
+                }
+                $this->entityManager->persist($refs);
             }
-            $this->entityManager->persist($refs);
         }
         $this->entityManager->flush();
     }

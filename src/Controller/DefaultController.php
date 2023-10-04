@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\Services\Episciences;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -11,6 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DefaultController extends AbstractController
 {
+    public function __construct(private Episciences $episciences,private RequestStack $requestStack)
+    {
+    }
     /**
      * @param Request $request
      * @return RedirectResponse
@@ -56,6 +61,8 @@ class DefaultController extends AbstractController
         }
 
         $logger->info('SESSION',[$_SESSION]);
+
+        $this->setSessionEpiUrlPdf($request,$request->get('url'));
         return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
     }
 
@@ -89,5 +96,16 @@ class DefaultController extends AbstractController
             }
         }
         return $url;
+    }
+
+    /**
+     * @param $url
+     * @return void
+     * In case with need to reextract in the app we have infos of which one to extract
+     */
+    private function setSessionEpiUrlPdf(Request $request, $url){
+        $session = $request->getSession();
+        $session->set('EpiPdfUrltoExtract', '');
+        $session->set('EpiPdfUrltoExtract',$url);
     }
 }

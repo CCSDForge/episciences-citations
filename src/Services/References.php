@@ -75,9 +75,9 @@ class References {
 
     /**
      * @param $docId
-     * @return Document
+     * @return Document|null
      */
-    public function getDocument($docId): Document
+    public function getDocument($docId): ?Document
     {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
@@ -132,5 +132,9 @@ class References {
 
         }
         return $orderChanged;
+    }
+
+    public function documentAlreadyExtracted($docId): bool {
+        return $this->getDocument($docId) !== null;
     }
 }

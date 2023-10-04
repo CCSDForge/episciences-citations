@@ -52,8 +52,20 @@ class ExtractController extends AbstractController
 
     public function extract(EntityManagerInterface $entityManager, Request $request) : RedirectResponse
     {
-        $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
+        $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        $session = $request->getSession();
+        $session->set('openModalClose', 0);
+        if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')){
+            $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        }
+
+        if ($this->references->documentAlreadyExtracted($docId)) {
+            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        }
+
         $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
@@ -77,6 +89,7 @@ class ExtractController extends AbstractController
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
+                $session->set('openModalClose', 0);
                 if ($form->get('submitNewRef')->isClicked()) {
                     $newRef = $this->references->addNewReference($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
                     if ($newRef) {
@@ -94,11 +107,11 @@ class ExtractController extends AbstractController
                     $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->flashMessageForChoices($userChoice, $translator);
                 }
+                $session->set('openModalClose', 1);
                 return $this->redirect($request->getUri());
             }
             return $this->render('extract/index.html.twig', [
                 'form' => $form->createView(),
-                'rvCode' => $session->get('rvCode')
             ]);
         } else {
             return $this->render('error/unauthorizedtemplate.html.twig', [

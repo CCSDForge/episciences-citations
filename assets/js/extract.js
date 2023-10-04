@@ -25,6 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
     declineAllReference();
     showLoadingScreen();
     hidePopUpAdding();
+    topAnchor();
+    openClosingModalWindow();
+    rextract();
+    checkIsDirty();
 });
 
 function changeValueFormByToggled() {
@@ -151,6 +155,7 @@ function acceptRefModificationsDone(idRef){
     classWhenConfirmDecline(containerBox,true);
 }
 function openModalAddBtn(){
+
     document.getElementById("btn-modal-addref").addEventListener('click',(event) => {
         let container = document.getElementById("modal-container");
         let boxcontainer = document.getElementById("box-container");
@@ -271,3 +276,62 @@ function classWhenConfirmDecline(el, confirm = true){
         el.classList.add("filtered");
     }
 }
+
+function topAnchor(){
+    document.getElementById('document_save').addEventListener('click',(event) => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.getElementById('confirm-adding').addEventListener('click',(event) => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+function openClosingModalWindow(){
+    let modalWindow = document.querySelector('#closing-window-modal-container');
+    if (modalWindow) {
+        let boxcontainer = document.getElementById("box-container-closing");
+        let greybg = document.getElementById("greybg-closing");
+        greybg.classList.remove("-z-50","opacity-0");
+        greybg.classList.add("z-49","opacity-1",'anim-box-popup');
+
+        modalWindow.classList.remove("-z-50","opacity-0");
+        modalWindow.classList.add("z-50","opacity-1",'anim-box-popup');
+
+        boxcontainer.classList.add("z-50","opacity-1",'anim-box-popup');
+        boxcontainer.classList.remove("opacity-0","-z-50");
+
+        document.getElementById('cancel-closing-app').addEventListener('click',(event) => {
+            greybg.classList.add("-z-50","opacity-0");
+            greybg.classList.remove("z-49","opacity-1");
+
+            modalWindow.classList.add("-z-50","opacity-0");
+            modalWindow.classList.remove("z-50","opacity-1");
+
+            boxcontainer.classList.add("-z-50","opacity-0");
+            boxcontainer.classList.remove("z-50","opacity-1");
+        });
+    }
+}
+
+function rextract(){
+    document.getElementById("extract-all").onclick = function (event) {
+        event.preventDefault();
+        location.href = "/extract?url="+this.dataset.urlFromEpi+"&rextract";
+    };
+}
+function checkIsDirty(){
+    let isDirty = document.getElementById('is-dirty');
+    let formSubmitting = false;
+    document.getElementById("form-extraction").addEventListener('change',(event) => {
+        isDirty.value = "1";
+    });
+    document.getElementById("form-extraction").addEventListener("submit", (event) => {
+        formSubmitting = true;
+    });
+    window.addEventListener("beforeunload", function(event) {
+        if (isDirty.value === "1" && formSubmitting === false) {
+            event.returnValue = null;
+        }
+    });
+}
+
