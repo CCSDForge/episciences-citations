@@ -14,6 +14,9 @@ class JsonGrobidExtension extends AbstractExtension
     {
         return [
             new TwigFunction('getAuthors', [$this, 'getAuthors']),
+            new TwigFunction('getDateInJson', [$this, 'getDateInJson']),
+            new TwigFunction('getJournalIdentifier', [$this, 'getJournalIdentifier']),
+            new TwigFunction('prettyReference', [$this, 'prettyReference']),
         ];
     }
 
@@ -71,8 +74,37 @@ class JsonGrobidExtension extends AbstractExtension
      * @param array $names
      * @return string
      */
-    public function composeNames(array $names): string{
+    public function composeNames(array $names): string {
         return implode(" ",$names);
     }
 
+    public function getDateInJson(string|array $date){
+        if (is_array($date)) {
+            foreach ($date as $attr) {
+                if (array_key_exists('when', $attr)) {
+                        return $attr['when'];
+                }
+            }
+        }
+        return $date;
+    }
+    public function getJournalIdentifier(string|array $identifier){
+        if (is_array($identifier)){
+            return implode('; ',$identifier);
+        }
+        return $identifier;
+
+    }
+
+    public function prettyReference(string $jsonRawReference): array {
+        if ($jsonRawReference !== ""){
+            $jsonRawReference = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
+            if (is_array($jsonRawReference)){
+                foreach ($jsonRawReference as $jsonReference) {
+                    return json_decode($jsonReference, true, 512, JSON_THROW_ON_ERROR);
+                }
+            }
+        }
+        return [];
+    }
 }

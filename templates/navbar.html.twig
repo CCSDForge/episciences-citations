@@ -1,0 +1,42 @@
+<nav class="flex items-center justify-between flex-wrap bg-gray-100 p-6">
+    <div class="flex items-center flex-shrink-0 text-white mr-6">
+        <img
+                src="{{ asset('/img/Episciences_Logo.svg') }}"
+                alt="Episciences logo"
+                class="w-10 h-10"/>
+        <span class="text-xl tracking-tight text-black">{{ 'Episciences Citations'|trans }}</span>
+    </div>
+    <div class="flex">
+        <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'en'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">en</a>
+        <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'fr'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">fr</a>
+    </div>
+</nav>
+{% for message in app.flashes('success') %}
+    <div id="flash-message" class="flex items-center align-middle gap-x-1 justify-center sticky top-0 bg-emerald-100 border border-emerald-100 text-emerald-600 px-4 py-3 rounded z-10" role="alert">
+        <div class="flex-shrink-0 align-middle">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="fill-current text-emerald-400 w-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"></path></svg>
+        </div>
+        <div class="flex-shrink-0 align-middle">{{ message }}</div>
+    </div>
+{% endfor %}
+{% for message in app.flashes('notice') %}
+    <div id="flash-message" class="flex items-center align-middle gap-x-1 justify-center sticky top-0 bg-amber-100 border border-amber-100 text-amber-600 px-4 py-3 rounded z-10" role="alert">
+        <div class="flex-shrink-0">
+            <svg class="fill-current text-yellow-500 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd">
+                </path>
+            </svg>
+        </div>
+        <div class="flex-shrink-0 align-middle">{{ message }}</div>
+    </div>
+{% endfor %}
+{% for message in app.flashes('error') %}
+    <div id="flash-message" class="flex items-center align-middle gap-x-1 justify-center sticky top-0 bg-rose-100 border border-rose-100 text-rose-600 px-4 py-3 rounded z-10" role="alert">
+        <div class="flex-shrink-0 align-middle">
+            <svg class="fill-current text-rose-400 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <div class="flex-shrink-0 align-middle">{{ message }}</div>
+    </div>
+{% endfor %}

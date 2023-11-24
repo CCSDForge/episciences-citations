@@ -6,6 +6,24 @@
 parameters:
     deposit_pdf: '%kernel.project_dir%/var/data'
     app.cache_folder: '%kernel.project_dir%/var/tmp'
+    cas_login_target: '%env(string:CAS_LOGIN_TARGET)%'
+    cas_logout_target: '%env(string:CAS_LOGOUT_TARGET)%'
+    cas_host: '%env(string:CAS_HOST)%'
+    cas_port: '%env(int:CAS_PORT)%'
+    cas_path: '%env(string:CAS_PATH)%'
+    cas_gateway: '%env(bool:CAS_GATEWAY)%'
+    cors_site: '%env(string:DOMAIN_CORS)%'
+    api_right: '%env(string:API_RIGHT_URL)%'
+    force_https: '%env(bool:FORCE_HTTPS)%'
+l3_cas_guard:
+    host: '%env(string:CAS_HOST)%'
+    path: '%env(string:CAS_PATH)%'
+    port: '%env(int:CAS_PORT)%'
+    ca: '%env(bool:CAS_CA)%'
+    handleLogoutRequest: '%env(bool:CAS_HANDLE_LOGOUT_REQUEST)%'
+    casLogoutTarget: '%env(string:CAS_LOGOUT_TARGET)%'
+    force: '%env(bool:CAS_FORCE)%'
+    gateway: '%env(bool:CAS_GATEWAY)%'
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -23,5 +41,9 @@ services:
         arguments:
             $cacheFolder: '%app.cache_folder%'
             $grobidUrl: '%env(APP_GROBID_URL)%'
+    App\Services\Episciences:
+        arguments:
+            $pdfFolder: '%kernel.project_dir%/var/data/'
+            $apiRight: '%env(string:API_RIGHT_URL)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

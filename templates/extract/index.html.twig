@@ -1,38 +1,99 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello ExtractController!{% endblock %}
-
+{% block title %}Episciences - Citations{% endblock %}
+{% block javascripts %}
+    {{ parent() }}
+    {{ encore_entry_script_tags('extract') }}
+{% endblock %}
 {% block body %}
-    {{ form_start(form) }}
-    <div>
-        {% for fc in form.choice %}
-            <p>
-                {% for key,reference in references.ref %}
-                    {% if key|trans is same as(fc.vars.value) %}
-                        <div class="mt-3">
-                            <div class="shadow-xl">
-                                {% if reference.analytic is defined %}
-                                    <p class="text-center">{{ reference.analytic['title'] }}</p>
-                                    {% if reference.analytic.author is defined %}
-                                        {% for authorInfo in getAuthors(reference.analytic.author) %}
-                                            <div class="flex">
-                                                {% if authorInfo.orcid is not null %}
-                                                    <a class="inline" href="https://orcid.org/{{ authorInfo.orcid }}" rel="noopener" target="_blank">
-                                                        <img alt="ORCID logo" src="{{ asset('img/ORCID_Logo.svg') }}" width="16" height="16"/>
-                                                    </a>
-                                                {% endif %}
-                                                <span class="ml-0.5">{{ authorInfo.forename }} {{ authorInfo.surname }}</span>
-                                            </div>
-                                        {% endfor %}
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            {{ form_widget(fc, {'attr': {"class":"accent-emerald-500/75"}}) }}
-            </p>
-        {% endfor %}
+    <div class="flex w-full gap-x-10 mt-2">
+        <div id="loading-screen" class="hidden">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-25 z-50"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="z-50 flex items-center justify-center rounded-full w-14 h-14 bg-gradient-to-tr from-emerald-500 to-cyan-200 animate-spin">
+                    <div class="h-9 w-9 rounded-full bg-gray-50"></div>
+                </div>
+            </div>
+        </div>
+        {% if(app.session.get('openModalClose') is same as(1) ) %}
+            {% include('extract/closingmodal.html.twig') %}
+        {% endif %}
+        <iframe class="h-screen min-h-screen flex-1" src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
+                allow="fullscreen"></iframe>
+        {{ form_start(form,{'attr':{'id':'form-extraction','class': "flex-1"}}) }}
+        {% include("extract/popupaddref.html.twig") with form %}
+        <div id="alert-drag-drop" class="bg-blue-50 text-blue-500 px-4 py-3 shadow-md w-11/12 mb-2 relative" role="alert">
+            <div class="flex">
+                <div class="py-1"><svg class="fill-current h-6 w-6 text-blue-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
+                    <div>
+                        <p class="font-bold">{{ "You can drag n drop references to change the order, move boxes"|trans }}</p>
+                        <span id="alert-drag-drop" class="absolute inset-y-0 right-0 px-4 py-3">
+                            <button id="alert-drag-drop" class="transition ease-in-out delay-150 hover:-translate-y-0.5">
+                                <svg class="fill-current h-6 w-6 text-blue-500 hover:text-blue-700 pointer-events-none" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+                            </button>
+                        </span>
+                    </div>
+               </div>
+        </div>
+        <div class="flex mb-2 w-11/12 gap-x-2">
+            <button id="extract-all" class="orange-outline-btn w-full" data-url-from-epi="{{ app.session.get('EpiPdfUrltoExtract') }}">{{ "Extract citations again"|trans }}</button>
+        </div>
+        <div class="flex mb-2 w-11/12 gap-x-2">
+            <button id="accept-all" class="emerald-outline-btn w-1/2">{{ "Accept all references"|trans }}</button>
+            <button id="decline-all" class=" flex-shrink-1 rose-outline-btn w-1/2">{{ "Decline all references"|trans }}</button>
+        </div>
+        <div id="sortref" class="w-11/12">
+            {% for paperReferences in form.paperReferences %}
+                <div id="container-reference" class="grid grid-rows-2 grid-flow-col gap-2 border-solid border-2 border-grey-200 mb-2 p-4 {% if paperReferences.vars.value.accepted is same as(0) %} filtered declinedRef {% endif %}"
+                     data-idref="{{ paperReferences.id.vars.value }}">
+                    {{ form_widget(paperReferences.reference,{'id':"reference-"~paperReferences.id.vars.value,'attr':{'class': "hidden block text-gray-700 text-sm font-bold mb-2"}}) }}
+                    {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
+                    {% set doiDecodedRef = '' %}
+                    <div id="container-reference-informations-{{ paperReferences.id.vars.value }}" class="row-span-2">
+                        <p id="textReference-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['raw_reference'] }}</p>
+                        {% if jsonDecodedRef['doi'] is defined %}
+                            <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}"
+                               class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
+                               target="_blank" id="linkDoiRef-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['doi'] }}</a>
+                            {% set doiDecodedRef = jsonDecodedRef['doi'] %}
+                        {% endif %}
+                    </div>
+                    <div class="row-span-4 col-span-2">
+                        <div class="hidden mt-2 z-50" id="modifyTextArea-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReference,{'id':"textareaRef-"~paperReferences.id.vars.value,'attr': {'class':"textarea-height"},'value': jsonDecodedRef['raw_reference']}) }}</div>
+                        <div class="hidden z-50 w-full" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReferenceDoi,{'id':"textDoiRef-"~paperReferences.id.vars.value,'value': doiDecodedRef}) }}</div>
+                    </div>
+                    <div class="row-span-1 col-span-1 col-start-3 col-end-4">
+                        <div class="hidden" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.acceptModifyBtn,{'attr': {'class':"emerald-outline-btn"}}) }}</div>
+                        <div class="hidden" id="cancelModifyBtn-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.cancelModifyBtn,{'attr': {'class':"rose-outline-btn"}}) }}</div>
+                    </div>
+                    <div class="row-span-1 col-span-1">
+                        {{ form_widget(paperReferences.modifyBtn,{'id':'modifyBtn','attr':{'data-idref': paperReferences.id.vars.value,'class':
+                            "w-fit bg-transparent
+                        hover:bg-cyan-300 text-cyan-300
+                        font-semibold hover:text-white py-2 px-4
+                        border border-cyan-500 hover:border-transparent
+                        rounded mb-2 text-center"
+                        }}) }}
+                        <label class="relative inline-flex items-center mr-5 cursor-pointer align-middle col-span-1">
+                            <input id="toggle-input-{{ paperReferences.id.vars.value }}" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% endif %}>
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-red-700 peer-focus:ring-4
+                        peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full
+                        peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                        after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
+                        dark:border-gray-600 peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                    <div class="hidden" id="radio-group-choice-{{ paperReferences.id.vars.value }}">{{ form_widget(paperReferences.accepted) }}</div>
+                    <span>{{ form_row(paperReferences.reference_order) }}</span>
+                    <span>{{ form_row(paperReferences.id) }}</span>
+                </div>
+            {% endfor %}
+            <div class="flex gap-x-2 mb-4">
+                {{ form_row(form.save,{'attr': {'class':"w-full bg-transparent hover:bg-emerald-500 text-emerald-400 font-semibold hover:text-white py-2 px-4 border border-emerald-500 hover:border-transparent rounded mt-4"}}) }}
+                {{ form_row(form.btnModalNewReference,{'id': "btn-modal-addref",'attr': {'class':"w-full bg-transparent hover:bg-amber-500 text-amber-400 font-semibold hover:text-white py-2 px-4 border border-amber-500 hover:border-transparent rounded mt-4"}}) }}
+            </div>
+        </div>
+        {{ form_end(form) }}
     </div>
-    {{ form_end(form) }}
+    <div id="is-dirty">0</div>
 {% endblock %}
