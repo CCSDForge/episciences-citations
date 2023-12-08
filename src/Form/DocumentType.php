@@ -37,7 +37,7 @@ class DocumentType extends AbstractType
             'label' => 'DOI, URL, ...',
         ]);
         $builder->add('submitNewRef',SubmitType::class,[
-            'label' => 'Confirm adding',
+            'label' => 'Add reference',
         ]);
         $builder->add('btnModalNewReference',ButtonType::class,[ 'label' => 'Add reference','row_attr' => ['class'=>'w-1/2']]);
         $builder->add('btnCancelAddNewReference',ButtonType::class,['label' => 'Cancel']);
