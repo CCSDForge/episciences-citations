@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Episciences - Citations{% endblock %}
+{% block javascripts %}
+    {{ parent() }}
+{% endblock %}
+{% block body %}
+    <div class="flex items-center justify-center h-screen">
+        <div class="font-extrabold">{{ exception.message }}</div>
+    </div>
+{% endblock %}

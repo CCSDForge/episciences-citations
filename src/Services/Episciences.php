@@ -3,6 +3,7 @@ namespace App\Services;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -16,7 +17,8 @@ class Episciences {
                                 private HttpClientInterface $client,
                                 private ContainerBagInterface $params,
                                 private string $pdfFolder,
-                                private string $apiRight)
+                                private string $apiRight,
+                                private LoggerInterface $logger)
     {
     }
 
@@ -31,7 +33,7 @@ class Episciences {
         $this->createDirDataPdf();
         $docId = $this->getDocIdFromUrl($url);
         if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
-        try {
+            try {
             $response = $this->client->request('GET', $url, [
                 'headers' => [
                     "Accept" => "application/octet-stream"
@@ -39,6 +41,11 @@ class Episciences {
             ])->getContent();
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
             $message = $this->manageHttpErrorMessagePDF($e->getCode(),$e->getMessage());
+            if ($e->getCode() === 404) {
+                $this->logger->warning('PDF NOT FOUND ON EPISCIENCES',['DOCID' => $docId]);
+                return ['status' => $e->getCode(),
+                    'message' => $this->manageHttpErrorMessagePDF($e->getCode(),"pdf Not Found")];
+            }
             return ['status' => $e->getCode(), 'message' => $message];
         }
             return $this->putPdfInCache($docId, $response);

@@ -6,7 +6,6 @@ use App\Form\DocumentType;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
@@ -30,58 +29,65 @@ class ExtractController extends AbstractController
      * @param Grobid $grobid
      * @param References $references
      * @param Episciences $episciences
+     * @param LoggerInterface $logger
      */
 
-    public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences)
+    public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences, private LoggerInterface $logger)
     {
     }
 
     /**
-     * @param EntityManagerInterface $entityManager
      * @param Request $request
-     * @return RedirectResponse
-     * @throws \JsonException
+     * @return RedirectResponse|Response
+     * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
-     * @throws ClientExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ServerExceptionInterface
      * @throws TransportExceptionInterface
+     * @throws \JsonException
      */
     #[Route('/extract', name: 'app_extract')]
 
-    public function extract(EntityManagerInterface $entityManager, Request $request) : RedirectResponse
+    public function extract(Request $request) : RedirectResponse | Response
     {
 
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        if (isset($getPdf['status']) && $getPdf['status'] === 404) {
+            throw $this->createNotFoundException('Unable to get PDF from Episciences');
+        }
         $session = $request->getSession();
         $session->set('openModalClose', 0);
         if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')){
+            $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
             $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
 
         if ($this->references->documentAlreadyExtracted($docId)) {
+            $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
-
+        $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
         $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
 
     /**
-     * @param EntityManagerInterface $entityManager
      * @param int $docId
      * @param Request $request
+     * @param TranslatorInterface $translator
+     * @param LoggerInterface $logger
      * @return Response
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
+     * @throws \JsonException
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
 
-    public function viewReference(EntityManagerInterface $entityManager,int $docId, Request $request,TranslatorInterface $translator,LoggerInterface $logger) : Response
+    public function viewReference(int $docId, Request $request, TranslatorInterface $translator, LoggerInterface $logger) : Response
     {
         $logger->info('view ref page',['docId' => $docId,'attribute cas'=>$this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->isAuthorizeForApp($docId) === true) {
@@ -92,6 +98,7 @@ class ExtractController extends AbstractController
                 $session->set('openModalClose', 0);
                 if ($form->get('submitNewRef')->isClicked()) {
                     $newRef = $this->references->addNewReference($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
+                    $this->logger->info('New reference added');
                     if ($newRef) {
                         $this->addFlash(
                             'success',
@@ -114,8 +121,12 @@ class ExtractController extends AbstractController
                 'form' => $form->createView(),
             ]);
         } else {
-            return $this->render('error/unauthorizedtemplate.html.twig', [
-            ]);
+            $logger->warning('Access Denied for this user : ',
+                [
+                    'DOCID' => $docId,
+                    'USER CAS' => $this->container->get('security.token_storage')->getToken()->getAttributes()
+                ]);
+            throw $this->createAccessDeniedException();
         }
     }
 
@@ -126,12 +137,14 @@ class ExtractController extends AbstractController
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
     public function getpdf(int $docId): BinaryFileResponse
     {
+        $this->logger->info('get PDF in cache => ',['path' => $this->getParameter("deposit_pdf")."/".$docId.".pdf"]);
         return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/".$docId.".pdf", Response::HTTP_OK))
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,$docId.".pdf");
     }
 
     /**
      * @param array $userChoice
+     * @param TranslatorInterface $translator
      * @return void
      */
     public function flashMessageForChoices(array $userChoice, TranslatorInterface $translator): void
@@ -159,7 +172,18 @@ class ExtractController extends AbstractController
         }
     }
 
-    public function isAuthorizeForApp(int $docId){
+    /**
+     * @param int $docId
+     * @return bool
+     * @throws ClientExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
+     */
+    public function isAuthorizeForApp(int $docId): bool
+    {
         return $this->episciences->getRightUser($docId, $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 }

@@ -6,6 +6,7 @@ use App\Services\Grobid;
 use App\Services\References;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,8 +19,13 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class EpisciencesController extends AbstractController {
 
-
-    public function __construct(private Episciences $episciences, private Grobid $grobid,private References $references)
+    /**
+     * @param Episciences $episciences
+     * @param Grobid $grobid
+     * @param References $references
+     * @param LoggerInterface $logger
+     */
+    public function __construct(private Episciences $episciences, private Grobid $grobid,private References $references, private LoggerInterface $logger)
     {
     }
 
@@ -85,6 +91,7 @@ class EpisciencesController extends AbstractController {
         if ($this->checkCors($request) === true) {
             header('Access-Control-Allow-Origin: '.$request->headers->get('origin'));
             if(is_null($request->get('url')) || $request->get('url') === '') {
+                $this->logger->warning('Api called with bad URL or NULL',['url',$request->get('url')]);
                 return new Response(
                     json_encode([
                         "status"=> Response::HTTP_BAD_REQUEST,
@@ -96,6 +103,7 @@ class EpisciencesController extends AbstractController {
 
             }
             $docId = $this->episciences->getDocIdFromUrl($request->get('url'));
+            $this->logger->info('Api called FOR ',[$docId]);
             if ($docId === "") {
                 return new Response(
                     json_encode([
@@ -107,12 +115,15 @@ class EpisciencesController extends AbstractController {
                 );
             }
             if ($request->query->has('all') && $request->query->get('all') === "1"){
+                $this->logger->info('Api called with all references ',[$docId]);
                 $refs = $this->references->getReferences($docId,'all');
             } else {
+                $this->logger->info('Api called just accepted ref ',[$docId]);
                 $refs = $this->references->getReferences($docId,'accepted');
             }
 
             if(empty($refs)) {
+                $this->logger->info('Api called But no ref bib found for: ',[$docId]);
                 return new Response(
                     json_encode(["status"=> Response::HTTP_OK,
                         "message"=> 'No References Found'],JSON_THROW_ON_ERROR),
@@ -126,6 +137,7 @@ class EpisciencesController extends AbstractController {
                 ['content-type' => 'application/json']
             );
         }
+        $this->logger->alert('FORBIDDEN CORS origin');
         return new Response(
             json_encode(["status"=> Response::HTTP_FORBIDDEN,
                 "message"=> 'Forbidden'],JSON_THROW_ON_ERROR),
@@ -136,12 +148,15 @@ class EpisciencesController extends AbstractController {
 
     /**
      * @param Request $request
-     * @param $matchesOrigin
-     * @param $matchesHost
-     * @return array
+     * @return bool
      */
     public function checkCors(Request $request): bool
     {
+        $this->logger->info('check CORS for this url : ',
+            [
+                'ORIGIN' => $request->headers->get('origin'),
+                'HOST' => $request->headers->get('host')
+            ]);
         preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('origin'), $matchesOrigin);
         preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('host'), $matchesHost);
         if (!empty($matchesOrigin) || !empty($matchesHost)) {
