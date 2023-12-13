@@ -90,7 +90,11 @@ class References {
         if ($form['addReference'] !== ""){
             $ref = new PaperReferences();
             $refInfo = ['raw_reference'=>$form['addReference']];
-            if ($form['addReferenceDoi'] !== ""){
+            if ($form['addReferenceDoi'] !== "") {
+                $regexDoiOrg = "/^https?:\/\/(?:dx\.|www\.)?doi\.org\/(10\.[0-9]{4,}(?:\.[0-9]+)*(?:\/|%2F)(?:(?![\"&\'])\S)+)/";
+                if (preg_match($regexDoiOrg, $form['addReferenceDoi'],$matches)) {
+                    $form['addReferenceDoi'] = $matches[1];
+                }
                 $refInfo['doi'] = $form['addReferenceDoi'];
             }
             $ref->setReference([json_encode($refInfo,JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)]);
