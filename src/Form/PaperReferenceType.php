@@ -49,7 +49,7 @@ class PaperReferenceType extends AbstractType
             'label' => false,
         ]);
         $builder->add("modifyReferenceDoi",TextType::class,[
-            'attr' => ['class' => 'tinymce shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
+            'attr' => ['class' => 'tinymce shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline','placeholder' => "DOI, URL"],
             'mapped' => false,
             'required' => false,
             'label' => false,
