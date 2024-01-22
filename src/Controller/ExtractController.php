@@ -61,7 +61,10 @@ class ExtractController extends AbstractController
         $session->set('openModalClose', 0);
         if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')){
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
-            $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+            $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+            if ($insertRef === false){
+                throw $this->createNotFoundException('Unable to find references in the document');
+            }
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
 
@@ -70,7 +73,10 @@ class ExtractController extends AbstractController
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
-        $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+        $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
+        if ($insertRef === false){
+            throw $this->createNotFoundException('Unable to find references in the document');
+        }
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
 

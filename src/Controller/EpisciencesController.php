@@ -126,7 +126,7 @@ class EpisciencesController extends AbstractController {
                 $this->logger->info('Api called But no ref bib found for: ',[$docId]);
                 return new Response(
                     json_encode(["status"=> Response::HTTP_OK,
-                        "message"=> 'No References Found'],JSON_THROW_ON_ERROR),
+                        "message"=> 'No reference found'],JSON_THROW_ON_ERROR),
                     Response::HTTP_OK,
                     ['content-type' => 'application/json']
                 );

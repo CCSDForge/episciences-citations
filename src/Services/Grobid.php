@@ -36,7 +36,7 @@ class Grobid {
      * @throws ClientExceptionInterface
      * @throws \JsonException
      */
-    public function insertReferences(int $docId,string $pathPdf): void
+    public function insertReferences(int $docId,string $pathPdf): bool
     {
         $referencesExist = $this->getGrobidReferencesInCache($docId.".pdf");
         if (!$referencesExist) {
@@ -50,11 +50,15 @@ class Grobid {
                 'body' => $data->bodyToIterable(),
             ])->getContent();
             $references = $this->tei->getReferencesInTei($response);
+            if (empty($references)){
+                return false;
+            }
             $this->putGrobidReferencesInCache($docId.".pdf",$response);
         }else{
             $references = $this->tei->getReferencesInTei($referencesExist);
         }
         $this->tei->insertReferencesInDB($references,$docId,PaperReferences::SOURCE_METADATA_GROBID);
+        return true;
     }
 
     /**
@@ -82,7 +86,6 @@ class Grobid {
     public function getGrobidReferencesInCache($name) {
 
         $cache = new FilesystemAdapter('grobidReferences',0,$this->cacheFolder);
-
         try {
             $sets = $cache->getItem($name);
         } catch (InvalidArgumentException $e) {

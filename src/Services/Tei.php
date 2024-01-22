@@ -1,10 +1,8 @@
 <?php
 namespace App\Services;
 use App\Entity\Document;
-use App\Entity\Documents;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
-use App\Repository\PaperReferencesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class Tei {
@@ -23,22 +21,25 @@ class Tei {
 
         $tei = simplexml_load_string($tei);
         $info = [];
-        foreach ($tei->text as $teInfo) {
-            foreach ($teInfo->back->div->listBibl->biblStruct as $value) {
-                $raw_reference = [];
-                foreach ($value->note as $note) {
-                    if (!is_null($note->attributes()) && (string) $note->attributes() === 'raw_reference') {
-                        $raw_reference['raw_reference'] = (string) $note;
+        if ($tei !== false) {
+            foreach ($tei->text as $teInfo) {
+                foreach ($teInfo->back->div->listBibl->biblStruct as $value) {
+                    $raw_reference = [];
+                    foreach ($value->note as $note) {
+                        if (!is_null($note->attributes()) && (string) $note->attributes() === 'raw_reference') {
+                            $raw_reference['raw_reference'] = (string) $note;
+                        }
                     }
-                }
 
-                if ($value->analytic && $value->analytic->idno && (string) $value->analytic->idno->attributes() === 'DOI') {
-                    $raw_reference['doi'] = (string) $value->analytic->idno;
+                    if ($value->analytic && $value->analytic->idno && (string) $value->analytic->idno->attributes() === 'DOI') {
+                        $raw_reference['doi'] = (string) $value->analytic->idno;
+                    }
+                    $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
                 }
-                $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
             }
+            return $info;
         }
-        return $info;
+        return [];
     }
 
     public function insertReferencesInDB(array $references, int $docId, string $source): void
