@@ -20,3 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add custom error page 404 and 403
 - Add support url doi.org
+
+### Changed
+- [20](https://github.com/CCSDForge/episciences-citations/issues/20) Add some French translations to harmonize
