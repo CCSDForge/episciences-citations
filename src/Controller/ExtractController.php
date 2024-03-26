@@ -6,6 +6,7 @@ use App\Form\DocumentType;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
+use App\Services\Bibtex;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
@@ -17,6 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -25,14 +27,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ExtractController extends AbstractController
 {
-    /**
-     * @param Grobid $grobid
-     * @param References $references
-     * @param Episciences $episciences
-     * @param LoggerInterface $logger
-     */
 
-    public function __construct(private Grobid $grobid,private References $references, private Episciences $episciences, private LoggerInterface $logger)
+    public function __construct(private Grobid $grobid,
+                                private References $references,
+                                private Episciences $episciences,
+                                private Bibtex $bibtex,
+                                private LoggerInterface $logger,
+                                private ValidatorInterface $validator)
     {
     }
 
@@ -44,15 +45,20 @@ class ExtractController extends AbstractController
      * @throws NotFoundExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ServerExceptionInterface
-     * @throws TransportExceptionInterface
-     * @throws \JsonException
+     * @throws TransportExceptionInterface @throws \JsonException
      */
     #[Route('/extract', name: 'app_extract')]
 
-    public function extract(Request $request) : RedirectResponse | Response
+    public function extract(Request $request,TranslatorInterface $translator) : RedirectResponse | Response
     {
 
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
+        if ($request->query->get('exportbib') === "1"){
+            if ($this->references->getDocument($docId) === null){
+                $this->references->createDocumentId($docId);
+            }
+            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        }
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
         if (isset($getPdf['status']) && $getPdf['status'] === 404) {
             throw $this->createNotFoundException('Unable to get PDF from Episciences');
@@ -63,7 +69,10 @@ class ExtractController extends AbstractController
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
             $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
             if ($insertRef === false){
-                throw $this->createNotFoundException('Unable to find references in the document');
+                $this->addFlash(
+                    'notice',
+                    $translator->trans('No reference found in the PDF')
+                );
             }
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
@@ -75,7 +84,10 @@ class ExtractController extends AbstractController
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
         $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
         if ($insertRef === false){
-            throw $this->createNotFoundException('Unable to find references in the document');
+            $this->addFlash(
+                'notice',
+                $translator->trans('No reference found in the PDF')
+            );
         }
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
@@ -93,17 +105,32 @@ class ExtractController extends AbstractController
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
 
-    public function viewReference(int $docId, Request $request, TranslatorInterface $translator, LoggerInterface $logger) : Response
+    public function viewReference(int $docId, Request $request,
+                                  TranslatorInterface $translator,
+                                  LoggerInterface $logger,
+                                  ValidatorInterface $validator) : Response
     {
-        $logger->info('view ref page',['docId' => $docId,'attribute cas'=>$this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        $logger->info('view ref page',['docId' => $docId,
+            'attribute cas'=> $this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->isAuthorizeForApp($docId) === true) {
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
+
+            $errors  = $validator->validate($form);
+            if (count($errors) > 0) {
+                foreach ($errors as $violation) {
+                    $this->addFlash(
+                        'error',
+                        $translator->trans($violation->getMessage())
+                    );
+                }
+            }
             if ($form->isSubmitted() && $form->isValid()) {
                 $session->set('openModalClose', 0);
                 if ($form->get('submitNewRef')->isClicked()) {
-                    $newRef = $this->references->addNewReference($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
+                    $newRef = $this->references->addNewReference($request->request->all($form->getName()),
+                        $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->logger->info('New reference added');
                     if ($newRef) {
                         $this->addFlash(
@@ -117,8 +144,19 @@ class ExtractController extends AbstractController
                         );
                     }
                 } elseif ($form->get('save')->isClicked()) {
-                    $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()), $this->container->get('security.token_storage')->getToken()->getAttributes());
+                    $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
+                        $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->flashMessageForChoices($userChoice, $translator);
+                } elseif ($form->get('submitImportBib')->isClicked()){
+                    $bibtexFile = $form->get('bibtexFile')->getData();
+                    $process = $this->bibtex->processBibtex($bibtexFile,
+                        $this->container->get('security.token_storage')->getToken()->getAttributes(),$docId);
+                    if (!empty($process)){
+                        $this->addFlash(
+                            'error',
+                            $translator->trans($process['error'])
+                        );
+                    }
                 }
                 $session->set('openModalClose', 1);
                 return $this->redirect($request->getUri());
@@ -190,6 +228,7 @@ class ExtractController extends AbstractController
      */
     public function isAuthorizeForApp(int $docId): bool
     {
-        return $this->episciences->getRightUser($docId, $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
+        return $this->episciences->getRightUser($docId,
+            $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 }

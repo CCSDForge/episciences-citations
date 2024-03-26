@@ -17,5 +17,12 @@ Decline all references: Refuser toutes les références
 Close the application: Fermer l'application
 Continue editing: Continuez l'édition
 To view your changes, go to your Episciences document page. You can continue editing if you wish.: Pour voir vos modifications, vous devez aller sur la page de votre document Episciences. Vous pouvez continuer les modifications si vous le souhaitez.
-Extract references again: Extraire les références à nouveau
+Extract references from PDF: Extraire les références depuis le PDF
 Reference: Référence
+If you are about to import again, the old references from the old file will be overwritten.: Si vous êtes sur le point d'effectuer une nouvelle importation, les anciennes références de l'ancien fichier seront écrasées.
+GROBID: PDF
+USER: UTILISATEUR
+No references were extracted or founded: Aucune référence n'a été extraites ou trouvée
+Please upload a valid BibTeX document: Merci de téléverser un fichier de type BibTeX
+Remove references: Effacer des references
+To delete references, use the checkboxes to select the reference you wish to delete and click on the "Save" button when you have finished.: Pour supprimer des références, vous devez sélectionner à l'aide de cases à cocher la référence que vous souhaitez supprimer et cliquer sur le bouton "Enregistrer" lorsque vous avez terminé.

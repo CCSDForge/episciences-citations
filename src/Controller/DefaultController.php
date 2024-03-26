@@ -27,11 +27,12 @@ class DefaultController extends AbstractController
         $url = 'https://'
             . $this->getParameter('cas_host') . $this->getParameter('cas_path')
             . '/login?service=';
+        $bibExportAsked = ($request->get('exportbib') === "1") ? urlencode('&exportbib=1'): "";
         $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
         $logger->info('page CAS');
         $logger->info("journal_url",[$journalUrl]);
-        $logger->info("url complete",[$url . $target . '/force?url='.$journalUrl]);
-        return $this->redirect($url . $target . '/force?url='.$journalUrl);
+        $logger->info("url complete",[$url . $target . '/force?url='.$journalUrl.$bibExportAsked]);
+        return $this->redirect($url . $target . '/force?url='.$journalUrl.$bibExportAsked);
     }
 
     /**
@@ -61,9 +62,9 @@ class DefaultController extends AbstractController
         }
 
         $logger->info('SESSION',[$_SESSION]);
-
+        $option = ['url'=> $request->get('url'), 'exportbib' => $request->get('exportbib')];
         $this->setSessionEpiUrlPdf($request,$request->get('url'));
-        return $this->redirect($this->generateUrl('app_extract',['url'=>$request->get('url')]));
+        return $this->redirect($this->generateUrl('app_extract',$option));
     }
 
     /**

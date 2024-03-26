@@ -1,21 +1,23 @@
 import { Sortable } from 'sortablejs/modular/sortable.core.esm';
 document.addEventListener("DOMContentLoaded", () => {
-    let sortEl = Sortable.create(document.getElementById('sortref'),{
-        easing: "cubic-bezier(0.11, 0, 0.5, 0)",
-        animation: 150,
-        ghostClass: 'highlighted',
-        filter: '.filtered',
-        onEnd(event){
-            let arrayOrder = [];
-            for (let el of document.querySelectorAll("#container-reference")){
-                arrayOrder.push(el.dataset.idref)
+    if (document.getElementById('sortref')){
+        let sortEl = Sortable.create(document.getElementById('sortref'),{
+            easing: "cubic-bezier(0.11, 0, 0.5, 0)",
+            animation: 150,
+            ghostClass: 'highlighted',
+            filter: '.filtered',
+            onEnd(event){
+                let arrayOrder = [];
+                for (let el of document.querySelectorAll("#container-reference")){
+                    arrayOrder.push(el.dataset.idref)
+                }
+                let strOrder = arrayOrder.join(';');
+                let hiddenRefNode = document.getElementById('document_orderRef')
+                hiddenRefNode.value = strOrder;
             }
-            let strOrder = arrayOrder.join(';');
-            let hiddenRefNode = document.getElementById('document_orderRef')
-            hiddenRefNode.value = strOrder;
-        }
-    });
-    disabledSortWhenChangeRef(sortEl);
+        });
+        disabledSortWhenChangeRef(sortEl);
+    }
     changeValueFormByToggled();
     changeValueOfReference();
     openModalAddBtn();
@@ -29,6 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openClosingModalWindow();
     rextract();
     checkIsDirty();
+    manageBibtex()
+    removeReference();
 });
 
 function changeValueFormByToggled() {
@@ -78,22 +82,21 @@ function changeValueOfReference() {
             let acceptModifyBtn = document.querySelector("#acceptModifyBtn-"+event.target.dataset.idref);
             let cancelModifyBtn = document.querySelector("#cancelModifyBtn-"+event.target.dataset.idref);
             let containerInfo = document.querySelector("#container-reference-informations-"+event.target.dataset.idref);
+            document.querySelector('#textareaRef-'+event.target.dataset.idref).addEventListener('input',(e)=> {
+                document.querySelector(`input[data-dirty-ref="${event.target.dataset.idref}"]`).value = 1;
+            });
             modifyReferenceText.classList.remove("hidden");
             modifyReferenceDoi.classList.remove("hidden");
             acceptModifyBtn.classList.remove("hidden");
             cancelModifyBtn.classList.remove("hidden");
             modifyReferenceText.classList.add("w-full");
             modifyReferenceDoi.classList.add("w-1/2");
-            acceptModifyBtn.classList.add("inline-block");
-            cancelModifyBtn.classList.add("inline-block");
             btnModify.classList.remove("inline-block");
             btnModify.classList.add("hidden");
             containerInfo.classList.add("hidden");
-            cancelModifyBtn.addEventListener('click', (event) => {
+            cancelModifyBtn.addEventListener('click', (e) => {
                 modifyReferenceText.classList.remove("w-full");
                 modifyReferenceDoi.classList.remove("w-1/2");
-                acceptModifyBtn.classList.remove("inline-block");
-                cancelModifyBtn.classList.remove("inline-block");
                 modifyReferenceText.classList.add("hidden");
                 modifyReferenceDoi.classList.add("hidden");
                 acceptModifyBtn.classList.add("hidden");
@@ -101,13 +104,12 @@ function changeValueOfReference() {
                 btnModify.classList.remove("hidden");
                 btnModify.classList.add("inline-block");
                 containerInfo.classList.remove("hidden");
+                document.querySelector(`input[data-dirty-ref="${event.target.dataset.idref}"]`).value = 0;
             });
             acceptModifyBtn.addEventListener('click', (ev) => {
                 containerInfo.classList.remove("hidden");
                 modifyReferenceText.classList.remove("w-full");
                 modifyReferenceDoi.classList.remove("w-1/2");
-                acceptModifyBtn.classList.remove("inline-block");
-                cancelModifyBtn.classList.remove("inline-block");
                 modifyReferenceText.classList.add("hidden");
                 modifyReferenceDoi.classList.add("hidden");
                 acceptModifyBtn.classList.add("hidden");
@@ -189,6 +191,10 @@ function closeInfoAlert() {
     document.querySelector("button#alert-drag-drop").addEventListener('click',(event)=>{
         event.preventDefault();
         document.querySelector("div#alert-drag-drop").classList.add('hidden');
+    });
+    document.querySelector("button#alert-remove").addEventListener('click',(event)=>{
+        event.preventDefault();
+        document.querySelector("div#alert-remove").classList.add('hidden');
     });
 }
 
@@ -317,6 +323,7 @@ function rextract(){
     document.getElementById("extract-all").onclick = function (event) {
         event.preventDefault();
         location.href = "/extract?url="+this.dataset.urlFromEpi+"&rextract";
+        document.getElementById('loading-screen').classList.remove('hidden');
     };
 }
 function checkIsDirty(){
@@ -335,3 +342,77 @@ function checkIsDirty(){
     });
 }
 
+function manageBibtex(){
+    let importbibtex= document.querySelector("#btn-modal-importbibtex");
+    let container = document.getElementById("modal-container-bib");
+    let boxcontainer = document.getElementById("box-container-bib");
+    let greybg = document.getElementById("greybg-bib");
+    importbibtex.addEventListener('click', (event) => {
+        greybg.classList.remove("-z-50","opacity-0");
+        greybg.classList.add("z-49","opacity-1",'anim-box-popup');
+
+        container.classList.remove("-z-50","opacity-0");
+        container.classList.add("z-50","opacity-1",'anim-box-popup');
+
+        boxcontainer.classList.add("z-50","opacity-1",'anim-box-popup');
+        boxcontainer.classList.remove("opacity-0","-z-50");
+    });
+    document.getElementById("cancel-adding-bib").addEventListener('click',(event) => {
+        greybg.classList.add("-z-50","opacity-0");
+        greybg.classList.remove("z-49","opacity-1");
+
+        container.classList.add("-z-50","opacity-0");
+        container.classList.remove("z-50","opacity-1");
+
+        boxcontainer.classList.add("-z-50","opacity-0");
+        boxcontainer.classList.remove("z-50","opacity-1");
+
+    });
+    document.getElementById("confirm-adding-bib").addEventListener('click',(event) => {
+        greybg.classList.add("-z-50","opacity-0");
+        greybg.classList.remove("z-49","opacity-1");
+
+        container.classList.add("-z-50","opacity-0");
+        container.classList.remove("z-50","opacity-1");
+
+        boxcontainer.classList.add("-z-50","opacity-0");
+        boxcontainer.classList.remove("z-50","opacity-1");
+
+    });
+}
+
+
+function removeReference(){
+    let deleteBtn = document.getElementById("select-delete-ref");
+    let cancelBtn = document.getElementById("cancel-delete-ref");
+    deleteBtn.addEventListener('click',(event) => {
+        event.preventDefault();
+        document.getElementById("alert-remove").classList.remove('hidden');
+        document.querySelectorAll('#selection-references').forEach(node => {
+            node.classList.add('hidden');
+        });
+        document.querySelectorAll('#ref-to-delete').forEach(node => {
+            node.classList.remove('hidden');
+        });
+        deleteBtn.classList.add('hidden');
+        cancelBtn.classList.remove('hidden');
+
+    });
+    cancelBtn.addEventListener('click',(event) => {
+        event.preventDefault();
+        document.getElementById("alert-remove").classList.add('hidden');
+        document.querySelectorAll('#ref-to-delete').forEach(node => {
+           node.value = '0';
+        });
+        deleteBtn.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
+        document.querySelectorAll('#selection-references').forEach(node => {
+            node.classList.remove('hidden');
+        });
+        document.querySelectorAll('#ref-to-delete').forEach(node => {
+            node.classList.add('hidden');
+            node.checked = false;
+        });
+    });
+
+}

@@ -21,6 +21,17 @@
     hover:border-transparent
     rounded
 }
+.blue-outline-btn {
+    @apply bg-transparent
+    hover:bg-blue-500
+    text-blue-400
+    font-semibold
+    hover:text-white
+    py-2 px-4 border
+    border-blue-500
+    hover:border-transparent
+    rounded
+}
 .rose-outline-btn{
     @apply
     bg-transparent
@@ -54,4 +65,31 @@
 .textarea-height{
     min-height: 150px;
     @apply min-w-full
+}
+.rotate-source{
+    writing-mode: vertical-rl;
+}
+.source-color-user {
+    @apply
+    bg-gradient-to-tl from-[#11998e] to-[#ffffff] /*via-cyan-900*/
+    text-gray-200
+}
+.source-color-bibtex {
+    @apply
+    bg-gradient-to-tl from-[#2980b9] to-[#ffffff] /*via-cyan-900*/
+    text-gray-200
+}
+.source-color-grobid {
+    @apply
+    bg-gradient-to-tl from-[#f12711] to-[#ffffff] /*via-cyan-900*/
+    text-gray-200
+}
+.box-height-none-ref {
+    background: linear-gradient(white, white) padding-box,
+    linear-gradient(to right, darkblue, darkorchid) border-box;
+    border: transparent;
+    min-height: 30vh;
+}
+.color-box-none{
+    box-shadow: 5px 5px rgba(10, 160, 190, 0.7), 10px 10px rgba(0, 140, 195, 0.5), 15px 15px rgba(0, 95, 185, 0.3), 20px 20px rgba(10, 50, 175, 0.1);
 }

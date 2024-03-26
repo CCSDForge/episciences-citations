@@ -10,6 +10,7 @@ class PaperReferences
 {
     public const SOURCE_METADATA_GROBID = 'GROBID';
     public const SOURCE_METADATA_EPI_USER = 'USER';
+    public const SOURCE_METADATA_BIBTEX_IMPORT = 'BIBTEX';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -56,7 +57,9 @@ class PaperReferences
 
     public function setSource(string $source): self
     {
-        if (!in_array($source, array(self::SOURCE_METADATA_GROBID, self::SOURCE_METADATA_EPI_USER), true)) {
+        if (!in_array($source, array(self::SOURCE_METADATA_GROBID,
+            self::SOURCE_METADATA_EPI_USER,
+            self::SOURCE_METADATA_BIBTEX_IMPORT), true)) {
             throw new \InvalidArgumentException("Invalid status");
         }
         $this->source = $source;

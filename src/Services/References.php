@@ -7,7 +7,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class References {
 
-    public function __construct(private EntityManagerInterface $entityManager,private Grobid $grobid)
+    public function __construct(private EntityManagerInterface $entityManager,private Grobid $grobid, private Bibtex $bibtex)
     {
     }
 
@@ -22,25 +22,34 @@ class References {
         $orderChanged = 0;
         foreach ($form['paperReferences'] as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
-            $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-            if (is_null($user)) {
-                $user = new UserInformations();
-                $user->setId($userInfo['UID']);
-                $user->setSurname($userInfo['FIRSTNAME']);
-                $user->setName($userInfo['LASTNAME']);
-            }
-            if (!is_null($ref)) {
-               if (isset($paperReference['accepted'])) {
-                   $ref->setAccepted($paperReference['accepted']);
-                   $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
-                   $ref->setUpdatedAt(new \DateTimeImmutable());
-                   $ref->setUid($user);
-                   $user->addPaperReferences($ref);
-                   $this->entityManager->persist($ref);
-                   $refChanged++;
+            if (!isset($paperReference['checkboxIdTodelete'])) {
+                $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+                if (is_null($user)) {
+                    $user = new UserInformations();
+                    $user->setId($userInfo['UID']);
+                    $user->setSurname($userInfo['FIRSTNAME']);
+                    $user->setName($userInfo['LASTNAME']);
                 }
+                if (!is_null($ref)) {
+                    if (isset($paperReference['accepted'])) {
+                        if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
+                           $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+                        }
+                        $ref->setAccepted($paperReference['accepted']);
+                        $ref->setUpdatedAt(new \DateTimeImmutable());
+                        $ref->setUid($user);
+                        $user->addPaperReferences($ref);
+                        $this->entityManager->persist($ref);
+                        $refChanged++;
+                    }
+                    $this->entityManager->flush();
+                }
+            } else {
+                $this->entityManager->remove($ref);
                 $this->entityManager->flush();
+                $refChanged++;
             }
+
         }
         $orderChanged = $this->persistOrderRef($form['orderRef'], $orderChanged);
         $this->entityManager->flush();
@@ -66,6 +75,7 @@ class References {
             /** @var PaperReferences $reference */
             foreach ($reference->getReference() as $allReferences) {
                 $rawReferences[$reference->getId()]['ref'] = $allReferences;
+                $rawReferences[$reference->getId()]['ref'] = $this->bibtex->getCslRefText($allReferences);
             }
             $rawReferences[$reference->getId()]['isAccepted'] = $reference->getAccepted();
             $rawReferences[$reference->getId()]['referenceOrder'] = $reference->getReferenceOrder();
@@ -110,7 +120,8 @@ class References {
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
             $ref->setDocument($this->entityManager->getRepository(Document::class)->find($form['id']));
-            $ref->setReferenceOrder(count($form['paperReferences'])+1);
+            $counter = isset($form['paperReferences']) ? $this->getLastOrder($form['paperReferences']) + 1 : 0 ;
+            $ref->setReferenceOrder($counter);
             $this->entityManager->persist($ref);
             $this->entityManager->flush();
             return true;
@@ -140,5 +151,18 @@ class References {
 
     public function documentAlreadyExtracted($docId): bool {
         return $this->getDocument($docId) !== null;
+    }
+    public function createDocumentId($docId){
+        $doc = new Document();
+        $doc->setId($docId);
+        $this->entityManager->persist($doc);
+        $this->entityManager->flush();
+        return $doc;
+    }
+
+    public function getLastOrder(array $paperReferences){
+        $paperReferences = array_column($paperReferences, 'reference_order');
+        sort($paperReferences);
+        return $paperReferences[array_key_last($paperReferences)];
     }
 }

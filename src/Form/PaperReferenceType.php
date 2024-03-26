@@ -8,6 +8,7 @@ use App\Form\DataTransformer\JsonTransformer;
 use ModifyReferenceType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ButtonType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
@@ -31,6 +32,7 @@ class PaperReferenceType extends AbstractType
         $builder->add('id',HiddenType::class);
         $builder->add("reference",TextType::class);
         $builder->add('reference_order',HiddenType::class);
+        $builder->add('source',HiddenType::class,['required' => false]);
         $builder->add('accepted', ChoiceType::class, [
             'choices'  =>
                 [   'Yes' => true,
@@ -53,6 +55,18 @@ class PaperReferenceType extends AbstractType
             'mapped' => false,
             'required' => false,
             'label' => false,
+        ]);
+        $builder->add('checkboxIdTodelete', CheckboxType::class, [
+            'label'    => false,
+            'required' => false,
+            'mapped' => false,
+            'attr' => ['class' => 'tinymce'],
+        ]);
+        $builder->add('isDirtyTextAreaModifyRef',TextType::class,[
+                'attr' => ['class' => 'tinymce hidden'],
+                'mapped' => false,
+                'required' => false,
+                'label' => false,
         ]);
 
         $builder->add('modifyBtn', ButtonType::class,[
