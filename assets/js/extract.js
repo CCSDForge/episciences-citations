@@ -192,10 +192,12 @@ function closeInfoAlert() {
         event.preventDefault();
         document.querySelector("div#alert-drag-drop").classList.add('hidden');
     });
-    document.querySelector("button#alert-remove").addEventListener('click',(event)=>{
-        event.preventDefault();
-        document.querySelector("div#alert-remove").classList.add('hidden');
-    });
+    if (document.querySelector("#alert-remove")){
+        document.querySelector("button#alert-remove").addEventListener('click',(event)=>{
+            event.preventDefault();
+            document.querySelector("div#alert-remove").classList.add('hidden');
+        });
+    }
 }
 
 function closeFlashMessage(){
@@ -385,34 +387,35 @@ function manageBibtex(){
 function removeReference(){
     let deleteBtn = document.getElementById("select-delete-ref");
     let cancelBtn = document.getElementById("cancel-delete-ref");
-    deleteBtn.addEventListener('click',(event) => {
-        event.preventDefault();
-        document.getElementById("alert-remove").classList.remove('hidden');
-        document.querySelectorAll('#selection-references').forEach(node => {
-            node.classList.add('hidden');
-        });
-        document.querySelectorAll('#ref-to-delete').forEach(node => {
-            node.classList.remove('hidden');
-        });
-        deleteBtn.classList.add('hidden');
-        cancelBtn.classList.remove('hidden');
+    if (deleteBtn && cancelBtn){
+        deleteBtn.addEventListener('click',(event) => {
+            event.preventDefault();
+            document.getElementById("alert-remove").classList.remove('hidden');
+            document.querySelectorAll('#selection-references').forEach(node => {
+                node.classList.add('hidden');
+            });
+            document.querySelectorAll('#ref-to-delete').forEach(node => {
+                node.classList.remove('hidden');
+            });
+            deleteBtn.classList.add('hidden');
+            cancelBtn.classList.remove('hidden');
 
-    });
-    cancelBtn.addEventListener('click',(event) => {
-        event.preventDefault();
-        document.getElementById("alert-remove").classList.add('hidden');
-        document.querySelectorAll('#ref-to-delete').forEach(node => {
-           node.value = '0';
         });
-        deleteBtn.classList.remove('hidden');
-        cancelBtn.classList.add('hidden');
-        document.querySelectorAll('#selection-references').forEach(node => {
-            node.classList.remove('hidden');
+        cancelBtn.addEventListener('click',(event) => {
+            event.preventDefault();
+            document.getElementById("alert-remove").classList.add('hidden');
+            document.querySelectorAll('#ref-to-delete').forEach(node => {
+                node.value = '0';
+            });
+            deleteBtn.classList.remove('hidden');
+            cancelBtn.classList.add('hidden');
+            document.querySelectorAll('#selection-references').forEach(node => {
+                node.classList.remove('hidden');
+            });
+            document.querySelectorAll('#ref-to-delete').forEach(node => {
+                node.classList.add('hidden');
+                node.checked = false;
+            });
         });
-        document.querySelectorAll('#ref-to-delete').forEach(node => {
-            node.classList.add('hidden');
-            node.checked = false;
-        });
-    });
-
+    }
 }

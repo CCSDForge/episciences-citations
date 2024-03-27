@@ -128,8 +128,8 @@ class Bibtex
             $this->entityManager->flush();
         }
         $bibtex = $this->convertBibtexToArray($bibtexFile);
-        if (isset($bibtex['message'])) {
-            return ['error' => $bibtex['message']];
+        if (isset($bibtex['error'])) {
+            return ['error' => $bibtex['error']];
         }
 
         foreach ($bibtex as $bibtexInfo) {

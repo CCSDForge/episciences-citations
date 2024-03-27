@@ -44,10 +44,6 @@
             <button id="accept-all" class="emerald-outline-btn w-1/2">{{ "Accept all references"|trans }}</button>
             <button id="decline-all" class="flex-shrink-1 rose-outline-btn w-1/2">{{ "Decline all references"|trans }}</button>
         </div>
-        <div class="flex mb-2 w-11/12 gap-x-2">
-            <button id="select-delete-ref" class="rose-outline-btn w-full">{{ "Remove references"|trans }}</button>
-            <button id="cancel-delete-ref" class="orange-outline-btn w-full hidden">{{ "Cancel Delete"|trans }}</button>
-        </div>
         {% if form.paperReferences|length is same as(0) %}
             <div class="flex box-height-none-ref box-border border-4 w-11/12 justify-center color-box-none mb-4 mt-4">
                 <p class="align-middle m-auto">{{ "No references were extracted or founded"|trans }}</p>
@@ -56,19 +52,25 @@
         {% if form.paperReferences|length is same as(0) %}
             {{ form_row(form.paperReferences,{ 'attr':{'class':'hidden'} }) }}
         {% else %}
-        <div id="alert-remove" class="bg-amber-50 text-amber-500 px-4 py-3 shadow-md w-11/12 mb-2 relative hidden" role="alert">
-            <div class="flex">
-                <div class="py-1"><svg class="fill-current h-6 w-6 text-amber-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
-                <div>
-                    <p class="font-bold">{{ "To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button"|trans }}</p>
-                    <span id="alert-remove" class="absolute inset-y-0 right-0 px-4 py-3">
-                            <button id="alert-remove" class="transition ease-in-out delay-150 hover:-translate-y-0.5">
-                                <svg class="fill-current h-6 w-6 text-amber-500 hover:text-amber-700 pointer-events-none" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
-                            </button>
+        {% if form.paperReferences|length is not same as(0) %}
+            <div class="flex mb-2 w-11/12 gap-x-2">
+                <button id="select-delete-ref" class="rose-outline-btn w-full">{{ "Remove references"|trans }}</button>
+                <button id="cancel-delete-ref" class="orange-outline-btn w-full hidden">{{ "Cancel Delete"|trans }}</button>
+            </div>
+            <div id="alert-remove" class="bg-amber-50 text-amber-500 px-4 py-3 shadow-md w-11/12 mb-2 relative hidden" role="alert">
+                <div class="flex">
+                    <div class="py-1"><svg class="fill-current h-6 w-6 text-amber-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
+                    <div>
+                        <p class="font-bold">{{ "To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button"|trans }}</p>
+                        <span id="alert-remove" class="absolute inset-y-0 right-0 px-4 py-3">
+                                <button id="alert-remove" class="transition ease-in-out delay-150 hover:-translate-y-0.5">
+                                    <svg class="fill-current h-6 w-6 text-amber-500 hover:text-amber-700 pointer-events-none" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+                                </button>
                         </span>
+                    </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
         <div id="sortref" class="w-11/12">
                 {% for paperReferences in form.paperReferences %}
                     <div class="grid grid-cols-12 grid-flow-row-dense">
