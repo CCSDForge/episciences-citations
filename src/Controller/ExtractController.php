@@ -94,6 +94,9 @@ class ExtractController extends AbstractController
                 'notice',
                 $translator->trans('No reference found in the PDF')
             );
+            if ($this->references->getDocument($docId) === null) {
+                $this->references->createDocumentId($docId);
+            }
         }
         return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
     }
