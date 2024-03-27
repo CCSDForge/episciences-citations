@@ -53,11 +53,11 @@ class ExtractController extends AbstractController
     {
 
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
-        if ($this->references->getDocument($docId) === null){
-            $this->references->createDocumentId($docId);
-        }
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
         if ($request->query->get('exportbib') === "1") {
+            if ($this->references->getDocument($docId) === null){
+                $this->references->createDocumentId($docId);
+            }
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
         if (isset($getPdf['status']) && $getPdf['status'] === 404) {
