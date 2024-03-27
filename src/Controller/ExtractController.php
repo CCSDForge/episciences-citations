@@ -53,13 +53,13 @@ class ExtractController extends AbstractController
     {
 
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
-        if ($request->query->get('exportbib') === "1"){
-            if ($this->references->getDocument($docId) === null){
-                $this->references->createDocumentId($docId);
-            }
-            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        if ($this->references->getDocument($docId) === null){
+            $this->references->createDocumentId($docId);
         }
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        if ($request->query->get('exportbib') === "1") {
+            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        }
         if (isset($getPdf['status']) && $getPdf['status'] === 404) {
             throw $this->createNotFoundException('Unable to get PDF from Episciences');
         }
@@ -78,6 +78,12 @@ class ExtractController extends AbstractController
         }
 
         if ($this->references->documentAlreadyExtracted($docId)) {
+            if (empty($this->references->getReferences($docId,'all'))){
+                $this->addFlash(
+                    'notice',
+                    $translator->trans('No reference found in the PDF')
+                );
+            }
             $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
             return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
         }
