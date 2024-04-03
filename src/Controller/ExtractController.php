@@ -205,7 +205,7 @@ class ExtractController extends AbstractController
         if ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('References and order saved')
+                $translator->trans('References and sorting saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(

@@ -76,6 +76,11 @@ class References {
             foreach ($reference->getReference() as $allReferences) {
                 $rawReferences[$reference->getId()]['ref'] = $allReferences;
                 $rawReferences[$reference->getId()]['ref'] = $this->bibtex->getCslRefText($allReferences);
+                $jsonReference = json_decode($allReferences, true, 512, JSON_THROW_ON_ERROR);
+                // Check if 'csl' key is set in $jsonReference
+                if (array_key_exists('csl',$jsonReference)) {
+                    $rawReferences[$reference->getId()]['csl'] = $allReferences;
+                }
             }
             $rawReferences[$reference->getId()]['isAccepted'] = $reference->getAccepted();
             $rawReferences[$reference->getId()]['referenceOrder'] = $reference->getReferenceOrder();
