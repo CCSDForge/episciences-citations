@@ -49,16 +49,16 @@ class Bibtex
         } catch (ParserException $exception) {
             // The BibTeX isn't valid
             $this->logger->error('BIBTEX NOT VALID => '. $exception->getMessage(),['file'=> $exception->getFile()]);
-            return ["error" => 'Bibtex is not valid'];
+            return ["error" => 'BibTeX is not valid'];
         } catch (ExceptionInterface $exception) {
             // Alternatively, you can use this exception to catch all of them at once
             $this->logger->error('EXCEPTION FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
-            return ["error" => 'Something went wrong with the converter bibtex'];
+            return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
         } catch (\ErrorException $exception) {
             $this->logger->error('ERROR FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
-            return ["error" => 'Something went wrong with the converter bibtex'];
+            return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
         }
         return $entries;
     }

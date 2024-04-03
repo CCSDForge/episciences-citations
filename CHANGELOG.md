@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [23](https://github.com/CCSDForge/episciences-citations/issues/23) Add support to import BibTeX file in the app
 - Feature to remove references
 - Feature to indicate if a user has changed the citation, if it's edited
-- Display informative box if citations is not founded, in the page view
+- Display informative box if citations is not found, in the page view
 
 - Add custom error page 404 and 403
 - Add support url doi.org
