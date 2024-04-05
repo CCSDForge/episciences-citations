@@ -181,6 +181,8 @@ class Bibtex
             $bibliography = $citeProc->render(json_decode($jsonArray), "bibliography");
             // Process raw reference and assign to 'raw_reference' key
             $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+            $jsonReference['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING
+                ,'',$jsonReference['raw_reference']);
             unset($jsonReference['csl']);
             return json_encode($jsonReference);
         }
