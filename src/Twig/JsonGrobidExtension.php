@@ -2,6 +2,7 @@
 // src/Twig/AppExtension.php
 namespace App\Twig;
 
+use App\Services\Bibtex;
 use JsonException;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -130,6 +131,8 @@ class JsonGrobidExtension extends AbstractExtension
                         ($jsonArray, false, 512, JSON_THROW_ON_ERROR));
                         // Process raw reference and assign to 'raw_reference' key
                         $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+                        $jsonReference['raw_reference'] = str_replace(Bibtex::REPLACE_CSL_EXCEPTION_STRING
+                            ,'',$jsonReference['raw_reference']);
                         unset($jsonReference['csl']);
                         $jsonReference['forbiddenModify'] = 1;
                     }

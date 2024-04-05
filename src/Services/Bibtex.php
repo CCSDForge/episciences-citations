@@ -21,6 +21,7 @@ use Seboettg\CiteProc\StyleSheet;
 
 class Bibtex
 {
+    public CONST REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
 
     public function __construct(private Doi $doi,private EntityManagerInterface $entityManager, private LoggerInterface $logger)
     {
