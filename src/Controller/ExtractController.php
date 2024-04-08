@@ -158,12 +158,19 @@ class ExtractController extends AbstractController
                     $this->flashMessageForChoices($userChoice, $translator);
                 } elseif ($form->get('submitImportBib')->isClicked()){
                     $bibtexFile = $form->get('bibtexFile')->getData();
-                    $process = $this->bibtex->processBibtex($bibtexFile,
-                        $this->container->get('security.token_storage')->getToken()->getAttributes(),$docId);
-                    if (!empty($process)){
+                    if ($bibtexFile !== null){
+                        $process = $this->bibtex->processBibtex($bibtexFile,
+                            $this->container->get('security.token_storage')->getToken()->getAttributes(),$docId);
+                        if (!empty($process)){
+                            $this->addFlash(
+                                'error',
+                                $translator->trans($process['error'])
+                            );
+                        }
+                    } else {
                         $this->addFlash(
                             'error',
-                            $translator->trans($process['error'])
+                            $translator->trans('Please add a BibTeX file')
                         );
                     }
                 }
