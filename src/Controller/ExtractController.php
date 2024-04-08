@@ -174,7 +174,11 @@ class ExtractController extends AbstractController
                         );
                     }
                 }
-                $session->set('openModalClose', 1);
+                $session->set('openModalClose', 0);
+                if ($session->get('isAlreadyopenModal') === 0){
+                    $session->set('openModalClose', 1);
+                    $session->set('isAlreadyopenModal',1);
+                }
                 return $this->redirect($request->getUri());
             }
             return $this->render('extract/index.html.twig', [

@@ -64,6 +64,7 @@ class DefaultController extends AbstractController
         $logger->info('SESSION',[$_SESSION]);
         $option = ['url'=> $request->get('url'), 'exportbib' => $request->get('exportbib')];
         $this->setSessionEpiUrlPdf($request,$request->get('url'));
+        $this->setSessionModal($request);
         return $this->redirect($this->generateUrl('app_extract',$option));
     }
 
@@ -108,5 +109,14 @@ class DefaultController extends AbstractController
         $session = $request->getSession();
         $session->set('EpiPdfUrltoExtract', '');
         $session->set('EpiPdfUrltoExtract',$url);
+    }
+
+    /**
+     * @param Request $request
+     * @return void
+     */
+    private function setSessionModal(Request $request){
+        $session = $request->getSession();
+        $session->set('isAlreadyopenModal',0);
     }
 }
