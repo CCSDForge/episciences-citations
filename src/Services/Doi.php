@@ -23,4 +23,18 @@ class Doi
             return "";
         }
     }
+
+
+    public function retrieveReferencesFromCsl(array $csl){
+        $refs = [];
+        $i = 0;
+        foreach ($csl['reference'] as $refInfo){
+            $refs[$i]['raw_reference'] = $refInfo['unstructured'];
+            if (isset($refInfo['DOI'])){
+                $refs[$i]['doi'] = $refInfo['DOI'];
+            }
+            $i++;
+        }
+        return $refs;
+    }
 }

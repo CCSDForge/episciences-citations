@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add support url doi.org
 - [21](https://github.com/CCSDForge/episciences-citations/issues/21) Add placeholder in modify references input
 
+- Script to retrieve refs from a csv file with the list of doi
+
 ### Changed
 - [20](https://github.com/CCSDForge/episciences-citations/issues/20) Add some French translations to harmonize
 - Display the source in the page 
