@@ -79,6 +79,11 @@
     bg-gradient-to-tl from-[#2980b9] to-[#ffffff] /*via-cyan-900*/
     text-gray-200
 }
+.source-color-semantics {
+    @apply
+    bg-gradient-to-tl from-[#b48648] to-[#ffffff] /*via-cyan-900*/
+    text-gray-200
+}
 .source-color-grobid {
     @apply
     bg-gradient-to-tl from-[#f12711] to-[#ffffff] /*via-cyan-900*/
