@@ -21,18 +21,18 @@ use Seboettg\CiteProc\StyleSheet;
 
 class Bibtex
 {
-    public CONST REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
-
+    public const REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
+    private static LoggerInterface $loggerSingleton;
     public function __construct(private Doi $doi,private EntityManagerInterface $entityManager, private LoggerInterface $logger)
     {
-
+        $this->initStatic();
     }
 
     /**
      * @param $bibtexFile
      * @return string[]
      */
-    public function convertBibtexToArray($bibtexFile): array
+    public static function convertBibtexToArray($bibtexFile, $isFile = true): array
     {
         // Create and configure a Listener
         $listener = new Listener();
@@ -43,28 +43,38 @@ class Bibtex
         $parser = new Parser();
         $parser->addListener($listener);
         try {
-            $parser->parseFile($bibtexFile);
+            static::logger();
+            $bibtexLog = ($isFile) ? file_get_contents($bibtexFile) : $bibtexFile;
+            ($isFile) ? $parser->parseFile($bibtexFile) : $parser->parseString($bibtexFile) ;
             $entries = $listener->export();
-            $this->logger->info('bibtexImport => ',['entries' => $entries,
-                'original File' => file_get_contents($bibtexFile)]);
+            self::logger()->info('bibtexImport => ', ['entries' => $entries,
+                'original File' => $bibtexLog
+            ]);
         } catch (ParserException $exception) {
             // The BibTeX isn't valid
-            $this->logger->error('BIBTEX NOT VALID => '. $exception->getMessage(),['file'=> $exception->getFile()]);
+            self::logger()->error('BIBTEX NOT VALID => '. $exception->getMessage(),['file'=> $exception->getFile()]);
             return ["error" => 'BibTeX is not valid'];
         } catch (ExceptionInterface $exception) {
             // Alternatively, you can use this exception to catch all of them at once
-            $this->logger->error('EXCEPTION FROM BIBTEX CONVERTER => '. $exception->getMessage(),
+            self::logger()->error('EXCEPTION FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
             return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
         } catch (\ErrorException $exception) {
-            $this->logger->error('ERROR FROM BIBTEX CONVERTER => '. $exception->getMessage(),
+            self::logger()->error('ERROR FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
             return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
         }
         return $entries;
     }
-
-    public function generateCSL($entry): array
+    public function initStatic()
+    {
+        self::$loggerSingleton = $this->logger;
+    }
+    public static function logger(): LoggerInterface
+    {
+        return self::$loggerSingleton;
+    }
+    public static function generateCSL($entry): array
     {
         $csl = [
             'type' => lcfirst($entry['type']),
@@ -128,7 +138,7 @@ class Bibtex
             }
             $this->entityManager->flush();
         }
-        $bibtex = $this->convertBibtexToArray($bibtexFile);
+        $bibtex = self::convertBibtexToArray($bibtexFile);
         if (isset($bibtex['error'])) {
             return ['error' => $bibtex['error']];
         }
@@ -139,7 +149,7 @@ class Bibtex
                 $reference = (['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
                     'doi' => $bibtexInfo['crossref_doi']]);
             } else {
-                $csl = $this->generateCSL($bibtexInfo);
+                $csl = self::generateCSL($bibtexInfo);
                 $reference = (['csl' => $csl]);
             }
             $ref = new PaperReferences();

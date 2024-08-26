@@ -45,5 +45,8 @@ services:
         arguments:
             $pdfFolder: '%kernel.project_dir%/var/data/'
             $apiRight: '%env(string:API_RIGHT_URL)%'
+    App\Services\Semanticsscholar:
+        arguments:
+            $apiKeyS2: '%env(string:API_S2_KEY)%'
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

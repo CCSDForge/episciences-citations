@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 -->
 
+## V1.1.2
+### Added
+- Script to import bibliographical references from Semantics Scholar from a CSV list
+  CSV format is : `doi,docid`
+
 ## V1.1.1
 
 ### Added
