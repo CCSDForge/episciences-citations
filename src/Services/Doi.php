@@ -23,6 +23,21 @@ class Doi
             return "";
         }
     }
+    public function getBibtex(string $doi)
+    {
+        $client = new Client();
+        try {
+            $response = $client->get(self::DOI_URL.$doi, [
+                'headers' => [
+                    'Accept' => 'application/x-bibtex',
+                ]
+            ]);
+            return $response->getBody()->getContents();
+        } catch (GuzzleException $e) {
+            return "";
+        }
+    }
+
 
 
     public function retrieveReferencesFromCsl(array $csl){

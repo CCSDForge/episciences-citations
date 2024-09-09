@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Script to import bibliographical references from semantics scholar from a csv list
-- 
+- Script to output bibtex from Semantic scholar
 ## V1.1
 
 ### Added
