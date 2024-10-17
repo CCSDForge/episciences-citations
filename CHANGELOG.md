@@ -19,8 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Script to import bibliographical references from Semantics Scholar from a CSV list
   CSV format is : `doi,docid`
+- Script to output bibtex, in order to fix the reference with another software and reimport it as .bib
 
 ## V1.1.1
+- Script to import bibliographical references from semantics scholar from a csv list
+
+## V1.1
 
 ### Added
 - Script to import bibliographical references from Crossref for articles previously published
