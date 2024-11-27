@@ -152,16 +152,24 @@ class EpisciencesController extends AbstractController {
      */
     public function checkCors(Request $request): bool
     {
-        $this->logger->info('check CORS for this url : ',
-            [
-                'ORIGIN' => $request->headers->get('origin'),
-                'HOST' => $request->headers->get('host')
-            ]);
-        preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('origin'), $matchesOrigin);
-        preg_match('/(' . $this->getParameter("cors_site") . ')$/', $request->headers->get('host'), $matchesHost);
+        $this->logger->info('check CORS for this url : ', [
+            'ORIGIN' => $request->headers->get('origin'),
+            'HOST' => $request->headers->get('host')
+        ]);
+
+        // Ensure the headers are strings
+        $origin = $request->headers->get('origin') ?? '';
+        $host = $request->headers->get('host') ?? '';
+
+        // Perform preg_match with safe inputs
+        preg_match('/(' . preg_quote($this->getParameter("cors_site"), '/') . ')$/', $origin, $matchesOrigin);
+        preg_match('/(' . preg_quote($this->getParameter("cors_site"), '/') . ')$/', $host, $matchesHost);
+
         if (!empty($matchesOrigin) || !empty($matchesHost)) {
             return true;
         }
+
         return false;
     }
+
 }
