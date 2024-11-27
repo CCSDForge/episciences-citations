@@ -3,10 +3,11 @@
 namespace App\Controller;
 
 use App\Form\DocumentType;
+use App\Services\Bibtex;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
-use App\Services\Bibtex;
+use JsonException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
@@ -28,68 +29,77 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 class ExtractController extends AbstractController
 {
 
-    public function __construct(private Grobid $grobid,
-                                private References $references,
-                                private Episciences $episciences,
-                                private Bibtex $bibtex,
-                                private LoggerInterface $logger,
+    public function __construct(private Grobid             $grobid,
+                                private References         $references,
+                                private Episciences        $episciences,
+                                private Bibtex             $bibtex,
+                                private LoggerInterface    $logger,
                                 private ValidatorInterface $validator)
     {
     }
 
     /**
      * @param Request $request
+     * @param TranslatorInterface $translator
      * @return RedirectResponse|Response
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
+     * @throws JsonException @throws \JsonException
      * @throws NotFoundExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ServerExceptionInterface
      * @throws TransportExceptionInterface @throws \JsonException
      */
     #[Route('/extract', name: 'app_extract')]
-
-    public function extract(Request $request,TranslatorInterface $translator) : RedirectResponse | Response
+    public function extract(Request $request, TranslatorInterface $translator): RedirectResponse|Response
     {
+
 
         $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+
+        $this->logger->info('Extracting for docid ', ['DocId' => $docId]);
+        $this->logger->info('Extracting for pdf ', ['PDF' => $getPdf]);
+
         if ($request->query->get('exportbib') === "1") {
-            if ($this->references->getDocument($docId) === null){
+            if ($this->references->getDocument($docId) === null) {
                 $this->references->createDocumentId($docId);
             }
-            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
         if (isset($getPdf['status']) && $getPdf['status'] === 404) {
+            $this->logger->error('Unable to get PDF from Episciences ', ['PDF' => $getPdf]);
             throw $this->createNotFoundException('Unable to get PDF from Episciences');
+
         }
         $session = $request->getSession();
         $session->set('openModalClose', 0);
-        if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')){
+        if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')) {
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
-            $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
-            if ($insertRef === false){
+            $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
+            if ($insertRef === false) {
                 $this->addFlash(
                     'notice',
                     $translator->trans('No reference found in the PDF')
                 );
             }
-            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
 
         if ($this->references->documentAlreadyExtracted($docId)) {
-            if (empty($this->references->getReferences($docId,'all'))){
+            if (empty($this->references->getReferences($docId, 'all'))) {
                 $this->addFlash(
                     'notice',
                     $translator->trans('No reference found in the PDF')
                 );
             }
             $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
-            return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
+
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
-        $insertRef = $this->grobid->insertReferences($docId,$this->getParameter("deposit_pdf")."/".$docId.".pdf");
-        if ($insertRef === false){
+        $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
+        if ($insertRef === false) {
             $this->addFlash(
                 'notice',
                 $translator->trans('No reference found in the PDF')
@@ -98,7 +108,7 @@ class ExtractController extends AbstractController
                 $this->references->createDocumentId($docId);
             }
         }
-        return $this->redirectToRoute('app_view_ref',['docId'=> $docId]);
+        return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
     }
 
     /**
@@ -109,24 +119,23 @@ class ExtractController extends AbstractController
      * @return Response
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
-     * @throws \JsonException
+     * @throws JsonException
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
-
-    public function viewReference(int $docId, Request $request,
+    public function viewReference(int                 $docId, Request $request,
                                   TranslatorInterface $translator,
-                                  LoggerInterface $logger,
-                                  ValidatorInterface $validator) : Response
+                                  LoggerInterface     $logger,
+                                  ValidatorInterface  $validator): Response
     {
-        $logger->info('view ref page',['docId' => $docId,
-            'attribute cas'=> $this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        $logger->info('view ref page', ['docId' => $docId,
+            'attribute cas' => $this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->isAuthorizeForApp($docId) === true) {
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
 
-            $errors  = $validator->validate($form);
+            $errors = $validator->validate($form);
             if (count($errors) > 0) {
                 foreach ($errors as $violation) {
                     $this->addFlash(
@@ -156,12 +165,12 @@ class ExtractController extends AbstractController
                     $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
                         $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->flashMessageForChoices($userChoice, $translator);
-                } elseif ($form->get('submitImportBib')->isClicked()){
+                } elseif ($form->get('submitImportBib')->isClicked()) {
                     $bibtexFile = $form->get('bibtexFile')->getData();
-                    if ($bibtexFile !== null){
+                    if ($bibtexFile !== null) {
                         $process = $this->bibtex->processBibtex($bibtexFile,
-                            $this->container->get('security.token_storage')->getToken()->getAttributes(),$docId);
-                        if (!empty($process)){
+                            $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
+                        if (!empty($process)) {
                             $this->addFlash(
                                 'error',
                                 $translator->trans($process['error'])
@@ -175,9 +184,9 @@ class ExtractController extends AbstractController
                     }
                 }
                 $session->set('openModalClose', 0);
-                if ($session->get('isAlreadyopenModal') === 0){
+                if ($session->get('isAlreadyopenModal') === 0) {
                     $session->set('openModalClose', 1);
-                    $session->set('isAlreadyopenModal',1);
+                    $session->set('isAlreadyopenModal', 1);
                 }
                 return $this->redirect($request->getUri());
             }
@@ -196,14 +205,18 @@ class ExtractController extends AbstractController
 
     /**
      * @param int $docId
-     * @return BinaryFileResponse
+     * @return bool
+     * @throws ClientExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
-    #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
-    public function getpdf(int $docId): BinaryFileResponse
+    public function isAuthorizeForApp(int $docId): bool
     {
-        $this->logger->info('get PDF in cache => ',['path' => $this->getParameter("deposit_pdf")."/".$docId.".pdf"]);
-        return (new BinaryFileResponse($this->getParameter("deposit_pdf")."/".$docId.".pdf", Response::HTTP_OK))
-            ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE,$docId.".pdf");
+        return $this->episciences->getRightUser($docId,
+            $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 
     /**
@@ -238,17 +251,13 @@ class ExtractController extends AbstractController
 
     /**
      * @param int $docId
-     * @return bool
-     * @throws ClientExceptionInterface
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     * @throws RedirectionExceptionInterface
-     * @throws ServerExceptionInterface
-     * @throws TransportExceptionInterface
+     * @return BinaryFileResponse
      */
-    public function isAuthorizeForApp(int $docId): bool
+    #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
+    public function getpdf(int $docId): BinaryFileResponse
     {
-        return $this->episciences->getRightUser($docId,
-            $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
+        $this->logger->info('get PDF in cache => ', ['path' => $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf"]);
+        return (new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK))
+            ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $docId . ".pdf");
     }
 }

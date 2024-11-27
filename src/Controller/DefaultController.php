@@ -16,8 +16,10 @@ class DefaultController extends AbstractController
     public function __construct(private Episciences $episciences,private RequestStack $requestStack)
     {
     }
+
     /**
      * @param Request $request
+     * @param LoggerInterface $logger
      * @return RedirectResponse
      */
     #[Route('/login', name: 'login')]
@@ -39,7 +41,8 @@ class DefaultController extends AbstractController
      * @return void
      */
     #[Route('/logout', name: 'logout')]
-    public function logout() {
+    public function logout(): void
+    {
         if (($this->getParameter('cas_logout_target') !== null) && (!empty($this->getParameter('cas_logout_target')))) {
             \phpCAS::logoutWithRedirectService($this->getParameter('cas_logout_target'));
         } else {
@@ -48,7 +51,8 @@ class DefaultController extends AbstractController
     }
 
     #[Route('/force', name: 'force')]
-    public function force(Request $request, LoggerInterface $logger) {
+    public function force(Request $request, LoggerInterface $logger): RedirectResponse
+    {
         $logger->notice('force page');
         $logger->info('cas_gateway',[$this->getParameter("cas_gateway")]);
         $logger->info('session before gateway',[$_SESSION]);
@@ -105,7 +109,8 @@ class DefaultController extends AbstractController
      * @return void
      * In case with need to reextract in the app we have infos of which one to extract
      */
-    private function setSessionEpiUrlPdf(Request $request, $url){
+    private function setSessionEpiUrlPdf(Request $request, $url): void
+    {
         $session = $request->getSession();
         $session->set('EpiPdfUrltoExtract', '');
         $session->set('EpiPdfUrltoExtract',$url);
@@ -115,7 +120,8 @@ class DefaultController extends AbstractController
      * @param Request $request
      * @return void
      */
-    private function setSessionModal(Request $request){
+    private function setSessionModal(Request $request): void
+    {
         $session = $request->getSession();
         $session->set('isAlreadyopenModal',0);
     }
