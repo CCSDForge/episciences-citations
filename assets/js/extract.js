@@ -1,4 +1,5 @@
 import { Sortable } from 'sortablejs/modular/sortable.core.esm';
+import DOMPurify from 'dompurify';
 document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById('sortref')){
         let sortEl = Sortable.create(document.getElementById('sortref'),{
@@ -132,9 +133,10 @@ function changeValueOfReference() {
                     doiContent = linkDoiTag.textContent
                 }
                 if (referenceDoiWished.value !== ""){
-                    linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
-                    linkDoiTag.text = referenceDoiWished.value;
-                    linkDoiTag.textContent = referenceDoiWished.value;
+                    const sanitizedValue = DOMPurify.sanitize(referenceDoiWished.value);
+                    linkDoiTag.href = "https://doi.org/"+sanitizedValue;
+                    linkDoiTag.text = sanitizedValue;
+                    linkDoiTag.textContent = sanitizedValue;
                     doiContent = linkDoiTag.textContent
                 } else if (referenceDoiWished.value === "" && linkDoiTag !== null) {
                     linkDoiTag.remove();
