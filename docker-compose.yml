@@ -7,13 +7,13 @@ services:
       dockerfile: docker/apache/Dockerfile
     restart: always
     volumes:
-      - ./src/apache/vhost.conf:/usr/local/apache2/conf/extra/episciences.conf
+      - ./docker/apache/vhost.conf:/usr/local/apache2/conf/extra/episciences-citations.conf
       - .:/var/www/htdocs
       - ./data:/var/www/data
       - ./cache:/var/www/cache
       - ./logs:/var/www/logs
     ports:
-      - "81:80"  # Apache listens on port 80 internally, mapped to 8888 on the host
+      - "80:80"
     depends_on:
       - php-fpm-citations
       - db-citations
@@ -23,11 +23,11 @@ services:
       /bin/sh -c "chown -R www-data:www-data /var/www/data /var/www/cache /var/www/logs && httpd-foreground"
 
 
-  php-fpm:
+  php-fpm-citations:
     container_name: php-fpm-citations
     build:
       context: .
-      dockerfile: src/php-fpm/Dockerfile
+      dockerfile: docker/php-fpm/Dockerfile
     ports:
       - "9004:9004" # Xdebug
     restart: always
@@ -36,7 +36,7 @@ services:
       - ./data:/var/www/data
       - ./cache:/var/www/cache
       - ./logs:/var/www/logs
-      - ./src/php-fpm/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-custom.conf
+      - ./docker/php-fpm/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-custom.conf
       - ./logs/xdebug.log:/var/www/logs
     environment:
       - PHP_FPM_LISTEN_PORT=9000
@@ -71,7 +71,7 @@ services:
 
 
   pma:
-    container_name: 'db-phpmyadmin'
+    container_name: 'db-phpmyadmin-citations'
     image: "phpmyadmin:latest"
     environment:
       - "PMA_PMADB=pma"
