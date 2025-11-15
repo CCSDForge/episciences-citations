@@ -10,6 +10,9 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt|error)|css|images|js)/
             security: false
+        api_public:
+            pattern: ^/visualize-citations
+            security: false
         l3_firewall:
             pattern: ^/
             security: true
