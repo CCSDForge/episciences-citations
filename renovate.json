@@ -9,11 +9,24 @@
     "replacements:all",
     "workarounds:all"
   ],
-  "baseBranches": ["preprod"],
+  "baseBranchPatterns": ["preprod"],
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "matchBaseBranches": ["preprod"],
       "labels": ["preprod-update"]
+    },
+    {
+      "matchManagers": ["composer"],
+      "matchDepTypes": ["require", "require-dev"],
+      "constraintsFiltering": "strict",
+      "ignoreUnstable": false,
+      "composerIgnorePlatformReqs": null,
+      "constraints": {
+        "php": "8.2"
+      }
     }
   ]
 }
