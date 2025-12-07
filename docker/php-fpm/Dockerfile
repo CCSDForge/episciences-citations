@@ -22,6 +22,7 @@ RUN apt-get install -y --no-install-recommends --no-install-suggests \
      git \
      vim \
      poppler-utils \
+     iputils-ping \
     && apt-get clean
 
 RUN pecl install xdebug && \

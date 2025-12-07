@@ -18,7 +18,8 @@ class Episciences {
                                 private ContainerBagInterface $params,
                                 private string $pdfFolder,
                                 private string $apiRight,
-                                private LoggerInterface $logger)
+                                private LoggerInterface $logger,
+                                private bool $forceHttp = false)
     {
     }
 
@@ -32,6 +33,12 @@ class Episciences {
     {
         $this->createDirDataPdf();
         $docId = $this->getDocIdFromUrl($url);
+
+        // Force HTTP instead of HTTPS for internal episciences domains when configured
+        if ($this->forceHttp && str_contains($url, 'episciences.org') && str_starts_with($url, 'https://')) {
+            $url = str_replace('https://', 'http://', $url);
+        }
+
         if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
             try {
             $response = $this->client->request('GET', $url, [
@@ -99,7 +106,8 @@ class Episciences {
     public function getRightUser($docId, $uid): bool {
         try {
             $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
-            return $response;
+            // Convert string response ("true"/"false") to boolean
+            return $response === 'true';
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
             return false;
         }

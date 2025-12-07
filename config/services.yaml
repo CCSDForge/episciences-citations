@@ -45,6 +45,7 @@ services:
         arguments:
             $pdfFolder: '%kernel.project_dir%/var/data/'
             $apiRight: '%env(string:API_RIGHT_URL)%'
+            $forceHttp: '%env(bool:EPISCIENCES_FORCE_HTTP)%'
     App\Services\Semanticsscholar:
         arguments:
             $apiKeyS2: '%env(string:API_S2_KEY)%'
