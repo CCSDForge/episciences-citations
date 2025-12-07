@@ -1,0 +1,7 @@
+framework:
+    http_client:
+        default_options:
+            verify_peer: false
+            verify_host: false
+            timeout: 120
+            max_duration: 120
