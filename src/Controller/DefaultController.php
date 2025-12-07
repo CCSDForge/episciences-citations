@@ -72,10 +72,6 @@ class DefaultController extends AbstractController
         return $this->redirect($this->generateUrl('app_extract',$option));
     }
 
-    /**
-     * @param Request $request
-     * @return Response
-     */
     #[Route(path: ['en' => '/', 'fr' => '/fr'], name: 'index')]
     public function index(Request $request, LoggerInterface $logger) : Response
     {

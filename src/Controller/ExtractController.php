@@ -39,9 +39,6 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param Request $request
-     * @param TranslatorInterface $translator
-     * @return RedirectResponse|Response
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws JsonException @throws \JsonException
@@ -112,12 +109,6 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param int $docId
-     * @param Request $request
-     * @param TranslatorInterface $translator
-     * @param LoggerInterface $logger
-     * @param ValidatorInterface $validator
-     * @return Response
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws JsonException
@@ -209,8 +200,6 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param int $docId
-     * @return bool
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
