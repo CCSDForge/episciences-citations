@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use App\Entity\Document;
 use App\Entity\PaperReferences;
 use Doctrine\ORM\EntityManagerInterface;
-use http\Url;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
@@ -15,8 +13,6 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Symfony\Contracts\Cache\ItemInterface;
-use App\Services\Tei;
 
 class Grobid {
 
