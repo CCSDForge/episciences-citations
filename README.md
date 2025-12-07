@@ -1,6 +1,5 @@
 # Episciences Citations Manager
 
-*alpha release*
 
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)

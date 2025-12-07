@@ -28,3 +28,5 @@ yarn-error.log
 /.idea
 /composer
 /composer.phar
+/tmp/
+/logs/
