@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 <!-- 
@@ -14,6 +14,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 ### Security
 -->
+
+## Unreleased
+
+### Added
+- Modern language switcher component with dropdown menu
+- Stimulus controller for interactive language selection (`language_switcher_controller.js`)
+- Script to output BibTeX from Semantic Scholar
+- GitHub workflows configuration (CodeQL for security analysis)
+- Renovate configuration for automated dependency updates
+- Dependabot configuration
+- Docker configuration improvements with HTTPS support
+- PHP version specification for Symfony server
+
+### Changed
+- Replaced simple language links with modern dropdown interface
+- Updated README.md with comprehensive documentation in English
+- Refactored CORS handling for better performance
+- Refactored Composer configuration to avoid conflicts with other Docker projects
+- Renamed example `.env` file for clarity
+- Updated multiple dependencies:
+  - FontAwesome to v6.7.2
+  - Tailwind CSS to v3.4.18
+  - Webpack to v5.102.1
+  - Core-js to v3.47.0
+  - Sortable.js to v1.15.6
+  - PostCSS to v8.5.6
+  - Symfony packages to latest 6.4.x versions
+  - And many more dependencies via Renovate
+
+### Fixed
+- Security warning from CodeQL analysis
+- Deprecation warnings in Symfony and Doctrine
+- PHP 8.2+ deprecation: `preg_match()` null parameter
+- Prevented public API route from creating unnecessary cookies
+- Bumped serialize-javascript from 6.0.1 to 6.0.2 (security fix)
+
+### Improved
+- Code quality by removing dead code, unused imports, and redundant PHPDoc
+- Translation coverage with additional French and English translations
+- CI/CD pipeline with automated security scanning
+- Performance optimization through CORS refactoring
+
+### Security
+- Configured CodeQL for automated security analysis
+- Fixed security vulnerabilities in dependencies (serialize-javascript)
+- Improved HTTPS support in Docker environment
 
 ## V1.1.2
 ### Added
