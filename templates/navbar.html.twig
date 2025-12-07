@@ -8,8 +8,73 @@
     </div>
     <div class="flex">
         {% if exception is not defined %}
-            <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'en'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">en</a>
-            <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'fr'}))) }}" class="underline flex-shrink-0 justify-center w-10 text-xl text-blue-600 hover:text-blue-800 visited:text-purple-600">fr</a>
+            {# Language Switcher Component #}
+            <div class="relative" data-controller="language-switcher">
+                {# Dropdown Button #}
+                <button
+                    type="button"
+                    data-language-switcher-target="button"
+                    data-action="click->language-switcher#toggle keydown->language-switcher#handleKeydown"
+                    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                >
+                    {# Globe Icon (FontAwesome) #}
+                    <i class="fas fa-globe text-blue-600"></i>
+
+                    {# Current Language Display #}
+                    <span class="uppercase font-semibold">{{ app.request.locale }}</span>
+
+                    {# Chevron Icon #}
+                    <svg class="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                {# Dropdown Menu #}
+                <div
+                    data-language-switcher-target="dropdown"
+                    class="hidden absolute right-0 mt-2 w-56 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50"
+                    role="menu"
+                    aria-orientation="vertical"
+                >
+                    <div class="py-1">
+                        {# English Option #}
+                        <a
+                            href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'en'}))) }}"
+                            class="flex items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150 {{ app.request.locale == 'en' ? 'bg-blue-50 font-semibold' : '' }}"
+                            role="menuitem"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium">EN</span>
+                                <span class="text-xs text-gray-500">English</span>
+                            </div>
+                            {% if app.request.locale == 'en' %}
+                                <svg class="w-5 h-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                </svg>
+                            {% endif %}
+                        </a>
+
+                        {# French Option #}
+                        <a
+                            href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge(app.request.query.all|merge({_locale: 'fr'}))) }}"
+                            class="flex items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150 {{ app.request.locale == 'fr' ? 'bg-blue-50 font-semibold' : '' }}"
+                            role="menuitem"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium">FR</span>
+                                <span class="text-xs text-gray-500">Français</span>
+                            </div>
+                            {% if app.request.locale == 'fr' %}
+                                <svg class="w-5 h-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
+                                </svg>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
 </nav>
