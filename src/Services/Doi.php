@@ -8,7 +8,7 @@ use GuzzleHttp\Exception\GuzzleException;
 class Doi
 {
     public const DOI_URL = 'https://doi.org/';
-    public function getCsl(string $doi)
+    public function getCsl(string $doi): string
     {
         $client = new Client();
         try {
@@ -23,7 +23,7 @@ class Doi
             return "";
         }
     }
-    public function getBibtex(string $doi)
+    public function getBibtex(string $doi): string
     {
         $client = new Client();
         try {
@@ -40,7 +40,8 @@ class Doi
 
 
 
-    public function retrieveReferencesFromCsl(array $csl){
+    public function retrieveReferencesFromCsl(array $csl): array
+    {
         $refs = [];
         $i = 0;
         foreach ($csl['reference'] as $refInfo){

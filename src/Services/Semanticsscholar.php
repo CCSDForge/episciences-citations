@@ -20,7 +20,7 @@ class Semanticsscholar
         try {
             $response = $client->get(self::S2_URL . $doi.'/references'.self::S2_ARG, [
                 'headers' => [
-                    'User-Agent' => 'CCSD Episciences support@episciences.org',
+                    'User-Agent' => 'CCSD Episciences Citations support@episciences.org',
                     'Accept' => 'application/json',
                     'Content-type' => "application/json",
                     'apiKey'=> $this->apiKeyS2,

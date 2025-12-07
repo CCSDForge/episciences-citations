@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Entity\PaperReferences;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\InvalidArgumentException;
+use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -12,7 +13,6 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 class Grobid {
 
@@ -21,7 +21,8 @@ class Grobid {
         private Tei $tei,
         private EntityManagerInterface $entityManager,
         private string $cacheFolder,
-        private string $grobidUrl
+        private string $grobidUrl,
+        private CacheInterface $grobidCache
     ) {
     }
 
@@ -62,35 +63,31 @@ class Grobid {
      * @param $response
      * @return void
      */
-    public function putGrobidReferencesInCache($name, $response) {
-        $cache = new FilesystemAdapter('grobidReferences',0,$this->cacheFolder);
+    public function putGrobidReferencesInCache($name, $response): void
+    {
         try {
-            $sets = $cache->getItem($name);
+            $item = $this->grobidCache->getItem($name);
+            if (!$item->isHit()) {
+                $item->set($response);
+                $this->grobidCache->save($item);
+            }
         } catch (InvalidArgumentException $e) {
             return;
-        }
-        if (!$sets->isHit()) {
-            $sets->set($response);
-            $cache->save($sets);
         }
     }
 
     /**
      * @param $name
-     * @return false|mixed|void
+     * @return false|mixed
      */
-    public function getGrobidReferencesInCache($name) {
-
-        $cache = new FilesystemAdapter('grobidReferences',0,$this->cacheFolder);
+    public function getGrobidReferencesInCache($name): mixed
+    {
         try {
-            $sets = $cache->getItem($name);
+            $item = $this->grobidCache->getItem($name);
+            return $item->isHit() ? $item->get() : false;
         } catch (InvalidArgumentException $e) {
-            return;
-        }
-        if (!$sets->isHit()) {
             return false;
         }
-        return $sets->get();
     }
 
     /**

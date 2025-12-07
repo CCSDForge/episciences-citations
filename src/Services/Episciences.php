@@ -1,8 +1,6 @@
 <?php
 namespace App\Services;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -26,8 +24,6 @@ class Episciences {
     /**
      * @param string $url
      * @return array|bool
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      */
     public function getPaperPDF(string $url): array|bool
     {
@@ -62,7 +58,7 @@ class Episciences {
     public function putPdfInCache($name, $response): bool
     {
         $fp = fopen($this->pdfFolder.$name.'.pdf', 'wb');
-        if (fwrite($fp, $response) === FALSE) {
+        if (fwrite($fp, $response) === false) {
             return false;
         }
         fclose($fp);
@@ -75,7 +71,8 @@ class Episciences {
      * @param string $message
      * @return string
      */
-    public function manageHttpErrorMessagePDF(int $status, string $message) {
+    public function manageHttpErrorMessagePDF(int $status, string $message): string
+    {
 
         if ($status === 404) {
             $message = "PDF not found at the destined address";
@@ -87,18 +84,16 @@ class Episciences {
      * @param string $url
      * @return string
      */
-    public function getDocIdFromUrl(string $url) :string {
-        $explodeUrl = explode('/',$url);
-        foreach ($explodeUrl as $item) {
-            if (preg_match('/^\d*$/', $item) && $item !== ""){
-                return $item;
-            }
+    public function getDocIdFromUrl(string $url): string
+    {
+        // Extraire directement le premier segment numérique de l'URL (optimisation)
+        if (preg_match('#/(\d+)(?:/|$)#', $url, $matches)) {
+            return $matches[1];
         }
         return '';
     }
 
     /**
-     * @throws TransportExceptionInterface
      * @throws ServerExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ClientExceptionInterface
