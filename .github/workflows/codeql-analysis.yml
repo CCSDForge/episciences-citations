@@ -16,7 +16,7 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ main, preprod ]
   schedule:
-    - cron: '0 22 * * 0'
+    - cron: '0 22 * * *'
 
 jobs:
   analyze:
