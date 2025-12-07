@@ -4,7 +4,7 @@
         "@babel/preset-env": "^7.16.0",
         "@hotwired/stimulus": "^3.0.0",
         "@symfony/stimulus-bridge": "^3.2.0",
-        "@symfony/webpack-encore": "^4.0.0",
+        "@symfony/webpack-encore": "^5.3.1",
         "autoprefixer": "^10.4.14",
         "core-js": "^3.23.0",
         "postcss": "^8.4.21",
@@ -26,5 +26,6 @@
     "dependencies": {
         "@fortawesome/fontawesome-free": "^6.4.0",
         "sortablejs": "^1.15.0"
-    }
+    },
+    "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
