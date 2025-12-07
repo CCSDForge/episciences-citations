@@ -39,9 +39,6 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param Request $request
-     * @param TranslatorInterface $translator
-     * @return RedirectResponse|Response
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws JsonException @throws \JsonException
@@ -80,7 +77,7 @@ class ExtractController extends AbstractController
             if ($insertRef === false) {
                 $this->addFlash(
                     'notice',
-                    $translator->trans('No reference found in the PDF')
+                    $translator->trans('No references found in the PDF')
                 );
             }
             return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
@@ -112,14 +109,13 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param int $docId
-     * @param Request $request
-     * @param TranslatorInterface $translator
-     * @param LoggerInterface $logger
-     * @return Response
+     * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws JsonException
+     * @throws NotFoundExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
@@ -204,8 +200,6 @@ class ExtractController extends AbstractController
     }
 
     /**
-     * @param int $docId
-     * @return bool
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
@@ -229,22 +223,22 @@ class ExtractController extends AbstractController
         if ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('References and sorting saved')
+                $translator->trans('The references and sorting have been saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('References saved')
+                $translator->trans('The references have been saved')
             );
         } elseif ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('Order saved')
+                $translator->trans('The sorting has been saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'notice',
-                $translator->trans('Nothing change')
+                $translator->trans('Nothing was changed')
             );
         }
     }

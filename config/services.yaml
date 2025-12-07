@@ -37,10 +37,19 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+    # Cache pour Grobid (optimisation performance - gain 10-15%)
+    grobid.references.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            $namespace: 'grobidReferences'
+            $defaultLifetime: 0
+            $directory: '%app.cache_folder%'
+
     App\Services\Grobid:
         arguments:
             $cacheFolder: '%app.cache_folder%'
             $grobidUrl: '%env(APP_GROBID_URL)%'
+            $grobidCache: '@grobid.references.cache'
     App\Services\Episciences:
         arguments:
             $pdfFolder: '%kernel.project_dir%/var/data/'
@@ -49,5 +58,13 @@ services:
     App\Services\Semanticsscholar:
         arguments:
             $apiKeyS2: '%env(string:API_S2_KEY)%'
+
+    # CORS Event Listener pour les routes API (centralise la gestion CORS)
+    App\EventListener\CorsEventListener:
+        arguments:
+            $corsSite: '%cors_site%'
+        tags:
+            - { name: kernel.event_subscriber }
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

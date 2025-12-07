@@ -132,10 +132,19 @@ function changeValueOfReference() {
                     doiContent = linkDoiTag.textContent
                 }
                 if (referenceDoiWished.value !== ""){
-                    linkDoiTag.href = "https://doi.org/"+referenceDoiWished.value;
-                    linkDoiTag.text = referenceDoiWished.value;
-                    linkDoiTag.textContent = referenceDoiWished.value;
-                    doiContent = linkDoiTag.textContent
+                    // Sanitize DOI value to prevent XSS
+                    const sanitizedDoi = referenceDoiWished.value.trim();
+                    // Prevent javascript: protocol or other malicious schemes
+                    if (sanitizedDoi.toLowerCase().startsWith('javascript:') ||
+                        sanitizedDoi.toLowerCase().startsWith('data:') ||
+                        sanitizedDoi.toLowerCase().startsWith('vbscript:')) {
+                        console.error('Invalid DOI value detected');
+                        return;
+                    }
+                    // Build safe URL
+                    linkDoiTag.href = "https://doi.org/" + encodeURIComponent(sanitizedDoi);
+                    linkDoiTag.textContent = sanitizedDoi;
+                    doiContent = sanitizedDoi;
                 } else if (referenceDoiWished.value === "" && linkDoiTag !== null) {
                     linkDoiTag.remove();
                 }

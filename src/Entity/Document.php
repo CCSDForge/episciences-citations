@@ -58,11 +58,9 @@ class Document
 
     public function removePaperReference(PaperReferences $paperReference): self
     {
-        if ($this->paperReferences->removeElement($paperReference)) {
-            // set the owning side to null (unless already changed)
-            if ($paperReference->getDocument() === $this) {
-                $paperReference->setDocument(null);
-            }
+        // set the owning side to null (unless already changed)
+        if ($this->paperReferences->removeElement($paperReference) && $paperReference->getDocument() === $this) {
+            $paperReference->setDocument(null);
         }
 
         return $this;
