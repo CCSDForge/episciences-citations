@@ -35,3 +35,4 @@ yarn-error.log
 phpstan.neon
 ###< phpstan/phpstan ###
 /docker/apache/ssl/
+/coverage/
