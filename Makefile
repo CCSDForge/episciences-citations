@@ -176,7 +176,7 @@ lint: ## Run all linters (PHP + JS)
 
 lint-php: ## Run PHPStan analysis
 	@echo "$(YELLOW)Running PHPStan...$(NC)"
-	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/phpstan analyse
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/phpstan analyse --memory-limit=512M
 	@echo "$(GREEN)✓ PHPStan analysis completed$(NC)"
 
 lint-js: ## Run ESLint
