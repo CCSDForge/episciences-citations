@@ -20,6 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Modern language switcher component with dropdown menu
 - Stimulus controller for interactive language selection (`language_switcher_controller.js`)
+- **Testing Infrastructure**:
+  - Jest test framework for JavaScript unit tests
+  - Testing Library for DOM testing utilities
+  - PHPStan for PHP static analysis (level 6)
+  - ESLint for JavaScript linting
+  - Babel configuration for Jest
+  - First test suite for language_switcher_controller (3 tests)
+  - Test directory structure (Unit, Integration, Functional, Fixtures)
+  - `.env.test` configuration for test environment
+  - Test coverage reporting with configurable thresholds
+  - Makefile shortcuts for all test and lint commands
+- **GitHub CI/CD Workflows**:
+  - Automated testing workflow (PHP + JavaScript)
+  - Automated linting workflow (PHPStan + ESLint)
+  - Code coverage reporting with Codecov integration
+  - Build verification for production assets
 - Script to output BibTeX from Semantic Scholar
 - GitHub workflows configuration (CodeQL for security analysis)
 - Renovate configuration for automated dependency updates
