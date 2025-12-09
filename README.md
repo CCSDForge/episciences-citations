@@ -3,7 +3,11 @@
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
 ![Symfony](https://img.shields.io/badge/Symfony-6.4-black)
-![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4)
+![PHP](https://img.shields.io/badge/PHP-8.2--8.4-777BB4)
+
+[![Tests](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml)
+[![Lint](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml)
+[![codecov](https://codecov.io/gh/CCSDForge/episciences-citations/branch/main/graph/badge.svg)](https://codecov.io/gh/CCSDForge/episciences-citations)
 
 A modern web application for managing and visualizing citations from [Episciences](https://www.episciences.org/) publications. The software enables automated extraction, processing, and management of bibliographic references from scientific documents.
 
