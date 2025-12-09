@@ -54,3 +54,31 @@ when@test:
                 cost: 4 # Lowest possible value for bcrypt
                 time_cost: 3 # Lowest possible value for argon
                 memory_cost: 10 # Lowest possible value for argon
+
+        # Provider avec utilisateurs test en mémoire
+        providers:
+            test_user_provider:
+                memory:
+                    users:
+                        test_user:
+                            password: 'test'
+                            roles: ['ROLE_USER', 'ROLE_ADMIN']
+                        test_unauthorized:
+                            password: 'test'
+                            roles: []
+
+        # Firewalls simplifiés pour tests (désactive toute sécurité)
+        firewalls:
+            dev:
+                pattern: ^/(_(profiler|wdt|error)|css|images|js)/
+                security: false
+            api_public:
+                pattern: ^/visualize-citations
+                security: false
+            l3_firewall:
+                pattern: ^/Shibboleth.sso
+                security: false
+            main:
+                pattern: ^/
+                # Désactive complètement la sécurité pour les tests
+                security: false

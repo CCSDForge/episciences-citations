@@ -1,4 +1,4 @@
-FROM httpd:2.4-bookworm
+FROM httpd:2.4-trixie
 
 # Install Vim and update packages
 RUN apt-get update && apt-get dist-upgrade -y && apt-get -y install vim iputils-ping && apt-get clean

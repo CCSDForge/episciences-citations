@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.tei-c.org/ns/1.0 /opt/grobid/grobid-home/schemas/xsd/Grobid.xsd"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+    <teiHeader xml:lang="en">
+        <fileDesc>
+            <titleStmt>
+                <title level="a" type="main">Test Document</title>
+            </titleStmt>
+            <publicationStmt>
+                <publisher/>
+                <availability status="unknown">
+                    <licence/>
+                </availability>
+            </publicationStmt>
+            <sourceDesc>
+                <biblStruct>
+                    <analytic>
+                        <title/>
+                        <author>
+                            <persName><forename type="first">John</forename><surname>Doe</surname></persName>
+                        </author>
+                    </analytic>
+                </biblStruct>
+            </sourceDesc>
+        </fileDesc>
+    </teiHeader>
+    <text xml:lang="en">
+        <body/>
+        <back>
+            <div type="references">
+                <listBibl>
+                    <biblStruct xml:id="b0">
+                        <analytic>
+                            <title level="a" type="main">First test reference article</title>
+                            <author>
+                                <persName><forename type="first">Jane</forename><surname>Smith</surname></persName>
+                            </author>
+                        </analytic>
+                        <monogr>
+                            <title level="j">Test Journal</title>
+                            <imprint>
+                                <biblScope unit="volume">42</biblScope>
+                                <biblScope unit="page" from="1" to="10"/>
+                                <date type="published" when="2024"/>
+                            </imprint>
+                        </monogr>
+                        <idno type="DOI">10.1234/test1</idno>
+                        <note type="raw_reference">Smith, J. (2024). First test reference article. Test Journal, 42, 1-10. https://doi.org/10.1234/test1</note>
+                    </biblStruct>
+
+                    <biblStruct xml:id="b1">
+                        <monogr>
+                            <title level="m">Test Book Title</title>
+                            <author>
+                                <persName><forename type="first">Bob</forename><surname>Johnson</surname></persName>
+                            </author>
+                            <imprint>
+                                <publisher>Test Publisher</publisher>
+                                <pubPlace>New York</pubPlace>
+                                <date type="published" when="2023"/>
+                            </imprint>
+                        </monogr>
+                        <note type="raw_reference">Johnson, B. (2023). Test Book Title. New York: Test Publisher.</note>
+                    </biblStruct>
+
+                    <biblStruct xml:id="b2">
+                        <analytic>
+                            <title level="a" type="main">Third reference without DOI</title>
+                            <author>
+                                <persName><forename type="first">Alice</forename><surname>Brown</surname></persName>
+                            </author>
+                        </analytic>
+                        <monogr>
+                            <title level="j">Another Journal</title>
+                            <imprint>
+                                <biblScope unit="volume">15</biblScope>
+                                <biblScope unit="issue">3</biblScope>
+                                <biblScope unit="page" from="45" to="67"/>
+                                <date type="published" when="2022"/>
+                            </imprint>
+                        </monogr>
+                        <note type="raw_reference">Brown, A. (2022). Third reference without DOI. Another Journal, 15(3), 45-67.</note>
+                    </biblStruct>
+                </listBibl>
+            </div>
+        </back>
+    </text>
+</TEI>

@@ -30,3 +30,9 @@ yarn-error.log
 /composer.phar
 /tmp/
 /logs/
+
+###> phpstan/phpstan ###
+phpstan.neon
+###< phpstan/phpstan ###
+/docker/apache/ssl/
+/coverage/

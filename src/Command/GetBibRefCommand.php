@@ -176,7 +176,6 @@ class GetBibRefCommand extends Command
             $this->logger->info('CSL From ARXIV ID/Resource not found => ' . $externalIds['DOI']);
             $output->writeln('SCRIPT CSV => CSL From ARXIV ID/Resource not found =>' . $externalIds['DOI']);
         }
-        $this->insertRefInDb($newRef, $counterRef, $docId, PaperReferences::SOURCE_SEMANTICS_SCHOLAR);
         return $csl;
     }
 
@@ -279,6 +278,7 @@ class GetBibRefCommand extends Command
      */
     public function processCslToGetRef(string $csl, array $arrayDoiInDb, array $arrayRefTxt, OutputInterface $output, int $counterRef, int|string $docId): mixed
     {
+        $refRetrieved = null;
         if ($csl !== '') {
             $refForDb = $this->doiService->retrieveReferencesFromCsl(json_decode($csl, true, 512, JSON_THROW_ON_ERROR));
             foreach ($refForDb as $refRetrieved) {
@@ -302,6 +302,7 @@ class GetBibRefCommand extends Command
      * @param mixed $refRetrieved
      * @param int $counterRef
      * @param int|string $docId
+     * @param string $source
      * @return array
      */
     public function insertRefInDb(mixed $refRetrieved, int $counterRef, int|string $docId, $source = PaperReferences::SOURCE_METADATA_EPI_USER): array
