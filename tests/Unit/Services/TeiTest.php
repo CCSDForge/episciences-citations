@@ -30,7 +30,7 @@ class TeiTest extends TestCase
     #[Test]
     public function testGetReferencesInTei_ValidTei_ExtractsReferences(): void
     {
-        // Arrange - Utiliser le fichier TEI sample
+        // Arrange - Use the TEI sample file
         $teiXml = file_get_contents(__DIR__ . '/../../Fixtures/grobid_tei_sample.xml');
 
         // Act
@@ -40,7 +40,7 @@ class TeiTest extends TestCase
         $this->assertIsArray($result);
         $this->assertGreaterThan(0, count($result), 'Should extract at least one reference');
 
-        // Vérifier structure de la première référence
+        // Verify structure of the first reference
         $firstRef = json_decode($result[0], true);
         $this->assertArrayHasKey('raw_reference', $firstRef);
         $this->assertNotEmpty($firstRef['raw_reference']);
@@ -49,7 +49,7 @@ class TeiTest extends TestCase
     #[Test]
     public function testGetReferencesInTei_InvalidXml_ReturnsEmpty(): void
     {
-        // Arrange - XML invalide
+        // Arrange - Invalid XML
         $invalidXml = '<invalid>not a TEI document</invalid>';
 
         // Act
@@ -71,13 +71,13 @@ class TeiTest extends TestCase
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
-        // Mock: document n'existe pas
+        // Mock: document does not exist
         $this->documentRepository->expects($this->once())
             ->method('find')
             ->with($docId)
             ->willReturn(null);
 
-        // Mock repository pour removeAllRefGrobidSource
+        // Mock repository for removeAllRefGrobidSource
         $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([]);
 
@@ -86,18 +86,18 @@ class TeiTest extends TestCase
             ->with(PaperReferences::class)
             ->willReturn($refRepo);
 
-        // Expect persist appelé 2 fois (2 références)
+        // Expect persist called 2 times (2 references)
         $this->entityManager->expects($this->exactly(2))
             ->method('persist');
 
-        // Expect flush appelé 2 fois (removeAll + insert)
+        // Expect flush called 2 times (removeAll + insert)
         $this->entityManager->expects($this->exactly(2))
             ->method('flush');
 
         // Act
         $this->service->insertReferencesInDB($references, $docId, $source);
 
-        // Assert - vérifié via expectations
+        // Assert - verified via expectations
         $this->assertTrue(true);
     }
 
@@ -111,7 +111,7 @@ class TeiTest extends TestCase
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
-        // Créer document existant avec une référence acceptée
+        // Create existing document with an accepted reference
         $existingDoc = new Document();
         $existingDoc->setId($docId);
 
@@ -124,13 +124,13 @@ class TeiTest extends TestCase
 
         $existingDoc->addPaperReference($acceptedRef);
 
-        // Mock: document existe
+        // Mock: document exists
         $this->documentRepository->expects($this->once())
             ->method('find')
             ->with($docId)
             ->willReturn($existingDoc);
 
-        // Mock repository pour removeAllRefGrobidSource
+        // Mock repository for removeAllRefGrobidSource
         $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([$acceptedRef]);
 
@@ -139,22 +139,22 @@ class TeiTest extends TestCase
             ->with(PaperReferences::class)
             ->willReturn($refRepo);
 
-        // Expect persist pour la référence acceptée (réordonnancement) + nouvelle référence
+        // Expect persist for accepted reference (reordering) + new reference
         $this->entityManager->expects($this->atLeast(2))
             ->method('persist');
 
-        // Expect flush (3 fois: removeAll + réordonnancement + insert)
+        // Expect flush (3 times: removeAll + reordering + insert)
         $this->entityManager->expects($this->exactly(3))
             ->method('flush');
 
-        // Expect remove ne soit PAS appelé (référence acceptée)
+        // Expect remove NOT to be called (accepted reference)
         $this->entityManager->expects($this->never())
             ->method('remove');
 
         // Act
         $this->service->insertReferencesInDB($newReferences, $docId, $source);
 
-        // Assert - référence acceptée préservée + nouvelle référence ajoutée
+        // Assert - accepted reference preserved + new reference added
         $this->assertCount(2, $existingDoc->getPaperReferences());
     }
 }

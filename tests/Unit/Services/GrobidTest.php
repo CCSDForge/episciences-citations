@@ -29,8 +29,8 @@ class GrobidTest extends TestCase
         $this->tei = $this->createMock(Tei::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
 
-        // Utiliser une vraie instance de cache pour éviter les problèmes avec CacheItem (classe final)
-        // C'est acceptable pour un test unitaire car on teste seulement la logique du service
+        // Use a real cache instance to avoid problems with CacheItem (final class)
+        // This is acceptable for a unit test as we only test the service logic
         $this->grobidCache = new FilesystemAdapter('grobid_test', 0, sys_get_temp_dir() . '/test_cache');
 
         $this->service = new Grobid(
@@ -45,7 +45,7 @@ class GrobidTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Nettoyer le cache après chaque test
+        // Clean cache after each test
         $this->grobidCache->clear();
     }
 
@@ -60,16 +60,16 @@ class GrobidTest extends TestCase
             json_encode(['raw_reference' => 'Cached reference 1'])
         ];
 
-        // Pré-remplir le cache
+        // Pre-fill the cache
         $this->service->putGrobidReferencesInCache($docId . '.pdf', $cachedTeiXml);
 
-        // Mock: Tei parse le XML du cache
+        // Mock: Tei parses XML from cache
         $this->tei->expects($this->once())
             ->method('getReferencesInTei')
             ->with($cachedTeiXml)
             ->willReturn($references);
 
-        // Mock: insertion en DB
+        // Mock: insert into DB
         $this->tei->expects($this->once())
             ->method('insertReferencesInDB')
             ->with(
@@ -78,7 +78,7 @@ class GrobidTest extends TestCase
                 PaperReferences::SOURCE_METADATA_GROBID
             );
 
-        // HTTP client ne doit PAS être appelé (cache hit)
+        // HTTP client should NOT be called (cache hit)
         $this->httpClient->expects($this->never())
             ->method('request');
 
@@ -100,7 +100,7 @@ class GrobidTest extends TestCase
             json_encode(['raw_reference' => 'API reference 1'])
         ];
 
-        // Cache est vide (setUp + pas de pré-remplissage)
+        // Cache is empty (setUp + no pre-fill)
 
         // Mock: HTTP request to GROBID API
         $response = $this->createMock(ResponseInterface::class);
@@ -111,13 +111,13 @@ class GrobidTest extends TestCase
             ->with('POST', $this->grobidUrl, $this->anything())
             ->willReturn($response);
 
-        // Mock: Tei parse la réponse API
+        // Mock: Tei parses API response
         $this->tei->expects($this->once())
             ->method('getReferencesInTei')
             ->with($grobidResponse)
             ->willReturn($references);
 
-        // Mock: insertion en DB
+        // Mock: insert into DB
         $this->tei->expects($this->once())
             ->method('insertReferencesInDB')
             ->with(
@@ -132,7 +132,7 @@ class GrobidTest extends TestCase
         // Assert
         $this->assertTrue($result);
 
-        // Vérifier que la réponse a été mise en cache
+        // Verify that the response was cached
         $cachedData = $this->service->getGrobidReferencesInCache($docId . '.pdf');
         $this->assertEquals($grobidResponse, $cachedData);
     }
@@ -152,13 +152,13 @@ class GrobidTest extends TestCase
         $this->httpClient->method('request')
             ->willReturn($response);
 
-        // Mock: Tei retourne tableau vide (aucune référence trouvée)
+        // Mock: Tei returns empty array (no references found)
         $this->tei->expects($this->once())
             ->method('getReferencesInTei')
             ->with($grobidResponse)
             ->willReturn([]);
 
-        // insertReferencesInDB ne doit PAS être appelé
+        // insertReferencesInDB should NOT be called
         $this->tei->expects($this->never())
             ->method('insertReferencesInDB');
 
@@ -179,7 +179,7 @@ class GrobidTest extends TestCase
         // Act
         $this->service->putGrobidReferencesInCache($name, $response);
 
-        // Assert - vérifier que le contenu est bien en cache
+        // Assert - verify that content is in cache
         $cachedData = $this->service->getGrobidReferencesInCache($name);
         $this->assertEquals($response, $cachedData);
     }
@@ -192,13 +192,13 @@ class GrobidTest extends TestCase
         $originalResponse = '<TEI>original response</TEI>';
         $newResponse = '<TEI>new response</TEI>';
 
-        // Pré-remplir le cache
+        // Pre-fill the cache
         $this->service->putGrobidReferencesInCache($name, $originalResponse);
 
-        // Act - tenter de remplacer (ne devrait rien faire)
+        // Act - attempt to replace (should do nothing)
         $this->service->putGrobidReferencesInCache($name, $newResponse);
 
-        // Assert - vérifier que le contenu original est toujours en cache
+        // Assert - verify that original content is still in cache
         $cachedData = $this->service->getGrobidReferencesInCache($name);
         $this->assertEquals($originalResponse, $cachedData);
     }
@@ -210,7 +210,7 @@ class GrobidTest extends TestCase
         $name = '123456.pdf';
         $cachedContent = '<TEI>cached content</TEI>';
 
-        // Pré-remplir le cache
+        // Pre-fill the cache
         $this->service->putGrobidReferencesInCache($name, $cachedContent);
 
         // Act
@@ -226,7 +226,7 @@ class GrobidTest extends TestCase
         // Arrange
         $name = '123456.pdf';
 
-        // Cache est vide (pas de pré-remplissage)
+        // Cache is empty (no pre-fill)
 
         // Act
         $result = $this->service->getGrobidReferencesInCache($name);

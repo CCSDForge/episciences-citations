@@ -137,13 +137,13 @@ class EpisciencesTest extends TestCase
         // Arrange
         $url = 'https://episciences.org/pdf/123456.pdf';
 
-        // Créer le dossier et le fichier PDF existant
+        // Create folder and existing PDF file
         if (!is_dir($this->pdfFolder)) {
             mkdir($this->pdfFolder, 0777, true);
         }
         file_put_contents($this->pdfFolder . '123456.pdf', 'existing PDF content');
 
-        // HTTP client ne doit PAS être appelé (fichier existe déjà)
+        // HTTP client should NOT be called (file already exists)
         $this->httpClient->expects($this->never())
             ->method('request');
 
@@ -158,7 +158,7 @@ class EpisciencesTest extends TestCase
     public function testGetPaperPDF_Success_DownloadsAndCachesPdf(): void
     {
         // Arrange
-        $url = 'https://episciences.org/pdf/123456/';  // Ajouter / pour que getDocIdFromUrl fonctionne
+        $url = 'https://episciences.org/pdf/123456/';  // Add / so getDocIdFromUrl works
         $pdfContent = 'mock PDF binary content';
 
         // Mock HTTP response
@@ -180,7 +180,7 @@ class EpisciencesTest extends TestCase
         // Assert
         $this->assertTrue($result);
 
-        // Vérifier que le fichier a été créé
+        // Verify that file was created
         $this->assertFileExists($this->pdfFolder . '123456.pdf');
         $this->assertEquals($pdfContent, file_get_contents($this->pdfFolder . '123456.pdf'));
     }
@@ -189,7 +189,7 @@ class EpisciencesTest extends TestCase
     public function testGetPaperPDF_HttpError404_ReturnsErrorArray(): void
     {
         // Arrange
-        $url = 'https://episciences.org/pdf/999999/';  // Ajouter / pour que getDocIdFromUrl fonctionne
+        $url = 'https://episciences.org/pdf/999999/';  // Add / so getDocIdFromUrl works
 
         // Mock HTTP exception
         $exception = new class('Not Found', 404) extends \Exception implements ClientExceptionInterface {
@@ -203,7 +203,7 @@ class EpisciencesTest extends TestCase
             ->method('request')
             ->willThrowException($exception);
 
-        // Logger doit être appelé pour 404
+        // Logger should be called for 404
         $this->logger->expects($this->once())
             ->method('warning')
             ->with('PDF NOT FOUND ON EPISCIENCES', ['DOCID' => '999999']);
@@ -231,8 +231,8 @@ class EpisciencesTest extends TestCase
             true // forceHttp activé
         );
 
-        $url = 'https://episciences.org/pdf/888888/';  // Ajouter / pour que getDocIdFromUrl fonctionne
-        $expectedUrl = 'http://episciences.org/pdf/888888/';  // Doit être converti en HTTP
+        $url = 'https://episciences.org/pdf/888888/';  // Add / so getDocIdFromUrl works
+        $expectedUrl = 'http://episciences.org/pdf/888888/';  // Should be converted to HTTP
         $pdfContent = 'mock PDF content';
 
         // Mock HTTP response
