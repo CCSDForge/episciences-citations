@@ -1,7 +1,7 @@
 // eslint.config.js
 import eslint from '@eslint/js';
 import globals from 'globals';
-import babelParser from '@babel/eslint-parser'; // <-- Importation du parseur Babel
+import babelParser from '@babel/eslint-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
