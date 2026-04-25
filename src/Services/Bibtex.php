@@ -16,7 +16,6 @@ use RenanBr\BibTexParser\Parser;
 use RenanBr\BibTexParser\Processor\NamesProcessor;
 use RenanBr\BibTexParser\Processor\TagNameCaseProcessor;
 use RenanBr\BibTexParser\Processor\TrimProcessor;
-use RenanBr\BibTexParser\Processor\LatexToUnicodeProcessor;
 use Seboettg\CiteProc\CiteProc;
 use Seboettg\CiteProc\StyleSheet;
 
@@ -40,7 +39,6 @@ class Bibtex
         $listener->addProcessor(new TagNameCaseProcessor(CASE_LOWER));
         $listener->addProcessor(new TrimProcessor());
         $listener->addProcessor(new NamesProcessor());
-        $listener->addProcessor(new LatexToUnicodeProcessor());
         $parser = new Parser();
         $parser->addListener($listener);
         try {
@@ -78,19 +76,19 @@ class Bibtex
     public static function generateCSL(array $entry): array
     {
         $csl = [
-            'type' => lcfirst((string) $entry['type']),
+            'type' => lcfirst((string) ($entry['type'] ?? 'misc')),
             'author' => [],
-            'title' => $entry['title'],
+            'title' => $entry['title'] ?? '',
             'issued' => [
                 'date-parts' => [
-                    [$entry['year']]
+                    [$entry['year'] ?? '']
                 ]
             ]
         ];
-        foreach ($entry['author'] as $author) {
+        foreach ($entry['author'] ?? [] as $author) {
             $csl['author'][] = [
-                'family' => $author['last'],
-                'given' => $author['first']
+                'family' => $author['last'] ?? '',
+                'given' => $author['first'] ?? ''
             ];
         }
         if (isset($entry['publisher'])){

@@ -1,10 +1,3 @@
-// Bootstrap variable overrides (must precede @import)
-$primary:   #2980b9;
-$success:   #11998e;
-$danger:    #e74c3c;
-$warning:   #e67e22;
-$info:      #57bec3;
-
 @import "~bootstrap/scss/bootstrap";
 
 // Reference declined state
@@ -77,3 +70,7 @@ $info:      #57bec3;
     position: relative;
     z-index: 1030;
 }
+
+// Delete mode: hide controls, show checkboxes via parent class toggle
+#sortref.delete-mode .ref-controls    { display: none !important; }
+#sortref.delete-mode .ref-delete-check { display: block !important; }

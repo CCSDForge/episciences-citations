@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     changeValueFormByToggled();
     changeValueOfReference();
+    enableClickToEdit();
     openModalAddBtn(addRefModal);
     acceptAllReference();
     declineAllReference();
@@ -52,10 +53,7 @@ function changeValueFormByToggled() {
     let toggles = document.querySelectorAll('[id^=toggle-input-]');
     for (let toggle of toggles) {
         toggle.addEventListener('click', () => {
-            let radiosBtns = document.querySelector('#radio-group-choice-'+toggle.value).getElementsByTagName('input');
-            for (let radioBtn of radiosBtns){
-                radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
-            }
+            document.getElementById('accepted-' + toggle.value).value = toggle.checked ? '1' : '0';
             let idRef = toggle.value;
             let containerBox = document.querySelector(`[id=container-reference][data-idref="${idRef}"]`);
             classWhenConfirmDecline(containerBox, toggle.checked);
@@ -69,10 +67,8 @@ function disabledSortWhenChangeRef(sortEl) {
         btnModify.addEventListener('click', (event) => {
             sortEl.option('disabled', true);
             let idRef = event.currentTarget.dataset.idref;
-            let acceptModifyBtn = document.querySelector('#acceptModifyBtn-'+idRef);
-            let cancelModifyBtn = document.querySelector('#cancelModifyBtn-'+idRef);
-            cancelModifyBtn.addEventListener('click', () => sortEl.option('disabled', false));
-            acceptModifyBtn.addEventListener('click', () => sortEl.option('disabled', false));
+            document.getElementById('cancelModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
+            document.getElementById('acceptModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
         });
     }
 }
@@ -84,20 +80,20 @@ function changeValueOfReference() {
             // Capture currentTarget immediately — it becomes null after dispatch
             const btn = event.currentTarget;
             let idRef = btn.dataset.idref;
-            let modifyReferenceText = document.querySelector('#modifyTextArea-'+idRef);
-            let modifyReferenceDoi  = document.querySelector('#modifyReferenceDoi-'+idRef);
-            let acceptModifyBtn     = document.querySelector('#acceptModifyBtn-'+idRef);
-            let cancelModifyBtn     = document.querySelector('#cancelModifyBtn-'+idRef);
-            let containerInfo       = document.querySelector('#container-reference-informations-'+idRef);
+            let modifyReferenceText = document.getElementById('modifyTextArea-'+idRef);
+            let modifyReferenceDoi  = document.getElementById('modifyReferenceDoi-'+idRef);
+            let editActionBtns      = document.getElementById('editActionBtns-'+idRef);
+            let acceptModifyBtn     = document.getElementById('acceptModifyBtn-'+idRef);
+            let cancelModifyBtn     = document.getElementById('cancelModifyBtn-'+idRef);
+            let containerInfo       = document.getElementById('container-reference-informations-'+idRef);
 
-            document.querySelector('#textareaRef-'+idRef).addEventListener('input', () => {
+            document.getElementById('textareaRef-'+idRef).addEventListener('input', () => {
                 document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
             });
 
             modifyReferenceText.classList.remove('d-none');
             modifyReferenceDoi.classList.remove('d-none');
-            acceptModifyBtn.classList.remove('d-none');
-            cancelModifyBtn.classList.remove('d-none');
+            editActionBtns.classList.remove('d-none');
             modifyReferenceText.classList.add('w-100');
             modifyReferenceDoi.classList.add('w-50');
             btn.classList.add('d-none');
@@ -108,8 +104,7 @@ function changeValueOfReference() {
                 modifyReferenceDoi.classList.remove('w-50');
                 modifyReferenceText.classList.add('d-none');
                 modifyReferenceDoi.classList.add('d-none');
-                acceptModifyBtn.classList.add('d-none');
-                cancelModifyBtn.classList.add('d-none');
+                editActionBtns.classList.add('d-none');
                 btn.classList.remove('d-none');
                 containerInfo.classList.remove('d-none');
                 document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 0;
@@ -121,8 +116,7 @@ function changeValueOfReference() {
                 modifyReferenceDoi.classList.remove('w-50');
                 modifyReferenceText.classList.add('d-none');
                 modifyReferenceDoi.classList.add('d-none');
-                acceptModifyBtn.classList.add('d-none');
-                cancelModifyBtn.classList.add('d-none');
+                editActionBtns.classList.add('d-none');
                 btn.classList.remove('d-none');
 
                 let referenceWished    = document.getElementById('textareaRef-'+idRef);
@@ -162,6 +156,19 @@ function changeValueOfReference() {
             });
         });
     }
+}
+
+function enableClickToEdit() {
+    document.querySelectorAll('[id^=modifyBtn-]').forEach(btn => {
+        let idRef = btn.dataset.idref;
+        let containerInfo = document.getElementById('container-reference-informations-' + idRef);
+        containerInfo.addEventListener('click', () => {
+            const sortref = document.getElementById('sortref');
+            if (!sortref || !sortref.classList.contains('delete-mode')) {
+                btn.click();
+            }
+        });
+    });
 }
 
 function acceptRefModificationsDone(idRef) {
@@ -227,8 +234,8 @@ function topAnchor() {
 function rextract() {
     document.getElementById('extract-all').onclick = function(event) {
         event.preventDefault();
-        location.href = '/extract?url='+this.dataset.urlFromEpi+'&rextract';
         document.getElementById('loading-screen').classList.remove('d-none');
+        location.href = '/extract?url='+this.dataset.urlFromEpi+'&rextract';
     };
 }
 
@@ -250,29 +257,49 @@ function manageBibtex(importBibModal) {
 }
 
 function removeReference() {
-    let deleteBtn = document.getElementById('select-delete-ref');
-    let cancelBtn = document.getElementById('cancel-delete-ref');
+    let deleteBtn    = document.getElementById('select-delete-ref');
+    let cancelBtn    = document.getElementById('cancel-delete-ref');
+    let toggleAllBtn = document.getElementById('toggle-select-all-ref');
     if (!deleteBtn || !cancelBtn) return;
 
-    deleteBtn.addEventListener('click', (event) => {
-        event.preventDefault();
+    const sortref = document.getElementById('sortref');
+
+    deleteBtn.addEventListener('click', () => {
         document.getElementById('alert-remove').classList.remove('d-none');
-        document.querySelectorAll('[id=selection-references]').forEach(node => node.classList.add('d-none'));
-        document.querySelectorAll('[id^=ref-to-delete-]').forEach(node => node.classList.remove('d-none'));
+        if (sortref) sortref.classList.add('delete-mode');
         deleteBtn.classList.add('d-none');
         cancelBtn.classList.remove('d-none');
+        if (toggleAllBtn) toggleAllBtn.classList.remove('d-none');
     });
 
-    cancelBtn.addEventListener('click', (event) => {
-        event.preventDefault();
+    cancelBtn.addEventListener('click', () => {
         document.getElementById('alert-remove').classList.add('d-none');
-        document.querySelectorAll('[id^=ref-to-delete-]').forEach(node => { node.value = '0'; });
+        if (sortref) sortref.classList.remove('delete-mode');
         deleteBtn.classList.remove('d-none');
         cancelBtn.classList.add('d-none');
-        document.querySelectorAll('[id=selection-references]').forEach(node => node.classList.remove('d-none'));
-        document.querySelectorAll('[id^=ref-to-delete-]').forEach(node => {
-            node.classList.add('d-none');
-            node.checked = false;
-        });
+        if (toggleAllBtn) {
+            toggleAllBtn.classList.add('d-none');
+            resetToggleAllBtn(toggleAllBtn);
+        }
+        document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = false; });
     });
+
+    if (toggleAllBtn) {
+        toggleAllBtn.addEventListener('click', () => {
+            const allSelected = toggleAllBtn.dataset.allSelected !== 'true';
+            toggleAllBtn.dataset.allSelected = allSelected ? 'true' : 'false';
+            document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = allSelected; });
+            setToggleAllBtnState(toggleAllBtn, allSelected);
+        });
+    }
+}
+
+function setToggleAllBtnState(btn, allSelected) {
+    btn.querySelector('i').className = 'fas ' + (allSelected ? 'fa-square' : 'fa-check-double') + ' me-1';
+    btn.querySelector('span').textContent = allSelected ? btn.dataset.deselectLabel : btn.dataset.selectLabel;
+}
+
+function resetToggleAllBtn(btn) {
+    btn.dataset.allSelected = 'false';
+    setToggleAllBtnState(btn, false);
 }

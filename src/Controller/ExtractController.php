@@ -14,6 +14,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -75,6 +76,9 @@ class ExtractController extends AbstractController
         $session->set('openModalClose', 0);
         if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')) {
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
+            if (!$this->grobid->hasCachedReferences($docId)) {
+                return $this->renderProcessingPage($docId, $request);
+            }
             $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
             if ($insertRef === false) {
                 $this->addFlash(
@@ -87,16 +91,24 @@ class ExtractController extends AbstractController
 
         if ($this->references->documentAlreadyExtracted($docId)) {
             if ($this->references->getReferences($docId, 'all') === []) {
-                $this->addFlash(
-                    'notice',
-                    $this->translator->trans('No reference found in the PDF')
-                );
+                // Refs absent — attempt (re)insertion: uses cache if available, calls GROBID otherwise
+                $this->logger->info('Document exists with no refs — retrying extraction', ['DocId' => $docId]);
+                if (!$this->grobid->hasCachedReferences($docId)) {
+                    return $this->renderProcessingPage($docId, $request);
+                }
+                $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
+                if ($insertRef === false) {
+                    $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+                }
             }
             $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
             return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
 
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
+        if (!$this->grobid->hasCachedReferences($docId)) {
+            return $this->renderProcessingPage($docId, $request);
+        }
         $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
         if ($insertRef === false) {
             $this->addFlash(
@@ -237,6 +249,31 @@ class ExtractController extends AbstractController
                 $this->translator->trans('Nothing was changed')
             );
         }
+    }
+
+    #[Route('/extract/run', name: 'app_extract_run')]
+    public function extractRun(Request $request): JsonResponse
+    {
+        $docId = (int) $request->query->get('docId');
+        $insertRef = $this->grobid->insertReferences(
+            $docId,
+            $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf'
+        );
+        if ($insertRef === false) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
+                $this->references->createDocumentId($docId);
+            }
+            $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+        }
+        return new JsonResponse(['success' => $insertRef !== false]);
+    }
+
+    private function renderProcessingPage(int $docId, Request $request): Response
+    {
+        return $this->render('extract/processing.html.twig', [
+            'extractRunUrl' => $this->generateUrl('app_extract_run', ['docId' => $docId]),
+            'viewRefUrl'    => $this->generateUrl('app_view_ref', ['docId' => $docId, '_locale' => $request->getLocale()]),
+        ]);
     }
 
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]

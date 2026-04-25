@@ -37,7 +37,7 @@ class References {
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                     }
-                    $ref->setAccepted($paperReference['accepted']);
+                    $ref->setAccepted((int) $paperReference['accepted']);
                     $ref->setUpdatedAt(new \DateTimeImmutable());
                     $ref->setUid($user);
                     $user->addPaperReferences($ref);
@@ -127,7 +127,7 @@ class References {
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
             $ref->setDocument($this->entityManager->getRepository(Document::class)->find($form['id']));
-            $counter = isset($form['paperReferences']) ? $this->getLastOrder($form['paperReferences']) + 1 : 0 ;
+            $counter = $this->getLastOrder((int) $form['id']) + 1;
             $ref->setReferenceOrder($counter);
             $this->entityManager->persist($ref);
             $this->entityManager->flush();
@@ -165,9 +165,16 @@ class References {
         return $doc;
     }
 
-    public function getLastOrder(array $paperReferences){
-        $paperReferences = array_column($paperReferences, 'reference_order');
-        sort($paperReferences);
-        return $paperReferences[array_key_last($paperReferences)];
+    public function getLastOrder(int $docId): int
+    {
+        $result = $this->entityManager->getRepository(PaperReferences::class)
+            ->createQueryBuilder('p')
+            ->select('MAX(p.referenceOrder)')
+            ->where('p.document = :docId')
+            ->setParameter('docId', $docId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result !== null ? (int) $result : -1;
     }
 }
