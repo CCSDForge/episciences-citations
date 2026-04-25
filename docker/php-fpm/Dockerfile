@@ -23,6 +23,7 @@ RUN apt-get install -y --no-install-recommends --no-install-suggests \
      vim \
      poppler-utils \
      iputils-ping \
+     pandoc \
     && apt-get clean
 
 RUN pecl install xdebug && \
@@ -43,6 +44,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Add Xdebug configuration
 COPY ./docker/php-fpm/xdebug.ini /usr/local/etc/php/conf.d/
+
+# Raise input variable limits for large reference forms
+COPY ./docker/php-fpm/limits.ini /usr/local/etc/php/conf.d/
 
 # disable opcache configuration
 #COPY ./docker/php-fpm/opcache.ini /usr/local/etc/php/conf.d/

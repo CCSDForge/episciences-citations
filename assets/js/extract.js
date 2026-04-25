@@ -1,4 +1,6 @@
 import { Sortable } from 'sortablejs/modular/sortable.core.esm';
+import { Modal, Toast } from 'bootstrap';
+
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('sortref')){
         let sortEl = Sortable.create(document.getElementById('sortref'),{
@@ -8,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filter: '.filtered',
             onEnd(){
                 let arrayOrder = [];
-                for (let el of document.querySelectorAll('#container-reference')){
+                for (let el of document.querySelectorAll('[id=container-reference]')){
                     arrayOrder.push(el.dataset.idref);
                 }
                 let strOrder = arrayOrder.join(';');
@@ -18,335 +20,230 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         disabledSortWhenChangeRef(sortEl);
     }
+
+    // Bootstrap modal initialisation
+    let addRefModal = null;
+    let importBibModal = null;
+
+    if (document.getElementById('modal-addref')) {
+        addRefModal = new Modal(document.getElementById('modal-addref'));
+    }
+    if (document.getElementById('modal-importbib')) {
+        importBibModal = new Modal(document.getElementById('modal-importbib'));
+    }
+    if (document.getElementById('closing-info-toast')) {
+        new Toast(document.getElementById('closing-info-toast'), { autohide: false }).show();
+    }
+
     changeValueFormByToggled();
     changeValueOfReference();
-    openModalAddBtn();
-    closeInfoAlert();
-    closeFlashMessage();
+    enableClickToEdit();
+    openModalAddBtn(addRefModal);
     acceptAllReference();
     declineAllReference();
     showLoadingScreen();
-    hidePopUpAdding();
     topAnchor();
-    openClosingModalWindow();
     rextract();
     checkIsDirty();
-    manageBibtex();
+    manageBibtex(importBibModal);
     removeReference();
 });
 
 function changeValueFormByToggled() {
     let toggles = document.querySelectorAll('[id^=toggle-input-]');
     for (let toggle of toggles) {
-        toggle.addEventListener('click', () =>
-        {
-            let radiosBtns = document.querySelector('#radio-group-choice-'+toggle.value).getElementsByTagName('input');
-            for (let radioBtn of radiosBtns){
-                radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
-            }
+        toggle.addEventListener('click', () => {
+            document.getElementById('accepted-' + toggle.value).value = toggle.checked ? '1' : '0';
             let idRef = toggle.value;
-            let containerBox = document.querySelector(`div[data-idref="${idRef}"]`);
-            if (toggle.checked){
-                classWhenConfirmDecline(containerBox,true);
-            } else {
-                classWhenConfirmDecline(containerBox,false);
-            }
+            let containerBox = document.querySelector(`[id=container-reference][data-idref="${idRef}"]`);
+            classWhenConfirmDecline(containerBox, toggle.checked);
+        });
+    }
+}
 
-        });
-    }
-}
 function disabledSortWhenChangeRef(sortEl) {
-    let btnModifys = document.querySelectorAll('#modifyBtn');
+    let btnModifys = document.querySelectorAll('[id^=modifyBtn-]');
     for (let btnModify of btnModifys) {
-        btnModify.addEventListener('click', (event) =>
-        {
-            sortEl.option('disabled',true); // set
-            let acceptModifyBtn = document.querySelector('#acceptModifyBtn-'+event.target.dataset.idref);
-            let cancelModifyBtn = document.querySelector('#cancelModifyBtn-'+event.target.dataset.idref);
-            cancelModifyBtn.addEventListener('click', () => {
-                sortEl.option('disabled',false);
-            });
-            acceptModifyBtn.addEventListener('click', () => {
-                sortEl.option('disabled',false);
-            });
+        btnModify.addEventListener('click', (event) => {
+            sortEl.option('disabled', true);
+            let idRef = event.currentTarget.dataset.idref;
+            document.getElementById('cancelModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
+            document.getElementById('acceptModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
         });
     }
 }
+
 function changeValueOfReference() {
-    let btnModifys = document.querySelectorAll('#modifyBtn');
+    let btnModifys = document.querySelectorAll('[id^=modifyBtn-]');
     for (let btnModify of btnModifys) {
-        btnModify.addEventListener('click', (event) =>
-        {
-            let modifyReferenceText = document.querySelector('#modifyTextArea-'+event.target.dataset.idref);
-            let modifyReferenceDoi = document.querySelector('#modifyReferenceDoi-'+event.target.dataset.idref);
-            let acceptModifyBtn = document.querySelector('#acceptModifyBtn-'+event.target.dataset.idref);
-            let cancelModifyBtn = document.querySelector('#cancelModifyBtn-'+event.target.dataset.idref);
-            let containerInfo = document.querySelector('#container-reference-informations-'+event.target.dataset.idref);
-            document.querySelector('#textareaRef-'+event.target.dataset.idref).addEventListener('input',()=> {
-                document.querySelector(`input[data-dirty-ref="${event.target.dataset.idref}"]`).value = 1;
+        btnModify.addEventListener('click', (event) => {
+            // Capture currentTarget immediately — it becomes null after dispatch
+            const btn = event.currentTarget;
+            let idRef = btn.dataset.idref;
+            let modifyReferenceText = document.getElementById('modifyTextArea-'+idRef);
+            let modifyReferenceDoi  = document.getElementById('modifyReferenceDoi-'+idRef);
+            let editActionBtns      = document.getElementById('editActionBtns-'+idRef);
+            let acceptModifyBtn     = document.getElementById('acceptModifyBtn-'+idRef);
+            let cancelModifyBtn     = document.getElementById('cancelModifyBtn-'+idRef);
+            let containerInfo       = document.getElementById('container-reference-informations-'+idRef);
+
+            document.getElementById('textareaRef-'+idRef).addEventListener('input', () => {
+                document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
             });
-            modifyReferenceText.classList.remove('hidden');
-            modifyReferenceDoi.classList.remove('hidden');
-            acceptModifyBtn.classList.remove('hidden');
-            cancelModifyBtn.classList.remove('hidden');
-            modifyReferenceText.classList.add('w-full');
-            modifyReferenceDoi.classList.add('w-1/2');
-            btnModify.classList.remove('inline-block');
-            btnModify.classList.add('hidden');
-            containerInfo.classList.add('hidden');
+
+            modifyReferenceText.classList.remove('d-none');
+            modifyReferenceDoi.classList.remove('d-none');
+            editActionBtns.classList.remove('d-none');
+            modifyReferenceText.classList.add('w-100');
+            modifyReferenceDoi.classList.add('w-50');
+            btn.classList.add('d-none');
+            containerInfo.classList.add('d-none');
+
             cancelModifyBtn.addEventListener('click', () => {
-                modifyReferenceText.classList.remove('w-full');
-                modifyReferenceDoi.classList.remove('w-1/2');
-                modifyReferenceText.classList.add('hidden');
-                modifyReferenceDoi.classList.add('hidden');
-                acceptModifyBtn.classList.add('hidden');
-                cancelModifyBtn.classList.add('hidden');
-                btnModify.classList.remove('hidden');
-                btnModify.classList.add('inline-block');
-                containerInfo.classList.remove('hidden');
-                document.querySelector(`input[data-dirty-ref="${event.target.dataset.idref}"]`).value = 0;
+                modifyReferenceText.classList.remove('w-100');
+                modifyReferenceDoi.classList.remove('w-50');
+                modifyReferenceText.classList.add('d-none');
+                modifyReferenceDoi.classList.add('d-none');
+                editActionBtns.classList.add('d-none');
+                btn.classList.remove('d-none');
+                containerInfo.classList.remove('d-none');
+                document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 0;
             });
+
             acceptModifyBtn.addEventListener('click', () => {
-                containerInfo.classList.remove('hidden');
-                modifyReferenceText.classList.remove('w-full');
-                modifyReferenceDoi.classList.remove('w-1/2');
-                modifyReferenceText.classList.add('hidden');
-                modifyReferenceDoi.classList.add('hidden');
-                acceptModifyBtn.classList.add('hidden');
-                cancelModifyBtn.classList.add('hidden');
-                btnModify.classList.remove('hidden');
-                btnModify.classList.add('inline-block');
-                let referenceWished = document.getElementById('textareaRef-'+event.target.dataset.idref);
-                let showedText = document.getElementById('textReference-'+event.target.dataset.idref);
+                containerInfo.classList.remove('d-none');
+                modifyReferenceText.classList.remove('w-100');
+                modifyReferenceDoi.classList.remove('w-50');
+                modifyReferenceText.classList.add('d-none');
+                modifyReferenceDoi.classList.add('d-none');
+                editActionBtns.classList.add('d-none');
+                btn.classList.remove('d-none');
+
+                let referenceWished    = document.getElementById('textareaRef-'+idRef);
+                let showedText         = document.getElementById('textReference-'+idRef);
                 showedText.textContent = referenceWished.value;
-                showedText.value = referenceWished.value;
-                let referenceDoiWished = document.getElementById('textDoiRef-'+event.target.dataset.idref);
-                let linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
-                let doiContent = '';
+                showedText.value       = referenceWished.value;
+
+                let referenceDoiWished = document.getElementById('textDoiRef-'+idRef);
+                let linkDoiTag         = document.getElementById('linkDoiRef-'+idRef);
+                let doiContent         = '';
+
                 if (linkDoiTag === null && referenceDoiWished.value !== '') {
                     let newNode = document.createElement('a');
-                    newNode.id = 'linkDoiRef-'+event.target.dataset.idref;
-                    newNode.className = 'underline text-blue-600 hover:text-blue-800 visited:text-purple-600';
+                    newNode.id        = 'linkDoiRef-'+idRef;
+                    newNode.className = 'link-primary text-decoration-underline';
                     showedText.after(newNode);
-                    linkDoiTag = document.getElementById('linkDoiRef-'+event.target.dataset.idref);
-                    doiContent = linkDoiTag.textContent;
+                    linkDoiTag = document.getElementById('linkDoiRef-'+idRef);
                 }
-                if (referenceDoiWished.value !== ''){
-                    // Sanitize DOI value to prevent XSS
+
+                if (referenceDoiWished.value !== '') {
                     const sanitizedDoi = referenceDoiWished.value.trim();
-                    // Prevent javascript: protocol or other malicious schemes
-                    if (sanitizedDoi.toLowerCase().startsWith('javascript:') ||
-                        sanitizedDoi.toLowerCase().startsWith('data:') ||
-                        sanitizedDoi.toLowerCase().startsWith('vbscript:')) {
+                    if (/^(javascript:|data:|vbscript:)/i.test(sanitizedDoi)) {
                         // eslint-disable-next-line no-console
                         console.error('Invalid DOI value detected');
                         return;
                     }
-                    // Build safe URL
-                    linkDoiTag.href = 'https://doi.org/' + encodeURIComponent(sanitizedDoi);
+                    linkDoiTag.href        = 'https://doi.org/' + encodeURIComponent(sanitizedDoi);
                     linkDoiTag.textContent = sanitizedDoi;
-                    doiContent = sanitizedDoi;
+                    doiContent             = sanitizedDoi;
                 } else if (referenceDoiWished.value === '' && linkDoiTag !== null) {
                     linkDoiTag.remove();
                 }
-                acceptRefModificationsDone(event.target.dataset.idref);
-                let modifiedInformations = JSON.stringify({'raw_reference':showedText.value,'doi':doiContent});
-                let referenceValueForm = document.getElementById('reference-'+event.target.dataset.idref);
-                referenceValueForm.value = '['+JSON.stringify(modifiedInformations)+']';
+
+                acceptRefModificationsDone(idRef);
+                let referenceValueForm   = document.getElementById('reference-'+idRef);
+                referenceValueForm.value = JSON.stringify({'raw_reference': showedText.value, 'doi': doiContent});
             });
         });
     }
 }
 
-function acceptRefModificationsDone(idRef){
+function enableClickToEdit() {
+    document.querySelectorAll('[id^=modifyBtn-]').forEach(btn => {
+        let idRef = btn.dataset.idref;
+        let containerInfo = document.getElementById('container-reference-informations-' + idRef);
+        containerInfo.addEventListener('click', () => {
+            const sortref = document.getElementById('sortref');
+            if (!sortref || !sortref.classList.contains('delete-mode')) {
+                btn.click();
+            }
+        });
+    });
+}
+
+function acceptRefModificationsDone(idRef) {
     let toggle = document.querySelector('#toggle-input-'+idRef);
-    if (!toggle.checked){
-        toggle.click();
-    }
-    let containerBox = document.querySelector(`div[data-idref="${idRef}"]`);
-    classWhenConfirmDecline(containerBox,true);
+    if (!toggle.checked) toggle.click();
+    let containerBox = document.querySelector(`[id=container-reference][data-idref="${idRef}"]`);
+    classWhenConfirmDecline(containerBox, true);
 }
-function openModalAddBtn(){
 
-    document.getElementById('btn-modal-addref').addEventListener('click',() => {
-        let container = document.getElementById('modal-container');
-        let boxcontainer = document.getElementById('box-container');
-        let greybg = document.getElementById('greybg');
-        greybg.classList.remove('-z-50','opacity-0');
-        greybg.classList.add('z-49','opacity-1','anim-box-popup');
-
-        container.classList.remove('-z-50','opacity-0');
-        container.classList.add('z-50','opacity-1','anim-box-popup');
-
-        boxcontainer.classList.add('z-50','opacity-1','anim-box-popup');
-        boxcontainer.classList.remove('opacity-0','-z-50');
-    });
-    document.getElementById('cancel-adding').addEventListener('click',() => {
-        let container = document.getElementById('modal-container');
-        let boxcontainer = document.getElementById('box-container');
-        let greybg = document.getElementById('greybg');
-        greybg.classList.add('-z-50','opacity-0');
-        greybg.classList.remove('z-49','opacity-1');
-
-        container.classList.add('-z-50','opacity-0');
-        container.classList.remove('z-50','opacity-1');
-
-        boxcontainer.classList.add('-z-50','opacity-0');
-        boxcontainer.classList.remove('z-50','opacity-1');
-
+function openModalAddBtn(addRefModal) {
+    if (!addRefModal || !document.getElementById('btn-modal-addref')) return;
+    document.getElementById('btn-modal-addref').addEventListener('click', () => addRefModal.show());
+    document.getElementById('confirm-adding').addEventListener('click', () => {
+        addRefModal.hide();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
-function closeInfoAlert() {
-    document.querySelector('button#alert-drag-drop').addEventListener('click',(event)=>{
+function acceptAllReference() {
+    document.querySelector('#accept-all').addEventListener('click', (event) => {
         event.preventDefault();
-        document.querySelector('div#alert-drag-drop').classList.add('hidden');
-    });
-    if (document.querySelector('#alert-remove')){
-        document.querySelector('button#alert-remove').addEventListener('click',(event)=>{
-            event.preventDefault();
-            document.querySelector('div#alert-remove').classList.add('hidden');
+        document.querySelectorAll('[id^=toggle-input-]').forEach(toggle => {
+            if (!toggle.checked) toggle.click();
         });
-    }
-}
-
-function closeFlashMessage(){
-    document.querySelectorAll('#flash-message').forEach(function(e) {
-        setTimeout(function () {
-            e.remove();
-        },5000);
+        document.querySelectorAll('.declinedRef').forEach(el => classWhenConfirmDecline(el, true));
     });
 }
 
-function acceptAllReference(){
-    document.querySelector('#accept-all').addEventListener('click',(event) => {
+function declineAllReference() {
+    document.querySelector('#decline-all').addEventListener('click', (event) => {
         event.preventDefault();
-        let toggles = document.querySelectorAll('[id^=toggle-input-]');
-        for (let toggle of toggles) {
-            toggle.addEventListener('click', () =>
-            {
-                let radiosBtns = document.querySelector('#radio-group-choice-'+toggle.value).getElementsByTagName('input');
-                for (let radioBtn of radiosBtns){
-                    radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
-                }
-            });
-            if (!toggle.checked){
-                toggle.click();
-            }
-        }
-        (document.querySelectorAll('.declinedRef')).forEach((el) => {
-            classWhenConfirmDecline(el,true);
+        document.querySelectorAll('[id^=toggle-input-]').forEach(toggle => {
+            if (toggle.checked) toggle.click();
         });
+        document.querySelectorAll('[id=container-reference]').forEach(el => classWhenConfirmDecline(el, false));
     });
 }
 
-function declineAllReference(){
-    document.querySelector('#decline-all').addEventListener('click',(event) => {
-        event.preventDefault();
-        let toggles = document.querySelectorAll('[id^=toggle-input-]');
-        for (let toggle of toggles) {
-            toggle.addEventListener('click', () =>
-            {
-                let radiosBtns = document.querySelector('#radio-group-choice-'+toggle.value).getElementsByTagName('input');
-                for (let radioBtn of radiosBtns){
-                    radioBtn.checked = Number(radioBtn.value) === Number(toggle.checked);
-                }
-            });
-            if (toggle.checked){
-                toggle.click();
-            }
-        }
-        (document.querySelectorAll('#container-reference')).forEach((el) => {
-            classWhenConfirmDecline(el,false);
-        });
-    });
-}
-function showLoadingScreen(){
+function showLoadingScreen() {
     document.getElementById('form-extraction').addEventListener('submit', () => {
-        document.getElementById('loading-screen').classList.remove('hidden');
+        document.getElementById('loading-screen').classList.remove('d-none');
     });
 }
 
-function hidePopUpAdding(){
-    document.getElementById('confirm-adding').addEventListener('click',() => {
-        let container = document.getElementById('modal-container');
-        let boxcontainer = document.getElementById('box-container');
-        let greybg = document.getElementById('greybg');
-
-        greybg.classList.add('-z-50','opacity-0');
-        greybg.classList.remove('z-49','opacity-1');
-
-        container.classList.add('-z-50','opacity-0');
-        container.classList.remove('z-50','opacity-1');
-
-        boxcontainer.classList.add('-z-50','opacity-0');
-        boxcontainer.classList.remove('z-50','opacity-1');
-    });
-}
-
-function classWhenConfirmDecline(el, confirm = true){
-    if (typeof confirm === 'undefined') { confirm = true; }
-    if (confirm){
-        el.classList.remove('declinedRef');
-        el.classList.remove('filtered');
+function classWhenConfirmDecline(el, confirm = true) {
+    if (confirm) {
+        el.classList.remove('declinedRef', 'filtered');
     } else {
-        el.classList.add('declinedRef');
-        el.classList.add('filtered');
+        el.classList.add('declinedRef', 'filtered');
     }
 }
 
-function topAnchor(){
-    document.getElementById('document_save').addEventListener('click',() => {
+function topAnchor() {
+    document.getElementById('document_save').addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-    document.getElementById('confirm-adding').addEventListener('click',() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
-
-function openClosingModalWindow(){
-    let modalWindow = document.querySelector('#closing-window-modal-container');
-    if (modalWindow) {
-        let boxcontainer = document.getElementById('box-container-closing');
-        let greybg = document.getElementById('greybg-closing');
-        greybg.classList.remove('-z-50','opacity-0');
-        greybg.classList.add('z-49','opacity-1','anim-box-popup');
-
-        modalWindow.classList.remove('-z-50','opacity-0');
-        modalWindow.classList.add('z-50','opacity-1','anim-box-popup');
-
-        boxcontainer.classList.add('z-50','opacity-1','anim-box-popup');
-        boxcontainer.classList.remove('opacity-0','-z-50');
-
-        document.getElementById('cancel-closing-app').addEventListener('click',() => {
-            greybg.classList.add('-z-50','opacity-0');
-            greybg.classList.remove('z-49','opacity-1');
-
-            modalWindow.classList.add('-z-50','opacity-0');
-            modalWindow.classList.remove('z-50','opacity-1');
-
-            boxcontainer.classList.add('-z-50','opacity-0');
-            boxcontainer.classList.remove('z-50','opacity-1');
-        });
+    const confirmAdding = document.getElementById('confirm-adding');
+    if (confirmAdding) {
+        confirmAdding.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
 }
 
-function rextract(){
-    document.getElementById('extract-all').onclick = function (event) {
+function rextract() {
+    document.getElementById('extract-all').onclick = function(event) {
         event.preventDefault();
+        document.getElementById('loading-screen').classList.remove('d-none');
         location.href = '/extract?url='+this.dataset.urlFromEpi+'&rextract';
-        document.getElementById('loading-screen').classList.remove('hidden');
     };
 }
-function checkIsDirty(){
+
+function checkIsDirty() {
     let isDirty = document.getElementById('is-dirty');
     let formSubmitting = false;
-    document.getElementById('form-extraction').addEventListener('change',() => {
-        isDirty.value = '1';
-    });
-    document.getElementById('form-extraction').addEventListener('submit', () => {
-        formSubmitting = true;
-    });
+    document.getElementById('form-extraction').addEventListener('change', () => { isDirty.value = '1'; });
+    document.getElementById('form-extraction').addEventListener('submit', () => { formSubmitting = true; });
     window.addEventListener('beforeunload', function(event) {
         if (isDirty.value === '1' && formSubmitting === false) {
             event.returnValue = null;
@@ -354,78 +251,55 @@ function checkIsDirty(){
     });
 }
 
-function manageBibtex(){
-    let importbibtex= document.querySelector('#btn-modal-importbibtex');
-    let container = document.getElementById('modal-container-bib');
-    let boxcontainer = document.getElementById('box-container-bib');
-    let greybg = document.getElementById('greybg-bib');
-    importbibtex.addEventListener('click', () => {
-        greybg.classList.remove('-z-50','opacity-0');
-        greybg.classList.add('z-49','opacity-1','anim-box-popup');
-
-        container.classList.remove('-z-50','opacity-0');
-        container.classList.add('z-50','opacity-1','anim-box-popup');
-
-        boxcontainer.classList.add('z-50','opacity-1','anim-box-popup');
-        boxcontainer.classList.remove('opacity-0','-z-50');
-    });
-    document.getElementById('cancel-adding-bib').addEventListener('click',() => {
-        greybg.classList.add('-z-50','opacity-0');
-        greybg.classList.remove('z-49','opacity-1');
-
-        container.classList.add('-z-50','opacity-0');
-        container.classList.remove('z-50','opacity-1');
-
-        boxcontainer.classList.add('-z-50','opacity-0');
-        boxcontainer.classList.remove('z-50','opacity-1');
-
-    });
-    document.getElementById('confirm-adding-bib').addEventListener('click',() => {
-        greybg.classList.add('-z-50','opacity-0');
-        greybg.classList.remove('z-49','opacity-1');
-
-        container.classList.add('-z-50','opacity-0');
-        container.classList.remove('z-50','opacity-1');
-
-        boxcontainer.classList.add('-z-50','opacity-0');
-        boxcontainer.classList.remove('z-50','opacity-1');
-
-    });
+function manageBibtex(importBibModal) {
+    if (!importBibModal || !document.querySelector('#btn-modal-importbibtex')) return;
+    document.querySelector('#btn-modal-importbibtex').addEventListener('click', () => importBibModal.show());
 }
 
+function removeReference() {
+    let deleteBtn    = document.getElementById('select-delete-ref');
+    let cancelBtn    = document.getElementById('cancel-delete-ref');
+    let toggleAllBtn = document.getElementById('toggle-select-all-ref');
+    if (!deleteBtn || !cancelBtn) return;
 
-function removeReference(){
-    let deleteBtn = document.getElementById('select-delete-ref');
-    let cancelBtn = document.getElementById('cancel-delete-ref');
-    if (deleteBtn && cancelBtn){
-        deleteBtn.addEventListener('click',(event) => {
-            event.preventDefault();
-            document.getElementById('alert-remove').classList.remove('hidden');
-            document.querySelectorAll('#selection-references').forEach(node => {
-                node.classList.add('hidden');
-            });
-            document.querySelectorAll('#ref-to-delete').forEach(node => {
-                node.classList.remove('hidden');
-            });
-            deleteBtn.classList.add('hidden');
-            cancelBtn.classList.remove('hidden');
+    const sortref = document.getElementById('sortref');
 
-        });
-        cancelBtn.addEventListener('click',(event) => {
-            event.preventDefault();
-            document.getElementById('alert-remove').classList.add('hidden');
-            document.querySelectorAll('#ref-to-delete').forEach(node => {
-                node.value = '0';
-            });
-            deleteBtn.classList.remove('hidden');
-            cancelBtn.classList.add('hidden');
-            document.querySelectorAll('#selection-references').forEach(node => {
-                node.classList.remove('hidden');
-            });
-            document.querySelectorAll('#ref-to-delete').forEach(node => {
-                node.classList.add('hidden');
-                node.checked = false;
-            });
+    deleteBtn.addEventListener('click', () => {
+        document.getElementById('alert-remove').classList.remove('d-none');
+        if (sortref) sortref.classList.add('delete-mode');
+        deleteBtn.classList.add('d-none');
+        cancelBtn.classList.remove('d-none');
+        if (toggleAllBtn) toggleAllBtn.classList.remove('d-none');
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        document.getElementById('alert-remove').classList.add('d-none');
+        if (sortref) sortref.classList.remove('delete-mode');
+        deleteBtn.classList.remove('d-none');
+        cancelBtn.classList.add('d-none');
+        if (toggleAllBtn) {
+            toggleAllBtn.classList.add('d-none');
+            resetToggleAllBtn(toggleAllBtn);
+        }
+        document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = false; });
+    });
+
+    if (toggleAllBtn) {
+        toggleAllBtn.addEventListener('click', () => {
+            const allSelected = toggleAllBtn.dataset.allSelected !== 'true';
+            toggleAllBtn.dataset.allSelected = allSelected ? 'true' : 'false';
+            document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = allSelected; });
+            setToggleAllBtnState(toggleAllBtn, allSelected);
         });
     }
+}
+
+function setToggleAllBtnState(btn, allSelected) {
+    btn.querySelector('i').className = 'fas ' + (allSelected ? 'fa-square' : 'fa-check-double') + ' me-1';
+    btn.querySelector('span').textContent = allSelected ? btn.dataset.deselectLabel : btn.dataset.selectLabel;
+}
+
+function resetToggleAllBtn(btn) {
+    btn.dataset.allSelected = 'false';
+    setToggleAllBtnState(btn, false);
 }

@@ -6,132 +6,252 @@
     {{ encore_entry_script_tags('extract') }}
 {% endblock %}
 {% block body %}
-    <div class="flex w-full gap-x-10 mt-2">
-        <div id="loading-screen" class="hidden">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-25 z-50"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-                <div class="z-50 flex items-center justify-center rounded-full w-14 h-14 bg-gradient-to-tr from-emerald-500 to-cyan-200 animate-spin">
-                    <div class="h-9 w-9 rounded-full bg-gray-50"></div>
-                </div>
-            </div>
+
+{# Loading screen overlay #}
+<div id="loading-screen" class="d-none">
+    <div class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25" style="z-index:1040;"></div>
+    <div class="position-fixed top-50 start-50 translate-middle text-center" style="z-index:1050;">
+        <div class="spinner-border text-primary" role="status" style="width:3.5rem;height:3.5rem;">
+            <span class="visually-hidden">{{ 'Loading...'|trans }}</span>
         </div>
-        {% if(app.session.get('openModalClose') is same as(1) ) %}
-            {% include('extract/closingmodal.html.twig') %}
-        {% endif %}
-        <iframe title="pdf-viewer" class="h-screen min-h-screen flex-1" src="{{ path("app_get_pdf",{ 'docId': form.id.vars.value }) }}"
+        <div class="bg-white rounded-3 shadow px-4 py-2 mt-3">
+            <span class="text-secondary small">{{ 'Saving...'|trans }}</span>
+        </div>
+    </div>
+</div>
+
+{% if app.session.get('openModalClose') is same as(1) %}
+    {% include('extract/closingmodal.html.twig') %}
+{% endif %}
+
+{# Exact 50/50 two-column layout #}
+<div class="row g-0" style="height:calc(100vh - 57px); overflow:hidden;">
+
+    {# Left column: PDF viewer #}
+    <div class="col-6 p-0 h-100">
+        <iframe title="pdf-viewer" class="w-100 h-100 border-0"
+                src="{{ path("app_get_pdf", {'docId': form.id.vars.value}) }}"
                 allow="fullscreen"></iframe>
-        {{ form_start(form,{'attr':{'id':'form-extraction','class': "flex-1"}}) }}
+    </div>
+
+    {# Right column: scrollable form #}
+    <div class="col-6 h-100 overflow-y-auto border-start bg-light">
+
+        {{ form_start(form, {'attr': {'id': 'form-extraction'}}) }}
+
         {% include("extract/popupaddref.html.twig") with form %}
         {% include("extract/popupimportbib.html.twig") with form %}
-        <div id="alert-drag-drop" class="bg-blue-50 text-blue-500 px-4 py-3 shadow-md w-11/12 mb-2 relative" role="alert">
-            <div class="flex">
-                <div class="py-1"><svg class="fill-current h-6 w-6 text-blue-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
-                    <div>
-                        <p class="font-bold">{{ "You can use drag and drop to sort references"|trans }}</p>
-                        <span id="alert-drag-drop" class="absolute inset-y-0 right-0 px-4 py-3">
-                            <button id="alert-drag-drop" class="transition ease-in-out delay-150 hover:-translate-y-0.5">
-                                <svg class="fill-current h-6 w-6 text-blue-500 hover:text-blue-700 pointer-events-none" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+
+        {# Sticky toolbar — single row #}
+        <div class="sticky-top bg-white border-bottom px-3 py-2 shadow-sm">
+            <div class="d-flex gap-2">
+                {{ form_widget(form.save, {
+                    'label': '<i class="fas fa-floppy-disk me-1" aria-hidden="true"></i>'~'Save'|trans,
+                    'label_html': true,
+                    'attr': {'class': 'btn btn-sm btn-primary flex-fill fw-semibold'}
+                }) }}
+                {{ form_widget(form.btnModalNewReference, {
+                    'id': 'btn-modal-addref',
+                    'label': '<i class="fas fa-plus me-1" aria-hidden="true"></i>'~'Add reference'|trans,
+                    'label_html': true,
+                    'attr': {'class': 'btn btn-sm btn-success flex-fill'}
+                }) }}
+
+                {# Actions dropdown: Extract, Import, Accept all, Decline all #}
+                <div class="dropdown flex-fill">
+                    <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-sliders me-1" aria-hidden="true"></i>
+                        {{ "Actions"|trans }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <button id="extract-all" class="dropdown-item"
+                                    data-url-from-epi="{{ app.session.get('EpiPdfUrltoExtract') }}">
+                                <i class="fas fa-file-pdf me-2 text-warning" aria-hidden="true"></i>
+                                {{ "Extract from PDF"|trans }}
                             </button>
-                        </span>
-                    </div>
-               </div>
-        </div>
-        <div class="flex mb-2 w-11/12 gap-x-2">
-            <button id="extract-all" class="orange-outline-btn w-1/2" data-url-from-epi="{{ app.session.get('EpiPdfUrltoExtract') }}">{{ "Extract references from PDF"|trans }}</button>
-            {{ form_widget(form.btnModalImportBibtex,{'id': "btn-modal-importbibtex",'attr': {'class':"blue-outline-btn w-1/2"}}) }}
-        </div>
-        <div class="flex mb-2 w-11/12 gap-x-2">
-            <button id="accept-all" class="emerald-outline-btn w-1/2">{{ "Accept all references"|trans }}</button>
-            <button id="decline-all" class="flex-shrink-1 rose-outline-btn w-1/2">{{ "Decline all references"|trans }}</button>
-        </div>
-        {% if form.paperReferences|length is same as(0) %}
-            <div class="flex box-height-none-ref box-border border-4 w-11/12 justify-center color-box-none mb-4 mt-4">
-                <p class="align-middle m-auto">{{ "No references were extracted or found"|trans }}</p>
-            </div>
-        {% endif %}
-        {% if form.paperReferences|length is same as(0) %}
-            {{ form_row(form.paperReferences,{ 'attr':{'class':'hidden'} }) }}
-        {% else %}
-        {% if form.paperReferences|length is not same as(0) %}
-            <div class="flex mb-2 w-11/12 gap-x-2">
-                <button id="select-delete-ref" class="rose-outline-btn w-full">{{ "Remove references"|trans }}</button>
-                <button id="cancel-delete-ref" class="orange-outline-btn w-full hidden">{{ "Cancel Delete"|trans }}</button>
-            </div>
-            <div id="alert-remove" class="bg-amber-50 text-amber-500 px-4 py-3 shadow-md w-11/12 mb-2 relative hidden" role="alert">
-                <div class="flex">
-                    <div class="py-1"><svg class="fill-current h-6 w-6 text-amber-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
-                    <div>
-                        <p class="font-bold">{{ "To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button"|trans }}</p>
-                        <span id="alert-remove" class="absolute inset-y-0 right-0 px-4 py-3">
-                                <button id="alert-remove" class="transition ease-in-out delay-150 hover:-translate-y-0.5">
-                                    <svg class="fill-current h-6 w-6 text-amber-500 hover:text-amber-700 pointer-events-none" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
-                                </button>
-                        </span>
-                    </div>
+                        </li>
+                        <li>
+                            <button type="button" id="btn-modal-importbibtex"
+                                    name="{{ form.btnModalImportBibtex.vars.full_name }}"
+                                    class="dropdown-item">
+                                <i class="fas fa-file-import me-2" aria-hidden="true"></i>
+                                {{ 'Import BibTeX'|trans }}
+                            </button>
+                            {% do form.btnModalImportBibtex.setRendered() %}
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button id="accept-all" class="dropdown-item">
+                                <i class="fas fa-circle-check me-2 text-success" aria-hidden="true"></i>
+                                {{ "Accept all"|trans }}
+                            </button>
+                        </li>
+                        <li>
+                            <button id="decline-all" class="dropdown-item">
+                                <i class="fas fa-circle-xmark me-2 text-secondary" aria-hidden="true"></i>
+                                {{ "Decline all"|trans }}
+                            </button>
+                        </li>
+                    </ul>
                 </div>
+
+                {% if form.paperReferences|length > 0 %}
+                <button type="button" id="select-delete-ref" class="btn btn-sm btn-danger flex-fill">
+                    <i class="fas fa-trash me-1" aria-hidden="true"></i>
+                    {{ "Remove"|trans }}
+                </button>
+                <button type="button" id="cancel-delete-ref" class="btn btn-sm btn-outline-secondary flex-fill d-none">
+                    <i class="fas fa-rotate-left me-1" aria-hidden="true"></i>
+                    {{ "Cancel"|trans }}
+                </button>
+                <button type="button" id="toggle-select-all-ref" class="btn btn-sm btn-secondary flex-fill d-none"
+                        data-select-label="{{ 'Select all'|trans }}"
+                        data-deselect-label="{{ 'Deselect all'|trans }}">
+                    <i class="fas fa-check-double me-1" aria-hidden="true"></i><span>{{ "Select all"|trans }}</span>
+                </button>
+                {% endif %}
             </div>
-        {% endif %}
-        <div id="sortref" class="w-11/12">
+        </div>
+
+        {# Main form content area #}
+        <div class="px-3 py-3">
+
+            {# Empty state #}
+            {% if form.paperReferences|length is same as(0) %}
+                <div class="d-flex box-height-none-ref w-100 justify-content-center color-box-none mb-4 mt-2">
+                    <p class="m-auto text-muted">{{ "No references were extracted or found"|trans }}</p>
+                </div>
+                {{ form_row(form.paperReferences, {'attr': {'class': 'd-none'}}) }}
+            {% else %}
+
+            {# Delete mode alert #}
+            <div id="alert-remove" class="alert alert-warning alert-dismissible fade show mb-3 d-none" role="alert">
+                <i class="fas fa-circle-info me-2" aria-hidden="true"></i>
+                {{ "To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button"|trans }}
+                <button id="btn-close-remove" type="button" class="btn-close" data-bs-dismiss="alert"
+                        aria-label="{{ 'Close'|trans }}"></button>
+            </div>
+
+            {# Reference list (sortable) #}
+            <div id="sortref">
                 {% for paperReferences in form.paperReferences %}
-                    <div class="grid grid-cols-12 grid-flow-row-dense">
-                        <div id="container-reference" class="col-span-11 grid grid-rows-2 grid-flow-col gap-2 border-solid border-2 border-r-0 border-grey-200 mb-2 p-4 {% if paperReferences.vars.value.accepted is same as(0) %} filtered declinedRef {% endif %}"
-                             data-idref="{{ paperReferences.id.vars.value }}">
-                            {{ form_widget(paperReferences.reference,{'id':"reference-"~paperReferences.id.vars.value,'attr':{'class': "hidden block text-gray-700 text-sm font-bold mb-2"}}) }}
-                            {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
-                            {% set doiDecodedRef = '' %}
-                            <div id="container-reference-informations-{{ paperReferences.id.vars.value }}" class="row-span-2">
-                                <p id="textReference-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['raw_reference'] }}</p>
+                    {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
+                    {% set doiDecodedRef = '' %}
+                    {% set isDeclined = paperReferences.vars.value.accepted is same as(0) %}
+
+                    <div id="container-reference"
+                         class="card mb-2 shadow-sm{% if isDeclined %} filtered declinedRef{% endif %}"
+                         data-idref="{{ paperReferences.id.vars.value }}">
+                        <div class="card-body p-3">
+
+                            {{ form_widget(paperReferences.reference, {'id': 'reference-'~paperReferences.id.vars.value, 'attr': {'class': 'd-none'}}) }}
+
+                            {# Reference text (read mode) #}
+                            <div id="container-reference-informations-{{ paperReferences.id.vars.value }}"
+                                 style="cursor:pointer"
+                                 title="{{ 'Click to edit'|trans }}"
+                                 role="button">
+                                <p id="textReference-{{ paperReferences.id.vars.value }}" class="mb-1 small">
+                                    {{ jsonDecodedRef['raw_reference'] }}
+                                </p>
                                 {% if jsonDecodedRef['doi'] is defined %}
                                     <a href="https://doi.org/{{ jsonDecodedRef['doi'] }}"
-                                       class="underline text-blue-600 hover:text-blue-800 visited:text-purple-600" rel="noopener"
-                                       target="_blank" id="linkDoiRef-{{ paperReferences.id.vars.value }}">{{ jsonDecodedRef['doi'] }}</a>
+                                       class="link-primary small text-decoration-underline"
+                                       rel="noopener" target="_blank"
+                                       id="linkDoiRef-{{ paperReferences.id.vars.value }}">
+                                        <i class="fas fa-external-link-alt me-1" aria-hidden="true"></i>{{ jsonDecodedRef['doi'] }}
+                                    </a>
                                     {% set doiDecodedRef = jsonDecodedRef['doi'] %}
                                 {% endif %}
                             </div>
-                            <div class="row-span-4 col-span-2">
-                                <div class="hidden mt-2 z-50" id="modifyTextArea-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReference,{'id':"textareaRef-"~paperReferences.id.vars.value,'attr': {'class':"textarea-height"},'value': jsonDecodedRef['raw_reference']}) }}</div>
-                                <div class="hidden z-50 w-full" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.modifyReferenceDoi,{'id':"textDoiRef-"~paperReferences.id.vars.value,'value': doiDecodedRef}) }}</div>
-                            </div>
-                            <div class="row-span-1 col-span-1 col-start-3 col-end-4">
-                                <div class="hidden mb-2" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.acceptModifyBtn,{'attr': {'class':"emerald-outline-btn w-full"}}) }}</div>
-                                <div class="hidden" id="cancelModifyBtn-{{ paperReferences.id.vars.value }}">{{ form_row(paperReferences.cancelModifyBtn,{'attr': {'class':"rose-outline-btn w-full"}}) }}</div>
-                            </div>
-                            {{ form_widget(paperReferences.isDirtyTextAreaModifyRef,{'id':'is-dirty-textarea-modify-ref','attr':{'data-dirty-ref': paperReferences.id.vars.value}}) }}
-                            <div id="selection-references" class="row-span-1 col-span-1">
-                                {% set classModifyBtn = (jsonDecodedRef['forbiddenModify'] is not defined) ? 'w-fit bg-transparent
-                                hover:bg-cyan-300 text-cyan-300
-                                font-semibold hover:text-white py-2 px-4
-                                border border-cyan-600 hover:border-transparent
-                                rounded mb-2 text-center' : 'hidden' %}
 
-                                {{ form_widget(paperReferences.modifyBtn,{'id':'modifyBtn','attr':{'data-idref': paperReferences.id.vars.value,'class':classModifyBtn}}) }}
-                                <label class="relative inline-flex items-center mr-5 cursor-pointer align-middle col-span-1">
-                                    <input id="toggle-input-{{ paperReferences.id.vars.value }}" type="checkbox" value="{{ paperReferences.id.vars.value }}" class="sr-only peer" {% if paperReferences.accepted.vars.data is same as(1) %} checked {% endif %}>
-                                    <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-red-700 peer-focus:ring-4
-                            peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full
-                            peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px]
-                            after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
-                            dark:border-gray-600 peer-checked:bg-green-600"></div>
-                                </label>
+                            {# Edit mode fields (hidden by default) #}
+                            <div class="d-none" id="modifyTextArea-{{ paperReferences.id.vars.value }}">
+                                <textarea id="textareaRef-{{ paperReferences.id.vars.value }}"
+                                          class="form-control textarea-height">{{ jsonDecodedRef['raw_reference'] }}</textarea>
                             </div>
-                            <div class="row-span-1 col-span-1">
-                                {{ form_widget(paperReferences.checkboxIdTodelete,{'id':'ref-to-delete','attr':{'data-idref-del': paperReferences.id.vars.value,'class': 'accent-rose-600 w-6 h-6 hidden'}}) }}
+                            <div class="d-none w-100" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">
+                                <input type="text" id="textDoiRef-{{ paperReferences.id.vars.value }}"
+                                       class="form-control form-control-sm"
+                                       placeholder="{{ 'DOI, URL'|trans }}"
+                                       value="{{ doiDecodedRef }}">
                             </div>
-                            <div class="hidden" id="radio-group-choice-{{ paperReferences.id.vars.value }}">{{ form_widget(paperReferences.accepted) }}</div>
-                            <span>{{ form_row(paperReferences.reference_order) }}</span>
-                            <span>{{ form_row(paperReferences.id) }}</span>
+                            <div class="d-none mt-2 d-flex gap-2" id="editActionBtns-{{ paperReferences.id.vars.value }}">
+                                <button type="button" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}"
+                                        class="btn btn-sm btn-success flex-grow-1">
+                                    <i class="fas fa-check me-1" aria-hidden="true"></i>{{ 'Confirm'|trans }}
+                                </button>
+                                <button type="button" id="cancelModifyBtn-{{ paperReferences.id.vars.value }}"
+                                        class="btn btn-sm btn-outline-secondary flex-grow-1">
+                                    <i class="fas fa-xmark me-1" aria-hidden="true"></i>{{ 'Cancel'|trans }}
+                                </button>
+                            </div>
+
+                            {# Card footer: controls + source badge #}
+                            <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top">
+                                {# Left controls #}
+                                <div id="selection-references" class="d-flex align-items-center gap-2 flex-grow-1 ref-controls">
+                                    {% set classModifyBtn = (jsonDecodedRef['forbiddenModify'] is not defined) ? 'btn btn-sm btn-secondary' : 'd-none' %}
+                                    <button type="button"
+                                            id="modifyBtn-{{ paperReferences.id.vars.value }}"
+                                            data-idref="{{ paperReferences.id.vars.value }}"
+                                            class="{{ classModifyBtn }}">
+                                        <i class="fas fa-pen me-1" aria-hidden="true"></i>{{ 'Edit'|trans }}
+                                    </button>
+
+                                    {# Accept/Decline toggle #}
+                                    <div class="form-check form-switch mb-0 ref-toggle">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="toggle-input-{{ paperReferences.id.vars.value }}"
+                                               value="{{ paperReferences.id.vars.value }}"
+                                               {% if paperReferences.accepted.vars.data is same as(1) %} checked{% endif %}>
+                                        <label class="form-check-label visually-hidden"
+                                               for="toggle-input-{{ paperReferences.id.vars.value }}">
+                                            {{ 'Accept reference'|trans }}
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {# Delete checkbox (hidden by default, shown in delete mode) #}
+                                {{ form_widget(paperReferences.checkboxIdTodelete, {
+                                    'id': 'ref-to-delete-'~paperReferences.id.vars.value,
+                                    'attr': {
+                                        'data-idref-del': paperReferences.id.vars.value,
+                                        'class': 'form-check-input d-none ref-delete-check',
+                                        'style': 'width:1.4rem;height:1.4rem;accent-color:#e74c3c;cursor:pointer;'
+                                    }
+                                }) }}
+
+                                {# Source badge #}
+                                <span class="badge source-color-{{ paperReferences.vars.data.source|lower }} ms-auto">
+                                    {{ paperReferences.vars.data.source|trans }}
+                                </span>
+                            </div>
+
                         </div>
-                        <div class="col-span-1 box-border gap-2 rotate-source text-center source-color-{{ paperReferences.source.vars.value|lower }} mb-2 align-middle">{{ paperReferences.source.vars.value|trans }}</div>
-                        {{ form_row(paperReferences.source,{'attr': {'class':"hidden"}}) }}
+
+                        {{ form_widget(paperReferences.isDirtyTextAreaModifyRef, {
+                            'id': 'is-dirty-textarea-modify-ref-'~paperReferences.id.vars.value,
+                            'attr': {'data-dirty-ref': paperReferences.id.vars.value}
+                        }) }}
+                        {{ form_widget(paperReferences.accepted, {
+                            'id': 'accepted-'~paperReferences.id.vars.value
+                        }) }}
+                        <div class="d-none">{{ form_row(paperReferences.id) }}</div>
                     </div>
+
                 {% endfor %}
-            {% endif %}
-            <div class="w-11/12 flex gap-x-2 mb-4">
-                {{ form_row(form.save,{'attr': {'class':"w-full bg-transparent hover:bg-emerald-500 text-emerald-400 font-semibold hover:text-white py-2 px-4 border border-emerald-500 hover:border-transparent rounded mt-4"}}) }}
-                {{ form_row(form.btnModalNewReference,{'id': "btn-modal-addref",'attr': {'class':"w-full bg-transparent hover:bg-amber-500 text-amber-400 font-semibold hover:text-white py-2 px-4 border border-amber-500 hover:border-transparent rounded mt-4"}}) }}
             </div>
+
+            {% endif %}
+
+
         </div>
+
         {{ form_end(form) }}
     </div>
-    <div id="is-dirty">0</div>
+</div>
+<input type="hidden" id="is-dirty" value="0">
 {% endblock %}

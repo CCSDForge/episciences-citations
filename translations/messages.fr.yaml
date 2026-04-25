@@ -25,6 +25,7 @@ USER: UTILISATEUR
 No references were extracted or found: Aucune référence n'a été extraites ou trouvée
 Please upload a valid BibTeX document: Merci de téléverser un fichier de type BibTeX
 Cancel Delete: Annuler la suppression
+Remove: Effacer
 Remove references: Effacer des références
 To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button: Pour supprimer des références, sélectionner à l'aide de cases à cocher la référence que vous souhaitez supprimer et cliquer sur le bouton "Enregistrer".
 Please add a BibTeX file: Veuillez ajouter un fichier BibTeX
@@ -34,3 +35,11 @@ The references have been saved: Les références ont été enregistrées
 The sorting has been saved: Le tri a été enregistré
 Nothing was changed: Rien n'a été modifié
 No references found in the PDF: Aucune référence trouvée dans le PDF
+Select all: Tout sélectionner
+Deselect all: Tout désélectionner
+Click to edit: Cliquer pour modifier
+Accept reference: Accepter la référence
+Extraction in progress...: Extraction en cours...
+The first extraction may take more than a minute. Please wait.: La première extraction peut prendre plus d'une minute. Veuillez patienter.
+Saving...: Enregistrement en cours...
+Loading...: Chargement en cours...

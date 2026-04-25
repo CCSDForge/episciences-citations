@@ -213,16 +213,20 @@ class ReferencesTest extends TestCase
             'id' => 123456,
             'addReference' => 'New test reference',
             'addReferenceDoi' => 'https://doi.org/10.1234/test-new',
-            'paperReferences' => [
-                ['reference_order' => 0],
-                ['reference_order' => 1]
-            ]
         ];
 
+        $qb = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
+        $query = $this->createMock(\Doctrine\ORM\AbstractQuery::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+        $query->method('getSingleScalarResult')->willReturn(1);
+
         // Mock repositories
-        $this->entityManager->expects($this->exactly(2))
+        $this->entityManager->expects($this->exactly(3))
             ->method('getRepository')
-            ->willReturnCallback(function($class) use ($user, $doc) {
+            ->willReturnCallback(function($class) use ($user, $doc, $qb) {
                 if ($class === UserInformations::class) {
                     $repo = $this->userRepository;
                     $repo->method('find')->willReturn($user);
@@ -231,6 +235,11 @@ class ReferencesTest extends TestCase
                 if ($class === Document::class) {
                     $repo = $this->documentRepository;
                     $repo->method('find')->willReturn($doc);
+                    return $repo;
+                }
+                if ($class === PaperReferences::class) {
+                    $repo = $this->refRepository;
+                    $repo->method('createQueryBuilder')->willReturn($qb);
                     return $repo;
                 }
             });

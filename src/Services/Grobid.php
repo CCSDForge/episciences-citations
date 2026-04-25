@@ -88,6 +88,11 @@ class Grobid {
         }
     }
 
+    public function hasCachedReferences(int $docId): bool
+    {
+        return $this->getGrobidReferencesInCache($docId . '.pdf') !== false;
+    }
+
     /**
      * @param $docId
      * @return PaperReferences[]|array|object[]
