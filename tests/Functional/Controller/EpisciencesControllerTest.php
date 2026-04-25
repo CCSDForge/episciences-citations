@@ -2,6 +2,7 @@
 
 namespace App\Tests\Functional\Controller;
 
+use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -25,7 +26,7 @@ class EpisciencesControllerTest extends WebTestCase
 
         // Act - Call API without URL parameter (with valid CORS origin)
         $client->request(
-            'GET',
+            Request::METHOD_GET,
             '/visualize-citations',
             [],
             [],
@@ -48,7 +49,7 @@ class EpisciencesControllerTest extends WebTestCase
 
         // Act - Call API with invalid URL (no docId extractable) with valid CORS
         $client->request(
-            'GET',
+            Request::METHOD_GET,
             '/visualize-citations?url=https://invalid-url.com',
             [],
             [],
@@ -82,7 +83,7 @@ class EpisciencesControllerTest extends WebTestCase
 
         // Act - Call API with invalid CORS origin
         $client->request(
-            'GET',
+            Request::METHOD_GET,
             '/visualize-citations?url=https://episciences.org/test/123',
             [],
             [],
@@ -105,7 +106,7 @@ class EpisciencesControllerTest extends WebTestCase
 
         // Act - Send OPTIONS preflight request
         $client->request(
-            'OPTIONS',
+            Request::METHOD_OPTIONS,
             '/visualize-citations',
             [],
             [],

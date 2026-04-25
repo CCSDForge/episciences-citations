@@ -18,17 +18,13 @@ class JsonGrobidExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('getAuthors', [$this, 'getAuthors']),
-            new TwigFunction('getDateInJson', [$this, 'getDateInJson']),
-            new TwigFunction('getJournalIdentifier', [$this, 'getJournalIdentifier']),
-            new TwigFunction('prettyReference', [$this, 'prettyReference']),
+            new TwigFunction('getAuthors', $this->getAuthors(...)),
+            new TwigFunction('getDateInJson', $this->getDateInJson(...)),
+            new TwigFunction('getJournalIdentifier', $this->getJournalIdentifier(...)),
+            new TwigFunction('prettyReference', $this->prettyReference(...)),
         ];
     }
 
-    /**
-     * @param array $authors
-     * @return array
-     */
     public function getAuthors(array $authors): array
     {
         $infoAuthor = [];
@@ -63,10 +59,6 @@ class JsonGrobidExtension extends AbstractExtension
         return $infoAuthor;
     }
 
-    /**
-     * @param array $author
-     * @return string|null
-     */
     public function getOrcid(array $author): ?string
     {
         if (array_key_exists("idno", $author)) {
@@ -75,10 +67,6 @@ class JsonGrobidExtension extends AbstractExtension
         return null;
     }
 
-    /**
-     * @param array $names
-     * @return string
-     */
     public function composeNames(array $names): string
     {
         return implode(" ", $names);
@@ -96,7 +84,7 @@ class JsonGrobidExtension extends AbstractExtension
         return $date;
     }
 
-    public function getJournalIdentifier(string|array $identifier)
+    public function getJournalIdentifier(string|array $identifier): string
     {
         if (is_array($identifier)) {
             return implode('; ', $identifier);
@@ -111,14 +99,14 @@ class JsonGrobidExtension extends AbstractExtension
         $jsonReference = [];
 
         // Check if $jsonRawReference is not empty
-        if (!empty($jsonRawReference)) {
+        if ($jsonRawReference !== '' && $jsonRawReference !== '0') {
             try {
                 // Decode the JSON string to an associative array
                 $jsonRawReferenceArray = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
 
                 // Check if the first element of the array is set and decode it
                 if (isset($jsonRawReferenceArray[0])) {
-                    $jsonReference = json_decode($jsonRawReferenceArray[0], true, 512, JSON_THROW_ON_ERROR);
+                    $jsonReference = json_decode((string) $jsonRawReferenceArray[0], true, 512, JSON_THROW_ON_ERROR);
 
                     // Check if 'csl' key is set in $jsonReference
                     if (isset($jsonReference['csl'])) {
@@ -137,7 +125,7 @@ class JsonGrobidExtension extends AbstractExtension
                         $jsonReference['forbiddenModify'] = 1;
                     }
                 }
-            } catch (JsonException|CiteProcException $e) {
+            } catch (JsonException|CiteProcException) {
                 // Handle JSON decoding errors or CiteProc exceptions
                 return [];
             }

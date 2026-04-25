@@ -12,10 +12,8 @@ class User implements UserInterface
     private $id;
 
     private $username;
-    private $email;
+    private ?string $email = null;
     private $uid;
-
-    private $roles = [];
 
     public function getId(): ?int
     {
@@ -54,8 +52,6 @@ class User implements UserInterface
 
     public function setRoles(array $roles): self
     {
-    $this->roles = $roles;
-
     return $this;
     }
 
@@ -73,7 +69,7 @@ class User implements UserInterface
     /**
     * @see UserInterface
     */
-    public function eraseCredentials()
+    public function eraseCredentials(): void
     {
     // If you store any temporary, sensitive data on the user, clear it here
     // $this->plainPassword = null;

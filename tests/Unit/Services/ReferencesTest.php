@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -18,12 +19,12 @@ use PHPUnit\Framework\TestCase;
 class ReferencesTest extends TestCase
 {
     private References $service;
-    private EntityManagerInterface $entityManager;
-    private Grobid $grobid;
-    private Bibtex $bibtex;
-    private PaperReferencesRepository $refRepository;
-    private UserInformationsRepository $userRepository;
-    private DocumentRepository $documentRepository;
+    private MockObject $entityManager;
+    private MockObject $grobid;
+    private MockObject $bibtex;
+    private MockObject $refRepository;
+    private MockObject $userRepository;
+    private MockObject $documentRepository;
 
     protected function setUp(): void
     {
@@ -262,7 +263,7 @@ class ReferencesTest extends TestCase
         $this->entityManager->expects($this->exactly(3))
             ->method('getRepository')
             ->with(PaperReferences::class)
-            ->willReturnCallback(function() use ($ref1, $ref2, $ref3) {
+            ->willReturnCallback(function() use ($ref1, $ref2, $ref3): PaperReferencesRepository {
                 $repo = $this->refRepository;
                 $repo->method('find')->willReturnOnConsecutiveCalls($ref1, $ref2, $ref3);
                 return $repo;

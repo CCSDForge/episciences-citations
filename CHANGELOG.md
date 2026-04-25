@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- **PHP 8.3 Migration**:
+  - Upgraded project to PHP 8.3.
+  - Integrated Rector for automated code modernization and quality.
+  - Added Makefile commands: `make rector`, `make rector-dry`, and `make rebuild`.
+  - Upgraded PHPStan to version 2.1.
 - Modern language switcher component with dropdown menu
 - Stimulus controller for interactive language selection (`language_switcher_controller.js`)
 - **Testing Infrastructure**:

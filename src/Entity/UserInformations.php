@@ -66,17 +66,13 @@ class UserInformations
      * @return Collection<int, PaperReferences>
      */
     /**
-     * @return Collection
+     * @return Collection<int, PaperReferences>
      */
     public function getPaperReferences(): Collection
     {
         return $this->paperReferences;
     }
 
-    /**
-     * @param PaperReferences $paperReference
-     * @return UserInformations
-     */
     public function addPaperReferences(PaperReferences $paperReference): self
     {
         if (!$this->paperReferences->contains($paperReference)){

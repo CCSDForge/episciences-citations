@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use GuzzleHttp\Client;
@@ -19,7 +21,7 @@ class Doi
                 ]
             ]);
             return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
+        } catch (GuzzleException) {
             return "";
         }
     }
@@ -33,7 +35,7 @@ class Doi
                 ]
             ]);
             return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
+        } catch (GuzzleException) {
             return "";
         }
     }

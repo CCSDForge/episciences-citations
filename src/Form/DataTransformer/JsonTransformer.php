@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Form\DataTransformer;
 
 use Symfony\Component\Form\DataTransformerInterface;
@@ -19,7 +21,7 @@ class JsonTransformer implements DataTransformerInterface
             return [];
         }
 
-        return json_decode($value);
+        return json_decode((string) $value);
     }
 
     /**

@@ -46,7 +46,7 @@ class PaperReferences
         return $this->id;
     }
 
-    public function setId($id): self
+    public function setId(?int $id): self
     {
         $this->id = $id;
         return $this;
@@ -58,9 +58,9 @@ class PaperReferences
 
     public function setSource(string $source): self
     {
-        if (!in_array($source, array(self::SOURCE_METADATA_GROBID,
+        if (!in_array($source, [self::SOURCE_METADATA_GROBID,
             self::SOURCE_METADATA_EPI_USER,
-            self::SOURCE_METADATA_BIBTEX_IMPORT,self::SOURCE_SEMANTICS_SCHOLAR), true)) {
+            self::SOURCE_METADATA_BIBTEX_IMPORT,self::SOURCE_SEMANTICS_SCHOLAR], true)) {
             throw new \InvalidArgumentException("Invalid status");
         }
         $this->source = $source;
