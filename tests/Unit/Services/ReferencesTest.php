@@ -152,23 +152,25 @@ class ReferencesTest extends TestCase
     #[Test]
     public function testGetReferences_AllType_ReturnsFormatted(): void
     {
-        // Arrange
+        // Arrange — flat arrays, no JSON string wrapping
         $docId = 123456;
 
         $ref1 = new PaperReferences();
         $ref1->setId(1);
-        $ref1->setReference([json_encode([
+        $ref1->setReference([
             'raw_reference' => 'Test ref 1',
-            'csl' => ['type' => 'article', 'title' => 'Test']
-        ])]);
+            'csl' => ['type' => 'article', 'title' => 'Test'],
+        ]);
         $ref1->setAccepted(1);
         $ref1->setReferenceOrder(0);
 
         $ref2 = new PaperReferences();
         $ref2->setId(2);
-        $ref2->setReference([json_encode(['raw_reference' => 'Test ref 2'])]);
+        $ref2->setReference(['raw_reference' => 'Test ref 2']);
         $ref2->setAccepted(0);
         $ref2->setReferenceOrder(1);
+
+        $formattedRef = ['raw_reference' => 'Formatted reference text'];
 
         // Mock Grobid service
         $this->grobid->expects($this->once())
@@ -176,10 +178,10 @@ class ReferencesTest extends TestCase
             ->with($docId)
             ->willReturn([$ref1, $ref2]);
 
-        // Mock Bibtex formatting
+        // getCslRefText now takes an array and returns an array
         $this->bibtex->expects($this->exactly(2))
             ->method('getCslRefText')
-            ->willReturn('Formatted reference text');
+            ->willReturn($formattedRef);
 
         // Act
         $result = $this->service->getReferences($docId, 'all');
@@ -189,11 +191,11 @@ class ReferencesTest extends TestCase
         $this->assertCount(2, $result);
         $this->assertArrayHasKey(1, $result);
         $this->assertArrayHasKey(2, $result);
-        $this->assertEquals('Formatted reference text', $result[1]['ref']);
+        $this->assertEquals($formattedRef, $result[1]['ref']);
         $this->assertEquals(1, $result[1]['isAccepted']);
         $this->assertEquals(0, $result[1]['referenceOrder']);
-        $this->assertArrayHasKey('csl', $result[1]); // CSL present
-        $this->assertArrayNotHasKey('csl', $result[2]); // No CSL
+        $this->assertArrayHasKey('csl', $result[1]);    // CSL present in ref1
+        $this->assertArrayNotHasKey('csl', $result[2]); // No CSL in ref2
     }
 
     #[Test]

@@ -251,7 +251,7 @@ class GetBibRefCommand extends Command
         }
         $reference = $refRetrieved;
         $ref = new PaperReferences();
-        $ref->setReference([json_encode($reference)]);
+        $ref->setReference($reference);
         $ref->setSource($source);
         $ref->setUpdatedAt(new \DateTimeImmutable());
         $ref->setReferenceOrder($counterRef++);
@@ -347,8 +347,7 @@ class GetBibRefCommand extends Command
                 $reOrdonateCounter = 0;
                 foreach ($docExisting->getPaperReferences() as $doc) {
                     $doc->setReferenceOrder($reOrdonateCounter);
-                    $referenceAlreadyAccepted[] =
-                        json_decode((string) $doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR);
+                    $referenceAlreadyAccepted[] = $doc->getReference();
                     $this->entityManager->persist($doc);
                     $reOrdonateCounter++;
                     $counterRef++;

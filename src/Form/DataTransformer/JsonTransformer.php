@@ -21,7 +21,7 @@ class JsonTransformer implements DataTransformerInterface
             return [];
         }
 
-        return json_decode((string) $value);
+        return json_decode((string) $value, true, 512, JSON_THROW_ON_ERROR);
     }
 
     /**

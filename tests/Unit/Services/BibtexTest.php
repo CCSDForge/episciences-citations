@@ -143,34 +143,46 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
-    public function testGetCslRefText_WithCSL(): void
+    public function testGetCslRefText_WithCSL_ReturnsArrayWithRenderedText(): void
     {
-        // Arrange
-        $jsonWithCsl = json_encode([
+        // Arrange — pass flat array, no JSON string
+        $refData = [
             'csl' => [
                 'type' => 'article-journal',
                 'title' => 'Test Article',
                 'author' => [
-                    ['family' => 'Doe', 'given' => 'John']
+                    ['family' => 'Doe', 'given' => 'John'],
                 ],
                 'issued' => ['date-parts' => [[2024]]],
-                'container-title' => 'Test Journal'
+                'container-title' => 'Test Journal',
             ],
-            'raw_reference' => 'Original raw text'
-        ]);
+            'raw_reference' => 'Original raw text',
+        ];
 
         // Act
-        $result = $this->service->getCslRefText($jsonWithCsl);
+        $result = $this->service->getCslRefText($refData);
 
-        // Assert
-        $this->assertIsString($result);
+        // Assert — result is an array, 'csl' key removed, 'raw_reference' updated
+        $this->assertIsArray($result);
+        $this->assertArrayNotHasKey('csl', $result, 'CSL key should be removed after rendering');
+        $this->assertArrayHasKey('raw_reference', $result);
+        $this->assertStringContainsString('Doe', $result['raw_reference']);
+    }
 
-        // Result should be formatted citation text (not JSON)
-        // CiteProc renders it, so we just verify it's not the original JSON
-        $this->assertStringNotContainsString('"csl"', $result);
+    #[Test]
+    public function testGetCslRefText_WithoutCSL_ReturnsUnchangedArray(): void
+    {
+        // Arrange — reference without CSL (e.g. from GROBID)
+        $refData = [
+            'raw_reference' => 'Author et al. Title. Journal, 2024.',
+            'doi' => '10.1234/test',
+        ];
 
-        // Verify the formatted text contains author name
-        // (CiteProc will format it as "Doe, J." or similar)
-        $this->assertStringContainsString('Doe', $result);
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert — array returned as-is
+        $this->assertIsArray($result);
+        $this->assertEquals($refData, $result);
     }
 }
