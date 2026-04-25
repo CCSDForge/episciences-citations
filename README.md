@@ -44,9 +44,13 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 **Backend:**
 - PHP 8.3
-- Symfony 6.4
+- Symfony 6.4 (LTS)
 - Doctrine ORM
 - MySQL/MariaDB
+
+**Analysis & Modernization:**
+- PHPStan 2.1 (Static Analysis)
+- Rector 2.4 (Automated Upgrades)
 
 **Frontend:**
 - Tailwind CSS 3.2.7
@@ -85,23 +89,25 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 3. **Start Docker containers**
    ```bash
-   docker-compose up -d
+   make up
    ```
 
 4. **Install dependencies**
    ```bash
-   docker exec epi-citations-php-fpm composer install
-   docker exec epi-citations-php-fpm npm install
+   make composer-install
+   make npm-install
    ```
 
 5. **Run database migrations**
    ```bash
-   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate --no-interaction
+   make db-test-migrate # for test environment
+   # or manually for dev
+   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate
    ```
 
 6. **Build frontend assets**
    ```bash
-   docker exec epi-citations-php-fpm npm run build
+   make npm-build
    ```
 
 7. **Access the application**
@@ -198,6 +204,14 @@ For production deployment, configure your web server to point to the `public/` d
 ```
 
 ## Development
+
+### Makefile
+
+The project uses a `Makefile` to simplify common tasks. It is recommended to use these commands to ensure consistency between development environments.
+
+```bash
+make help # Display all available commands
+```
 
 ### Available Commands
 
