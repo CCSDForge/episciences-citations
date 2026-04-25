@@ -47,7 +47,6 @@ services:
 
     App\Services\Grobid:
         arguments:
-            $cacheFolder: '%app.cache_folder%'
             $grobidUrl: '%env(APP_GROBID_URL)%'
             $grobidCache: '@grobid.references.cache'
     App\Services\Episciences:

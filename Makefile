@@ -41,11 +41,14 @@ clean: down ## Clean up unused docker resources
 load-db-citations: ## Load an SQL dump from ~/tmp/citations.sql
 	$(MYSQL_CONNECT_CITATIONS) < ~/tmp/episciences.sql
 
-composer-install: ## Install composer dependencies
+composer-install: git-safe-dir ## Install composer dependencies
 	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) composer install --no-interaction --prefer-dist --optimize-autoloader
 
-composer-update: ## Update composer dependencies
-	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) composer update --no-interaction --prefer-dist --optimize-autoloader
+composer-update: git-safe-dir ## Update composer dependencies
+	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) composer update --no-interaction --prefer-dist --optimize-autoloader -W
+
+git-safe-dir: ## Fix dubious ownership in git
+	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) git config --global --add safe.directory $(CNTR_APP_DIR)
 
 yarn-encore-production: ## yarn encore production
 	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) yarn install; yarn encore production
@@ -219,3 +222,28 @@ ci: ## Run CI checks locally (tests + lint)
 	@make lint
 	@make test
 	@echo "$(GREEN)✓ CI checks passed$(NC)"
+
+# ============================================================================
+# RECTOR COMMANDS
+# ============================================================================
+
+rector: ## Run Rector on src and tests
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/rector process
+
+rector-dry: ## Run Rector in dry-run mode
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/rector process --dry-run
+
+rector-path: ## Run Rector on a specific path (usage: make rector-path path=src/Controller)
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/rector process $(path)
+
+rector-path-dry: ## Run Rector on a specific path in dry-run mode (usage: make rector-path-dry path=src/Controller)
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/rector process $(path) --dry-run
+
+# ============================================================================
+# DOCKER COMMANDS
+# ============================================================================
+
+rebuild: ## Rebuild and restart docker containers
+	$(DOCKER_COMPOSE) build --no-cache
+	$(DOCKER_COMPOSE) up -d --force-recreate
+	@echo "$(GREEN)✓ Containers rebuilt and restarted$(NC)"

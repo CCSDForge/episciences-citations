@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class EpisciencesController extends AbstractController
 {
-    public function __construct(private Episciences $episciences, private Grobid $grobid, private References $references, private LoggerInterface $logger)
+    public function __construct(private readonly Episciences $episciences, private readonly References $references, private readonly LoggerInterface $logger)
     {
     }
 
@@ -53,7 +53,7 @@ class EpisciencesController extends AbstractController
         // Récupération des références
         $refs = $this->references->getReferences($docId, $type);
 
-        if (empty($refs)) {
+        if ($refs === []) {
             $this->logger->info('API called but no references were found for: ', [$docId]);
             return new JsonResponse(
                 ['status' => Response::HTTP_OK, 'message' => 'No reference found'],

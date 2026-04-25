@@ -1,8 +1,6 @@
 <?php
 namespace App\Services;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -11,20 +9,14 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Episciences {
 
-    public function __construct(private EntityManagerInterface $entityManager,
-                                private HttpClientInterface $client,
-                                private ContainerBagInterface $params,
-                                private string $pdfFolder,
-                                private string $apiRight,
-                                private LoggerInterface $logger,
-                                private bool $forceHttp = false)
+    public function __construct(private readonly HttpClientInterface $client,
+                                private readonly string $pdfFolder,
+                                private readonly string $apiRight,
+                                private readonly LoggerInterface $logger,
+                                private readonly bool $forceHttp = false)
     {
     }
 
-    /**
-     * @param string $url
-     * @return array|bool
-     */
     public function getPaperPDF(string $url): array|bool
     {
         $this->createDirDataPdf();
@@ -55,10 +47,10 @@ class Episciences {
         }
         return true;
     }
-    public function putPdfInCache($name, $response): bool
+    public function putPdfInCache(string $name, $response): bool
     {
         $fp = fopen($this->pdfFolder.$name.'.pdf', 'wb');
-        if (fwrite($fp, $response) === false) {
+        if (fwrite($fp, (string) $response) === false) {
             return false;
         }
         fclose($fp);
@@ -66,24 +58,15 @@ class Episciences {
 
     }
 
-    /**
-     * @param int $status
-     * @param string $message
-     * @return string
-     */
     public function manageHttpErrorMessagePDF(int $status, string $message): string
     {
 
         if ($status === 404) {
-            $message = "PDF not found at the destined address";
+            return "PDF not found at the destined address";
         }
         return $message;
     }
 
-    /**
-     * @param string $url
-     * @return string
-     */
     public function getDocIdFromUrl(string $url): string
     {
         // Extraire directement le premier segment numérique de l'URL (optimisation)
@@ -98,19 +81,16 @@ class Episciences {
      * @throws RedirectionExceptionInterface
      * @throws ClientExceptionInterface
      */
-    public function getRightUser($docId, $uid): bool {
+    public function getRightUser(string $docId, string $uid): bool {
         try {
             $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
             // Convert string response ("true"/"false") to boolean
             return $response === 'true';
-        } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
+        } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface) {
             return false;
         }
     }
 
-    /**
-     * @return void
-     */
     public function createDirDataPdf(): void
     {
         if (!file_exists($this->pdfFolder) && !mkdir($concurrentDirectory = $this->pdfFolder) && !is_dir($concurrentDirectory)) {

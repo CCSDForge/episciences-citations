@@ -17,12 +17,11 @@ use Symfony\Component\Mime\Part\Multipart\FormDataPart;
 class Grobid {
 
     public function __construct(
-        private HttpClientInterface $client,
-        private Tei $tei,
-        private EntityManagerInterface $entityManager,
-        private string $cacheFolder,
-        private string $grobidUrl,
-        private CacheInterface $grobidCache
+        private readonly HttpClientInterface $client,
+        private readonly Tei $tei,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly string $grobidUrl,
+        private readonly CacheInterface $grobidCache
     ) {
     }
 
@@ -47,7 +46,7 @@ class Grobid {
                 'body' => $data->bodyToIterable(),
             ])->getContent();
             $references = $this->tei->getReferencesInTei($response);
-            if (empty($references)){
+            if ($references === []){
                 return false;
             }
             $this->putGrobidReferencesInCache($docId.".pdf",$response);
@@ -61,7 +60,6 @@ class Grobid {
     /**
      * @param $name
      * @param $response
-     * @return void
      */
     public function putGrobidReferencesInCache($name, $response): void
     {
@@ -71,7 +69,7 @@ class Grobid {
                 $item->set($response);
                 $this->grobidCache->save($item);
             }
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException) {
             return;
         }
     }
@@ -85,7 +83,7 @@ class Grobid {
         try {
             $item = $this->grobidCache->getItem($name);
             return $item->isHit() ? $item->get() : false;
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException) {
             return false;
         }
     }

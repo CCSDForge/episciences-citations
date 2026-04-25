@@ -13,17 +13,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DefaultController extends AbstractController
 {
-    public function __construct(private Episciences $episciences,private RequestStack $requestStack)
+    public function __construct(private readonly LoggerInterface $logger)
     {
     }
 
     /**
-     * @param Request $request
      * @param LoggerInterface $logger
-     * @return RedirectResponse
      */
     #[Route('/login', name: 'login')]
-    public function login(Request $request,LoggerInterface $logger) : RedirectResponse {
+    public function login(Request $request) : RedirectResponse {
 
         $target = urlencode($this->getParameter('cas_login_target'));
         $url = 'https://'
@@ -31,15 +29,12 @@ class DefaultController extends AbstractController
             . '/login?service=';
         $bibExportAsked = ($request->get('exportbib') === "1") ? urlencode('&exportbib=1'): "";
         $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
-        $logger->info('page CAS');
-        $logger->info("journal_url",[$journalUrl]);
-        $logger->info("url complete",[$url . $target . '/force?url='.$journalUrl.$bibExportAsked]);
+        $this->logger->info('page CAS');
+        $this->logger->info("journal_url",[$journalUrl]);
+        $this->logger->info("url complete",[$url . $target . '/force?url='.$journalUrl.$bibExportAsked]);
         return $this->redirect($url . $target . '/force?url='.$journalUrl.$bibExportAsked);
     }
 
-    /**
-     * @return void
-     */
     #[Route('/logout', name: 'logout')]
     public function logout(): void
     {
@@ -51,12 +46,12 @@ class DefaultController extends AbstractController
     }
 
     #[Route('/force', name: 'force')]
-    public function force(Request $request, LoggerInterface $logger): RedirectResponse
+    public function force(Request $request): RedirectResponse
     {
-        $logger->notice('force page');
-        $logger->info('cas_gateway',[$this->getParameter("cas_gateway")]);
-        $logger->info('session before gateway',[$_SESSION]);
-        $logger->info("USER INFO AFTER FORCE", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        $this->logger->notice('force page');
+        $this->logger->info('cas_gateway',[$this->getParameter("cas_gateway")]);
+        $this->logger->info('session before gateway',[$_SESSION]);
+        $this->logger->info("USER INFO AFTER FORCE", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->getParameter("cas_gateway")) {
             if (!isset($_SESSION)) {
                 session_start();
@@ -65,26 +60,22 @@ class DefaultController extends AbstractController
             session_destroy();
         }
 
-        $logger->info('SESSION',[$_SESSION]);
+        $this->logger->info('SESSION',[$_SESSION]);
         $option = ['url'=> $request->get('url'), 'exportbib' => $request->get('exportbib')];
         $this->setSessionEpiUrlPdf($request,$request->get('url'));
         $this->setSessionModal($request);
-        return $this->redirect($this->generateUrl('app_extract',$option));
+        return $this->redirectToRoute('app_extract', $option);
     }
 
     #[Route(path: ['en' => '/', 'fr' => '/fr'], name: 'index')]
-    public function index(Request $request, LoggerInterface $logger) : Response
+    public function index(): Response
     {
-        $logger->info("USER INFO", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
-        $logger->info('ROLE CAS',[$this->getUser()->getRoles()]);
-        $logger->info('index page',[$_SESSION]);
+        $this->logger->info("USER INFO", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
+        $this->logger->info('ROLE CAS',[$this->getUser()->getRoles()]);
+        $this->logger->info('index page',[$_SESSION]);
         return $this->render('base.html.twig', []);
     }
 
-    /**
-     * @param string $url
-     * @return string
-     */
     private function loadHttpsOrHttp(string $url): string
     {
 
@@ -112,10 +103,6 @@ class DefaultController extends AbstractController
         $session->set('EpiPdfUrltoExtract',$url);
     }
 
-    /**
-     * @param Request $request
-     * @return void
-     */
     private function setSessionModal(Request $request): void
     {
         $session = $request->getSession();

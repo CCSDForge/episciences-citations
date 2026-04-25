@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace App\Form;
 
@@ -23,7 +24,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 class PaperReferenceType extends AbstractType
 {
     public function __construct(
-        private JsonTransformer $jsonTransformer,
+        private readonly JsonTransformer $jsonTransformer,
     ) {
     }
     public function buildForm(FormBuilderInterface $builder, array $options): void

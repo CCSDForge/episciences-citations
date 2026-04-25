@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Services\Episciences;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -15,10 +16,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class EpisciencesTest extends TestCase
 {
     private Episciences $service;
-    private EntityManagerInterface $entityManager;
-    private HttpClientInterface $httpClient;
-    private ContainerBagInterface $params;
-    private LoggerInterface $logger;
+    private MockObject $entityManager;
+    private MockObject $httpClient;
+    private MockObject $params;
+    private MockObject $logger;
     private string $pdfFolder;
     private string $apiRight = 'http://mock-api';
     private bool $forceHttp = false;
@@ -40,9 +41,7 @@ class EpisciencesTest extends TestCase
         $this->logger = $this->createMock(LoggerInterface::class);
 
         $this->service = new Episciences(
-            $this->entityManager,
             $this->httpClient,
-            $this->params,
             $this->pdfFolder,
             $this->apiRight,
             $this->logger,
@@ -222,9 +221,7 @@ class EpisciencesTest extends TestCase
     {
         // Arrange - créer service avec forceHttp = true
         $serviceWithForceHttp = new Episciences(
-            $this->entityManager,
             $this->httpClient,
-            $this->params,
             $this->pdfFolder,
             $this->apiRight,
             $this->logger,

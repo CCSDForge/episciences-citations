@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\EventListener;
 
+use Symfony\Component\HttpFoundation\Request;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,8 +22,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class CorsEventListener implements EventSubscriberInterface
 {
     public function __construct(
-        private string $corsSite,
-        private LoggerInterface $logger
+        private readonly string $corsSite,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -101,7 +104,7 @@ class CorsEventListener implements EventSubscriberInterface
     /**
      * Checks if the request origin is valid
      */
-    private function isValidCorsOrigin($request): bool
+    private function isValidCorsOrigin(Request $request): bool
     {
         // Ensure values are non-null strings (PHP 8.2 strict)
         $origin = (string) ($request->headers->get('origin') ?? '');
@@ -113,7 +116,7 @@ class CorsEventListener implements EventSubscriberInterface
         ]);
 
         // Check that corsSite is not empty
-        if (empty($this->corsSite)) {
+        if ($this->corsSite === '' || $this->corsSite === '0') {
             $this->logger->warning('CORS site parameter is empty');
             return false;
         }
@@ -128,7 +131,7 @@ class CorsEventListener implements EventSubscriberInterface
     /**
      * Adds CORS headers to the response
      */
-    private function addCorsHeaders(Response $response, $request): void
+    private function addCorsHeaders(Response $response, Request $request): void
     {
         // Ensure origin is a non-null string (PHP 8.2 strict)
         $origin = (string) ($request->headers->get('origin') ?? '');

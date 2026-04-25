@@ -10,20 +10,19 @@ use Doctrine\ORM\EntityManagerInterface;
 class Tei
 {
 
-    public function __construct(private EntityManagerInterface $entityManager,
-                                private DocumentRepository $documentRepository)
+    public function __construct(private readonly EntityManagerInterface $entityManager,
+                                private readonly DocumentRepository $documentRepository)
     {
     }
 
     /**
      * @param $tei
-     * @return array
      * @throws \JsonException
      */
     public function getReferencesInTei($tei): array
     {
 
-        $tei = simplexml_load_string($tei);
+        $tei = simplexml_load_string((string) $tei);
         $info = [];
         if ($tei !== false) {
             foreach ($tei->text as $teInfo) {
@@ -58,7 +57,7 @@ class Tei
             foreach ($docExisting->getPaperReferences() as $doc) {
                 $doc->setReferenceOrder($reOrdonateCounter);
                 $referenceAlreadyAcceptedByUser[] = serialize(
-                    json_decode($doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR));
+                    json_decode((string) $doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR));
                 $this->entityManager->persist($doc);
                 $reOrdonateCounter++;
                 $counterRef++;
@@ -70,7 +69,7 @@ class Tei
             $doc->setId($docId);
         }
         foreach ($references as $reference) {
-            if (!in_array(serialize(json_decode($reference, true, 512, JSON_THROW_ON_ERROR)),
+            if (!in_array(serialize(json_decode((string) $reference, true, 512, JSON_THROW_ON_ERROR)),
                 $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
                 $refs->setReference((array)($reference));

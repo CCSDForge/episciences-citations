@@ -2,6 +2,8 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
+use App\Repository\PaperReferencesRepository;
 use App\Entity\PaperReferences;
 use App\Services\Grobid;
 use App\Services\Tei;
@@ -16,9 +18,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class GrobidTest extends TestCase
 {
     private Grobid $service;
-    private HttpClientInterface $httpClient;
-    private Tei $tei;
-    private EntityManagerInterface $entityManager;
+    private MockObject $httpClient;
+    private MockObject $tei;
+    private MockObject $entityManager;
     private FilesystemAdapter $grobidCache;
     private string $cacheFolder = '/tmp/grobid_cache';
     private string $grobidUrl = 'http://mock-grobid/api/processReferences';
@@ -37,7 +39,6 @@ class GrobidTest extends TestCase
             $this->httpClient,
             $this->tei,
             $this->entityManager,
-            $this->cacheFolder,
             $this->grobidUrl,
             $this->grobidCache
         );
@@ -248,7 +249,7 @@ class GrobidTest extends TestCase
 
         $expectedReferences = [$ref1, $ref2];
 
-        $repository = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $repository = $this->createMock(PaperReferencesRepository::class);
         $repository->expects($this->once())
             ->method('findBy')
             ->with(['document' => $docId])
@@ -279,7 +280,7 @@ class GrobidTest extends TestCase
 
         $expectedReferences = [$acceptedRef];
 
-        $repository = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $repository = $this->createMock(PaperReferencesRepository::class);
         $repository->expects($this->once())
             ->method('findBy')
             ->with(

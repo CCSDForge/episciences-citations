@@ -2,6 +2,8 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
+use App\Repository\PaperReferencesRepository;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
@@ -13,8 +15,8 @@ use PHPUnit\Framework\TestCase;
 class TeiTest extends TestCase
 {
     private Tei $service;
-    private EntityManagerInterface $entityManager;
-    private DocumentRepository $documentRepository;
+    private MockObject $entityManager;
+    private MockObject $documentRepository;
 
     protected function setUp(): void
     {
@@ -41,7 +43,7 @@ class TeiTest extends TestCase
         $this->assertGreaterThan(0, count($result), 'Should extract at least one reference');
 
         // Verify structure of the first reference
-        $firstRef = json_decode($result[0], true);
+        $firstRef = json_decode((string) $result[0], true);
         $this->assertArrayHasKey('raw_reference', $firstRef);
         $this->assertNotEmpty($firstRef['raw_reference']);
     }
@@ -78,7 +80,7 @@ class TeiTest extends TestCase
             ->willReturn(null);
 
         // Mock repository for removeAllRefGrobidSource
-        $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $refRepo = $this->createMock(PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([]);
 
         $this->entityManager->expects($this->once())
@@ -131,7 +133,7 @@ class TeiTest extends TestCase
             ->willReturn($existingDoc);
 
         // Mock repository for removeAllRefGrobidSource
-        $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $refRepo = $this->createMock(PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([$acceptedRef]);
 
         $this->entityManager->expects($this->once())

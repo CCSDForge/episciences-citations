@@ -8,13 +8,11 @@ use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
 
-    public function __construct(private EntityManagerInterface $entityManager,private Grobid $grobid, private Bibtex $bibtex)
+    public function __construct(private readonly EntityManagerInterface $entityManager,private readonly Grobid $grobid, private readonly Bibtex $bibtex)
     {
     }
 
     /**
-     * @param array $form
-     * @param array $userInfo
      * @return int[]
      */
     public function validateChoicesReferencesByUser(array $form, array $userInfo) : array
@@ -46,11 +44,9 @@ class References {
                     $this->entityManager->persist($ref);
                     $refChanged++;
                 }
-            } else {
-                if (!is_null($ref)) {
-                    $this->entityManager->remove($ref);
-                    $refChanged++;
-                }
+            } elseif (!is_null($ref)) {
+                $this->entityManager->remove($ref);
+                $refChanged++;
             }
 
         }
@@ -63,9 +59,6 @@ class References {
     }
 
     /**
-     * @param int $docId
-     * @param string $type
-     * @return array
      * @throws CiteProcException
      * @throws \JsonException
      */
@@ -92,7 +85,7 @@ class References {
             $firstReference = $referenceArray[0];
 
             // Decoder UNE SEULE FOIS (optimisation - gain 30-40%)
-            $jsonReference = json_decode($firstReference, true, 512, JSON_THROW_ON_ERROR);
+            $jsonReference = json_decode((string) $firstReference, true, 512, JSON_THROW_ON_ERROR);
 
             // Traiter via bibtex pour le texte formaté
             $rawReferences[$refId]['ref'] = $this->bibtex->getCslRefText($firstReference);
@@ -111,7 +104,6 @@ class References {
 
     /**
      * @param $docId
-     * @return Document|null
      */
     public function getDocument($docId): ?Document
     {
@@ -127,8 +119,8 @@ class References {
             $ref = new PaperReferences();
             $refInfo = ['raw_reference'=>$form['addReference']];
             if ($form['addReferenceDoi'] !== "") {
-                $regexDoiOrg = "/^https?:\/\/(?:dx\.|www\.)?doi\.org\/(10\.[0-9]{4,}(?:\.[0-9]+)*(?:\/|%2F)(?:(?![\"&\'])\S)+)/";
-                if (preg_match($regexDoiOrg, $form['addReferenceDoi'],$matches)) {
+                $regexDoiOrg = "/^https?:\\/\\/(?:dx\\.|www\\.)?doi\\.org\\/(10\\.\\d{4,}(?:\\.\\d+)*(?:\\/|%2F)(?:(?![\"&\\'])\\S)+)/";
+                if (preg_match($regexDoiOrg, (string) $form['addReferenceDoi'],$matches)) {
                     $form['addReferenceDoi'] = $matches[1];
                 }
                 $refInfo['doi'] = $form['addReferenceDoi'];
@@ -157,12 +149,10 @@ class References {
 
     /**
      * @param $orderRef
-     * @param int $orderChanged
-     * @return int
      */
     public function persistOrderRef($orderRef, int $orderChanged): int
     {
-        $orderRefArray = explode(";", $orderRef);
+        $orderRefArray = explode(";", (string) $orderRef);
         foreach ($orderRefArray as $order => $pkRef) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
             if (!is_null($ref)) {
@@ -176,9 +166,9 @@ class References {
     }
 
     public function documentAlreadyExtracted($docId): bool {
-        return $this->getDocument($docId) !== null;
+        return $this->getDocument($docId) instanceof Document;
     }
-    public function createDocumentId($docId){
+    public function createDocumentId(int $docId): Document{
         $doc = new Document();
         $doc->setId($docId);
         $this->entityManager->persist($doc);

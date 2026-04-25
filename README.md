@@ -3,7 +3,7 @@
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
 ![Symfony](https://img.shields.io/badge/Symfony-6.4-black)
-![PHP](https://img.shields.io/badge/PHP-8.2--8.4-777BB4)
+![PHP](https://img.shields.io/badge/PHP-8.3-777BB4)
 
 [![Tests](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml)
 [![Lint](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml)
@@ -43,10 +43,14 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 ## Tech Stack
 
 **Backend:**
-- PHP 8.2+
-- Symfony 6.4
+- PHP 8.3
+- Symfony 6.4 (LTS)
 - Doctrine ORM
 - MySQL/MariaDB
+
+**Analysis & Modernization:**
+- PHPStan 2.1 (Static Analysis)
+- Rector 2.4 (Automated Upgrades)
 
 **Frontend:**
 - Tailwind CSS 3.2.7
@@ -61,7 +65,7 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 ## Requirements
 
-- PHP 8.2 or higher
+- PHP 8.3 or higher
 - Composer
 - Node.js 16+ and npm/yarn
 - MySQL 5.7+ or MariaDB 10.3+
@@ -85,23 +89,25 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 3. **Start Docker containers**
    ```bash
-   docker-compose up -d
+   make up
    ```
 
 4. **Install dependencies**
    ```bash
-   docker exec epi-citations-php-fpm composer install
-   docker exec epi-citations-php-fpm npm install
+   make composer-install
+   make npm-install
    ```
 
 5. **Run database migrations**
    ```bash
-   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate --no-interaction
+   make db-test-migrate # for test environment
+   # or manually for dev
+   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate
    ```
 
 6. **Build frontend assets**
    ```bash
-   docker exec epi-citations-php-fpm npm run build
+   make npm-build
    ```
 
 7. **Access the application**
@@ -199,6 +205,14 @@ For production deployment, configure your web server to point to the `public/` d
 
 ## Development
 
+### Makefile
+
+The project uses a `Makefile` to simplify common tasks. It is recommended to use these commands to ensure consistency between development environments.
+
+```bash
+make help # Display all available commands
+```
+
 ### Available Commands
 
 ```bash
@@ -215,6 +229,8 @@ php bin/console doctrine:schema:validate # Validate database schema
 # Code quality
 composer install --dev                   # Install dev dependencies
 vendor/bin/phpunit                       # Run tests
+make rector-dry                          # Preview PHP migration changes
+make rector                              # Apply PHP migration changes
 ```
 
 ### Coding Standards

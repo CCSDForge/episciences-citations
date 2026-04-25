@@ -3,6 +3,7 @@
 namespace App\Services;
 
 
+use Seboettg\CiteProc\Exception\CiteProcException;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -23,7 +24,7 @@ class Bibtex
 {
     public const REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
     private static LoggerInterface $loggerSingleton;
-    public function __construct(private Doi $doi,private EntityManagerInterface $entityManager, private LoggerInterface $logger)
+    public function __construct(private readonly Doi $doi,private readonly EntityManagerInterface $entityManager, private readonly LoggerInterface $logger)
     {
         $this->initStatic();
     }
@@ -66,7 +67,7 @@ class Bibtex
         }
         return $entries;
     }
-    public function initStatic()
+    public function initStatic(): void
     {
         self::$loggerSingleton = $this->logger;
     }
@@ -74,10 +75,10 @@ class Bibtex
     {
         return self::$loggerSingleton;
     }
-    public static function generateCSL($entry): array
+    public static function generateCSL(array $entry): array
     {
         $csl = [
-            'type' => lcfirst($entry['type']),
+            'type' => lcfirst((string) $entry['type']),
             'author' => [],
             'title' => $entry['title'],
             'issued' => [
@@ -87,10 +88,10 @@ class Bibtex
             ]
         ];
         foreach ($entry['author'] as $author) {
-            $csl['author'][] = array(
+            $csl['author'][] = [
                 'family' => $author['last'],
                 'given' => $author['first']
-            );
+            ];
         }
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
@@ -126,7 +127,7 @@ class Bibtex
      * @return array|string[]
      * @throws \JsonException
      */
-    public function processBibtex($bibtexFile,$userInfo,$docId)
+    public function processBibtex($bibtexFile,array $userInfo,$docId): array
     {
         $allBibFromDocId = $this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
@@ -177,10 +178,10 @@ class Bibtex
      * @param $jsonCsl
      * @return false|mixed|string
      * @throws \JsonException
-     * @throws \Seboettg\CiteProc\Exception\CiteProcException
+     * @throws CiteProcException
      */
     public function getCslRefText($jsonCsl) {
-        $jsonReference = json_decode($jsonCsl, true, 512, JSON_THROW_ON_ERROR);
+        $jsonReference = json_decode((string) $jsonCsl, true, 512, JSON_THROW_ON_ERROR);
         // Check if 'csl' key is set in $jsonReference
         if (array_key_exists('csl',$jsonReference)) {
             // Extract CSL data and render bibliography

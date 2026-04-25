@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -18,9 +19,9 @@ use Psr\Log\LoggerInterface;
 class BibtexTest extends TestCase
 {
     private Bibtex $service;
-    private Doi $doi;
-    private EntityManagerInterface $entityManager;
-    private LoggerInterface $logger;
+    private MockObject $doi;
+    private MockObject $entityManager;
+    private MockObject $logger;
 
     protected function setUp(): void
     {

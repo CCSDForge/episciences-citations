@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\EventListener;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\EventListener\CorsEventListener;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -16,9 +17,9 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class CorsEventListenerTest extends TestCase
 {
     private CorsEventListener $listener;
-    private LoggerInterface $logger;
+    private MockObject $logger;
     private string $corsSite = 'episciences.org';
-    private HttpKernelInterface $kernel;
+    private MockObject $kernel;
 
     protected function setUp(): void
     {
