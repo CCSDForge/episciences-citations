@@ -144,59 +144,51 @@ class Bibtex
             return ['error' => $bibtex['error']];
         }
 
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+        if (is_null($user)) {
+            $user = new UserInformations();
+            $user->setId($userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME']);
+            $user->setName($userInfo['LASTNAME']);
+        }
+        $document = $this->entityManager->getRepository(Document::class)->find($docId);
         foreach ($bibtex as $bibtexInfo) {
             if (array_key_exists('crossref_doi', $bibtexInfo)) {
                 $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
-                $reference = (['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                    'doi' => $bibtexInfo['crossref_doi']]);
+                $reference = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
+                    'doi' => $bibtexInfo['crossref_doi']];
             } else {
-                $csl = self::generateCSL($bibtexInfo);
-                $reference = (['csl' => $csl]);
+                $reference = ['csl' => self::generateCSL($bibtexInfo)];
             }
             $ref = new PaperReferences();
-            $ref->setReference([json_encode($reference)]);
+            $ref->setReference($reference);
             $ref->setSource(PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT);
-            $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-            if (is_null($user)) {
-                $user = new UserInformations();
-                $user->setId($userInfo['UID']);
-                $user->setSurname($userInfo['FIRSTNAME']);
-                $user->setName($userInfo['LASTNAME']);
-            }
             $ref->setUid($user);
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
-            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($docId));
+            $ref->setDocument($document);
             $ref->setReferenceOrder($countAllRef++);
             $this->entityManager->persist($ref);
-            $this->entityManager->flush();
         }
+        $this->entityManager->flush();
         return [];
     }
 
     /**
-     * @param $jsonCsl
-     * @return false|mixed|string
-     * @throws \JsonException
      * @throws CiteProcException
+     * @throws \JsonException
      */
-    public function getCslRefText($jsonCsl) {
-        $jsonReference = json_decode((string) $jsonCsl, true, 512, JSON_THROW_ON_ERROR);
-        // Check if 'csl' key is set in $jsonReference
-        if (array_key_exists('csl',$jsonReference)) {
-            // Extract CSL data and render bibliography
-            $jsonArray = [$jsonReference['csl']];
-            $jsonArray = json_encode($jsonArray, JSON_THROW_ON_ERROR);
+    public function getCslRefText(array $refData): array
+    {
+        if (array_key_exists('csl', $refData)) {
+            $jsonArray = json_encode([$refData['csl']], JSON_THROW_ON_ERROR);
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");
-            $bibliography = $citeProc->render(json_decode($jsonArray), "bibliography");
-            // Process raw reference and assign to 'raw_reference' key
-            $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-            $jsonReference['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING
-                ,'',$jsonReference['raw_reference']);
-            unset($jsonReference['csl']);
-            return json_encode($jsonReference);
+            $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR), "bibliography");
+            $refData['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+            $refData['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $refData['raw_reference']);
+            unset($refData['csl']);
         }
-        return $jsonCsl;
+        return $refData;
     }
 }

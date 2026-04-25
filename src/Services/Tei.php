@@ -17,11 +17,10 @@ class Tei
 
     /**
      * @param $tei
-     * @throws \JsonException
+     * @return array<int, array<string, string>>
      */
     public function getReferencesInTei($tei): array
     {
-
         $tei = simplexml_load_string((string) $tei);
         $info = [];
         if ($tei !== false) {
@@ -38,7 +37,7 @@ class Tei
                         (string)$value->analytic->idno->attributes() === 'DOI') {
                         $raw_reference['doi'] = (string)$value->analytic->idno;
                     }
-                    $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+                    $info[] = $raw_reference;
                 }
             }
             return $info;
@@ -56,8 +55,7 @@ class Tei
             $reOrdonateCounter = 0;
             foreach ($docExisting->getPaperReferences() as $doc) {
                 $doc->setReferenceOrder($reOrdonateCounter);
-                $referenceAlreadyAcceptedByUser[] = serialize(
-                    json_decode((string) $doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR));
+                $referenceAlreadyAcceptedByUser[] = serialize($doc->getReference());
                 $this->entityManager->persist($doc);
                 $reOrdonateCounter++;
                 $counterRef++;
@@ -69,10 +67,9 @@ class Tei
             $doc->setId($docId);
         }
         foreach ($references as $reference) {
-            if (!in_array(serialize(json_decode((string) $reference, true, 512, JSON_THROW_ON_ERROR)),
-                $referenceAlreadyAcceptedByUser, true)) {
+            if (!in_array(serialize($reference), $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
-                $refs->setReference((array)($reference));
+                $refs->setReference($reference);
                 $refs->setSource($source);
                 $refs->setUpdatedAt(new \DateTimeImmutable());
                 $refs->setReferenceOrder($counterRef);

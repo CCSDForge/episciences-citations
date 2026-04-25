@@ -42,8 +42,9 @@ class TeiTest extends TestCase
         $this->assertIsArray($result);
         $this->assertGreaterThan(0, count($result), 'Should extract at least one reference');
 
-        // Verify structure of the first reference
-        $firstRef = json_decode((string) $result[0], true);
+        // Each element is now a flat associative array (not a JSON string)
+        $firstRef = $result[0];
+        $this->assertIsArray($firstRef);
         $this->assertArrayHasKey('raw_reference', $firstRef);
         $this->assertNotEmpty($firstRef['raw_reference']);
     }
@@ -65,11 +66,11 @@ class TeiTest extends TestCase
     #[Test]
     public function testInsertReferencesInDB_NewDocument_CreatesDocumentAndReferences(): void
     {
-        // Arrange
+        // Arrange — references are now flat arrays, not JSON strings
         $docId = 123456;
         $references = [
-            json_encode(['raw_reference' => 'Test reference 1', 'doi' => '10.1234/test1']),
-            json_encode(['raw_reference' => 'Test reference 2'])
+            ['raw_reference' => 'Test reference 1', 'doi' => '10.1234/test1'],
+            ['raw_reference' => 'Test reference 2'],
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
@@ -106,10 +107,10 @@ class TeiTest extends TestCase
     #[Test]
     public function testInsertReferencesInDB_ExistingDocument_PreservesAcceptedReferences(): void
     {
-        // Arrange
+        // Arrange — references are now flat arrays
         $docId = 123456;
         $newReferences = [
-            json_encode(['raw_reference' => 'New reference 1'])
+            ['raw_reference' => 'New reference 1'],
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
@@ -119,7 +120,7 @@ class TeiTest extends TestCase
 
         $acceptedRef = new PaperReferences();
         $acceptedRef->setId(1);
-        $acceptedRef->setReference([json_encode(['raw_reference' => 'Accepted reference'])]);
+        $acceptedRef->setReference(['raw_reference' => 'Accepted reference']);
         $acceptedRef->setAccepted(1);
         $acceptedRef->setReferenceOrder(0);
         $acceptedRef->setDocument($existingDoc);

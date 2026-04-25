@@ -60,7 +60,6 @@ class References {
 
     /**
      * @throws CiteProcException
-     * @throws \JsonException
      */
     public function getReferences(int $docId,string $type = "all"|"accepted"): array
     {
@@ -76,23 +75,16 @@ class References {
         /** @var PaperReferences $reference */
         foreach ($references as $reference) {
             $refId = $reference->getId();
-            $referenceArray = $reference->getReference();
+            $refData = $reference->getReference();
 
-            if (empty($referenceArray)) {
+            if (empty($refData)) {
                 continue;
             }
 
-            $firstReference = $referenceArray[0];
+            $rawReferences[$refId]['ref'] = $this->bibtex->getCslRefText($refData);
 
-            // Decoder UNE SEULE FOIS (optimisation - gain 30-40%)
-            $jsonReference = json_decode((string) $firstReference, true, 512, JSON_THROW_ON_ERROR);
-
-            // Traiter via bibtex pour le texte formaté
-            $rawReferences[$refId]['ref'] = $this->bibtex->getCslRefText($firstReference);
-
-            // Ajouter CSL seulement si présent
-            if (array_key_exists('csl', $jsonReference)) {
-                $rawReferences[$refId]['csl'] = $firstReference;
+            if (array_key_exists('csl', $refData)) {
+                $rawReferences[$refId]['csl'] = $refData;
             }
 
             $rawReferences[$refId]['isAccepted'] = $reference->getAccepted();
@@ -110,9 +102,6 @@ class References {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 
-    /**
-     * @throws \JsonException
-     */
     public function addNewReference(array $form, array $userInfo): bool
     {
         if ($form['addReference'] !== ""){
@@ -125,7 +114,7 @@ class References {
                 }
                 $refInfo['doi'] = $form['addReferenceDoi'];
             }
-            $ref->setReference([json_encode($refInfo,JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)]);
+            $ref->setReference($refInfo);
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
             if (is_null($user)) {

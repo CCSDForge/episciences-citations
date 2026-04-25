@@ -95,42 +95,32 @@ class JsonGrobidExtension extends AbstractExtension
 
     public function prettyReference(string $jsonRawReference): array
     {
-        // Initialize an empty array to store the processed reference
         $jsonReference = [];
-
-        // Check if $jsonRawReference is not empty
         if ($jsonRawReference !== '' && $jsonRawReference !== '0') {
             try {
-                // Decode the JSON string to an associative array
-                $jsonRawReferenceArray = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
+                $jsonReference = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
+                if (!is_array($jsonReference)) {
+                    return [];
+                }
 
-                // Check if the first element of the array is set and decode it
-                if (isset($jsonRawReferenceArray[0])) {
-                    $jsonReference = json_decode((string) $jsonRawReferenceArray[0], true, 512, JSON_THROW_ON_ERROR);
-
-                    // Check if 'csl' key is set in $jsonReference
-                    if (isset($jsonReference['csl'])) {
-                        // Extract CSL data and render bibliography
-                        $jsonArray = [$jsonReference['csl']];
-                        $jsonArray = json_encode($jsonArray, JSON_THROW_ON_ERROR);
-                        $style = StyleSheet::loadStyleSheet("apa");
-                        $citeProc = new CiteProc($style, "en-US");
-                        $bibliography = $citeProc->render(json_decode
-                        ($jsonArray, false, 512, JSON_THROW_ON_ERROR));
-                        // Process raw reference and assign to 'raw_reference' key
-                        $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-                        $jsonReference['raw_reference'] = str_replace(Bibtex::REPLACE_CSL_EXCEPTION_STRING
-                            ,'',$jsonReference['raw_reference']);
-                        unset($jsonReference['csl']);
-                        $jsonReference['forbiddenModify'] = 1;
-                    }
+                if (isset($jsonReference['csl'])) {
+                    $jsonArray = json_encode([$jsonReference['csl']], JSON_THROW_ON_ERROR);
+                    $style = StyleSheet::loadStyleSheet("apa");
+                    $citeProc = new CiteProc($style, "en-US");
+                    $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR));
+                    $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+                    $jsonReference['raw_reference'] = str_replace(
+                        Bibtex::REPLACE_CSL_EXCEPTION_STRING,
+                        '',
+                        $jsonReference['raw_reference']
+                    );
+                    unset($jsonReference['csl']);
+                    $jsonReference['forbiddenModify'] = 1;
                 }
             } catch (JsonException|CiteProcException) {
-                // Handle JSON decoding errors or CiteProc exceptions
                 return [];
             }
         }
-
         return $jsonReference;
     }
 }
