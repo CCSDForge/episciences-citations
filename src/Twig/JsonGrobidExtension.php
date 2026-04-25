@@ -103,6 +103,21 @@ class JsonGrobidExtension extends AbstractExtension
                     return [];
                 }
 
+                // Unwrap legacy outer-array format created by old JS double-encoding:
+                //   [{"raw_reference":"..."}]      → {"raw_reference":"..."}  (array wrapper)
+                //   ["{\"raw_reference\":\"...\"}"] → {"raw_reference":"..."}  (array + string wrapper)
+                if (array_is_list($jsonReference) && count($jsonReference) === 1) {
+                    $inner = $jsonReference[0];
+                    if (is_array($inner)) {
+                        $jsonReference = $inner;
+                    } elseif (is_string($inner)) {
+                        $decoded = json_decode($inner, true);
+                        if (is_array($decoded)) {
+                            $jsonReference = $decoded;
+                        }
+                    }
+                }
+
                 if (isset($jsonReference['csl'])) {
                     $jsonArray = json_encode([$jsonReference['csl']], JSON_THROW_ON_ERROR);
                     $style = StyleSheet::loadStyleSheet("apa");
