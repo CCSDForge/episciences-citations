@@ -251,6 +251,35 @@ class ExtractController extends AbstractController
         }
     }
 
+    #[Route('/{_locale<en|fr>}/viewref/{docId}/autosave', name: 'app_autosave', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function autosave(int $docId, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
+            return new JsonResponse(['success' => false], 403);
+        }
+        if (!$this->isAuthorizeForApp($docId)) {
+            return new JsonResponse(['success' => false], 403);
+        }
+
+        $data = $request->request->all();
+        $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
+
+        if (isset($data['orderRef'])) {
+            $this->references->autosaveOrder($data['orderRef']);
+        } elseif (isset($data['refId'])) {
+            $this->references->autosaveReference(
+                (int) $data['refId'],
+                $data['reference'] ?? '{}',
+                (int) ($data['accepted'] ?? 0),
+                ($data['isDirty'] ?? '0') === '1',
+                $userInfo
+            );
+        }
+
+        return new JsonResponse(['success' => true]);
+    }
+
     #[Route('/extract/run', name: 'app_extract_run')]
     public function extractRun(Request $request): JsonResponse
     {

@@ -177,4 +177,39 @@ class References {
 
         return $result !== null ? (int) $result : -1;
     }
+
+    public function autosaveOrder(string $orderRef): void
+    {
+        $this->persistOrderRef($orderRef, 0);
+        $this->entityManager->flush();
+    }
+
+    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): void
+    {
+        $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
+        if ($ref === null) {
+            return;
+        }
+
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+        if ($user === null) {
+            $user = new UserInformations();
+            $user->setId($userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME']);
+            $user->setName($userInfo['LASTNAME']);
+            $this->entityManager->persist($user);
+        }
+
+        $refData = json_decode($referenceJson, true) ?? [];
+        $ref->setReference($refData);
+        $ref->setAccepted($accepted);
+        if ($isDirty) {
+            $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+        }
+        $ref->setUpdatedAt(new \DateTimeImmutable());
+        $ref->setUid($user);
+        $user->addPaperReferences($ref);
+        $this->entityManager->persist($ref);
+        $this->entityManager->flush();
+    }
 }

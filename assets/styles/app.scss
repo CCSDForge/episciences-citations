@@ -3,6 +3,10 @@
 // Reference declined state
 .declinedRef {
     opacity: 0.55;
+
+    &.editing {
+        opacity: 1;
+    }
 }
 
 // Sortable drag-and-drop ghost
@@ -63,6 +67,19 @@
     width: 2.5em;
     height: 1.25em;
     cursor: pointer;
+}
+
+// Toast auto-dismiss progress bar
+@keyframes toast-shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+.toast-progress {
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.5);
+    animation: toast-shrink 5s linear forwards;
+    border-radius: 0 0 calc(var(--bs-toast-border-radius) - 1px) calc(var(--bs-toast-border-radius) - 1px);
 }
 
 // Navbar sits above sticky toolbar so its dropdown is never covered

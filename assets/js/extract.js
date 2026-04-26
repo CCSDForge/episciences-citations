@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let strOrder = arrayOrder.join(';');
                 let hiddenRefNode = document.getElementById('document_orderRef');
                 hiddenRefNode.value = strOrder;
+                autosave({ orderRef: strOrder });
             }
         });
         disabledSortWhenChangeRef(sortEl);
@@ -86,6 +87,7 @@ function changeValueOfReference() {
             let acceptModifyBtn     = document.getElementById('acceptModifyBtn-'+idRef);
             let cancelModifyBtn     = document.getElementById('cancelModifyBtn-'+idRef);
             let containerInfo       = document.getElementById('container-reference-informations-'+idRef);
+            let card                = document.querySelector(`[id=container-reference][data-idref="${idRef}"]`);
 
             document.getElementById('textareaRef-'+idRef).addEventListener('input', () => {
                 document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
@@ -98,6 +100,7 @@ function changeValueOfReference() {
             modifyReferenceDoi.classList.add('w-50');
             btn.classList.add('d-none');
             containerInfo.classList.add('d-none');
+            card.classList.add('editing');
 
             cancelModifyBtn.addEventListener('click', () => {
                 modifyReferenceText.classList.remove('w-100');
@@ -107,6 +110,7 @@ function changeValueOfReference() {
                 editActionBtns.classList.add('d-none');
                 btn.classList.remove('d-none');
                 containerInfo.classList.remove('d-none');
+                card.classList.remove('editing');
                 document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 0;
             });
 
@@ -118,6 +122,7 @@ function changeValueOfReference() {
                 modifyReferenceDoi.classList.add('d-none');
                 editActionBtns.classList.add('d-none');
                 btn.classList.remove('d-none');
+                card.classList.remove('editing');
 
                 let referenceWished    = document.getElementById('textareaRef-'+idRef);
                 let showedText         = document.getElementById('textReference-'+idRef);
@@ -153,6 +158,9 @@ function changeValueOfReference() {
                 acceptRefModificationsDone(idRef);
                 let referenceValueForm   = document.getElementById('reference-'+idRef);
                 referenceValueForm.value = JSON.stringify({'raw_reference': showedText.value, 'doi': doiContent});
+                const isDirty = document.querySelector(`input[data-dirty-ref="${idRef}"]`).value;
+                const accepted = document.getElementById('accepted-'+idRef).value;
+                autosave({ refId: idRef, reference: referenceValueForm.value, accepted, isDirty });
             });
         });
     }
@@ -302,4 +310,54 @@ function setToggleAllBtnState(btn, allSelected) {
 function resetToggleAllBtn(btn) {
     btn.dataset.allSelected = 'false';
     setToggleAllBtnState(btn, false);
+}
+
+function autosave(data) {
+    const form = document.getElementById('form-extraction');
+    const body = new URLSearchParams({ ...data, _token: form.dataset.csrfToken });
+    fetch(form.dataset.autosaveUrl, {
+        method: 'POST',
+        body,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(r => r.json())
+        .then(json => { if (json.success) showAutosaveToast(); })
+        .catch(() => {});
+}
+
+function showAutosaveToast() {
+    const form = document.getElementById('form-extraction');
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1100';
+        document.body.appendChild(container);
+    }
+
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-cloud-arrow-up flex-shrink-0';
+    icon.setAttribute('aria-hidden', 'true');
+
+    const body = document.createElement('div');
+    body.className = 'toast-body d-flex align-items-center gap-2';
+    body.appendChild(icon);
+    body.appendChild(document.createTextNode(form.dataset.autosaveLabel));
+
+    const row = document.createElement('div');
+    row.className = 'd-flex';
+    row.appendChild(body);
+
+    const progress = document.createElement('div');
+    progress.className = 'toast-progress';
+
+    const el = document.createElement('div');
+    el.className = 'toast align-items-center text-bg-success border-0';
+    el.appendChild(row);
+    el.appendChild(progress);
+
+    container.appendChild(el);
+    const toast = new Toast(el, { autohide: true, delay: 2000 });
+    toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
 }
