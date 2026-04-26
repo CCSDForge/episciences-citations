@@ -4,6 +4,7 @@ namespace App\Tests\Unit\EventListener;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use App\EventListener\CorsEventListener;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -33,6 +34,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetSubscribedEvents_ReturnsCorrectConfiguration(): void
     {
         // Act
@@ -50,6 +52,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelRequest_NotMainRequest_DoesNothing(): void
     {
         // Arrange
@@ -72,6 +75,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelRequest_NonApiRoute_DoesNothing(): void
     {
         // Arrange
@@ -94,6 +98,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelRequest_OptionsRequest_ReturnsNoContent(): void
     {
         // Arrange
@@ -129,6 +134,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelRequest_ValidOrigin_AllowsRequest(): void
     {
         // Arrange
@@ -170,6 +176,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelRequest_InvalidOrigin_BlocksRequest(): void
     {
         // Arrange
@@ -214,6 +221,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelResponse_NotMainRequest_DoesNothing(): void
     {
         // Arrange
@@ -234,6 +242,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelResponse_NonApiRoute_DoesNotAddHeaders(): void
     {
         // Arrange
@@ -254,6 +263,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testOnKernelResponse_ApiRoute_AddsHeaders(): void
     {
         // Arrange
@@ -287,6 +297,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testIsValidCorsOrigin_EmptyCorsSite_ReturnsFalse(): void
     {
         // Arrange - créer un nouveau logger pour ce test
@@ -341,6 +352,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testIsValidCorsOrigin_ValidHost_ReturnsTrue(): void
     {
         // Arrange
@@ -378,6 +390,7 @@ class CorsEventListenerTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testIsValidCorsOrigin_InvalidOriginAndHost_ReturnsFalse(): void
     {
         // Arrange

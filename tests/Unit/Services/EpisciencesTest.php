@@ -5,6 +5,7 @@ namespace App\Tests\Unit\Services;
 use PHPUnit\Framework\MockObject\MockObject;
 use App\Services\Episciences;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -62,6 +63,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_ValidUrl_ExtractsId(): void
     {
         // Arrange - la regex cherche /(\d+)(?:/|$) donc le nombre doit être suivi de / ou fin de chaîne
@@ -83,6 +85,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_InvalidUrl_ReturnsEmpty(): void
     {
         // Arrange
@@ -103,6 +106,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testManageHttpErrorMessagePDF_404_ReturnsCustomMessage(): void
     {
         // Arrange
@@ -117,6 +121,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testManageHttpErrorMessagePDF_OtherStatus_ReturnsOriginalMessage(): void
     {
         // Arrange
@@ -131,6 +136,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_FileAlreadyExists_ReturnsTrue(): void
     {
         // Arrange
@@ -154,6 +160,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_Success_DownloadsAndCachesPdf(): void
     {
         // Arrange
@@ -185,6 +192,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_HttpError404_ReturnsErrorArray(): void
     {
         // Arrange
@@ -217,6 +225,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_ForceHttp_ConvertsHttpsToHttp(): void
     {
         // Arrange - créer service avec forceHttp = true
@@ -250,6 +259,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_Allowed_ReturnsTrue(): void
     {
         // Arrange
@@ -274,6 +284,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_NotAllowed_ReturnsFalse(): void
     {
         // Arrange
@@ -296,6 +307,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_HttpError_ReturnsFalse(): void
     {
         // Arrange
@@ -322,6 +334,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPutPdfInCache_Success_WritesPdfFile(): void
     {
         // Arrange

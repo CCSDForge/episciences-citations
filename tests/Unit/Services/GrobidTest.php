@@ -8,6 +8,7 @@ use App\Entity\PaperReferences;
 use App\Services\Grobid;
 use App\Services\Tei;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -51,6 +52,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferences_WithCacheHit_UsesCache(): void
     {
         // Arrange
@@ -91,6 +93,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferences_WithCacheMiss_CallsGrobidAPI(): void
     {
         // Arrange
@@ -139,6 +142,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferences_EmptyReferences_ReturnsFalse(): void
     {
         // Arrange
@@ -171,6 +175,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPutGrobidReferencesInCache_NewItem_SavesInCache(): void
     {
         // Arrange
@@ -186,6 +191,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPutGrobidReferencesInCache_ExistingItem_DoesNotOverwrite(): void
     {
         // Arrange
@@ -205,6 +211,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetGrobidReferencesInCache_ItemExists_ReturnsContent(): void
     {
         // Arrange
@@ -222,6 +229,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetGrobidReferencesInCache_ItemNotExists_ReturnsFalse(): void
     {
         // Arrange
@@ -237,6 +245,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetAllGrobidReferencesFromDB_ReturnsAllReferences(): void
     {
         // Arrange
@@ -269,6 +278,7 @@ class GrobidTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetAcceptedReferencesFromDB_ReturnsOnlyAccepted(): void
     {
         // Arrange

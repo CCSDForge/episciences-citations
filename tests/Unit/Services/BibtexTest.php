@@ -12,6 +12,7 @@ use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Doi;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -41,6 +42,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testConvertBibtexToArray_ValidBibtex(): void
     {
         // Arrange - Use inline BibTeX string (more reliable than file path in Docker)
@@ -71,6 +73,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testConvertBibtexToArray_InvalidBibtex(): void
     {
         // Arrange - Invalid BibTeX syntax (unclosed braces)
@@ -90,6 +93,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGenerateCSL_ArticleType(): void
     {
         // Arrange - Entry structure AFTER BibTeX parsing (with NamesProcessor)
@@ -130,6 +134,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testProcessBibtex_WithDoi(): void
     {
         // This test requires actual BibTeX file parsing which may not work in test environment
@@ -143,6 +148,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetCslRefText_WithCSL_ReturnsArrayWithRenderedText(): void
     {
         // Arrange — pass flat array, no JSON string
@@ -170,6 +176,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetCslRefText_WithoutCSL_ReturnsUnchangedArray(): void
     {
         // Arrange — reference without CSL (e.g. from GROBID)

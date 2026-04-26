@@ -6,6 +6,7 @@ use App\Command\MigrateReferenceFormatCommand;
 use App\Entity\PaperReferences;
 use App\Repository\PaperReferencesRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_OldFormat_MigratesAndFlushes(): void
     {
         // Arrange — old format: single-element sequential array containing a JSON string
@@ -57,6 +59,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_NewFormat_SkipsAndDoesNotFlush(): void
     {
         // Arrange — new format: associative array (already migrated)
@@ -77,6 +80,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_EmptyReference_Skipped(): void
     {
         // Arrange — empty reference (edge case)
@@ -95,6 +99,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_InvalidJsonInOldFormat_SkipsWithWarning(): void
     {
         // Arrange — old format with invalid JSON string inside the array
@@ -114,6 +119,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_MixedBatch_MigratesOnlyOldFormat(): void
     {
         // Arrange — mix of old and new format references
@@ -140,6 +146,7 @@ class MigrateReferenceFormatCommandTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testExecute_NoReferences_ReportsZero(): void
     {
         $this->repository->method('findAll')->willReturn([]);

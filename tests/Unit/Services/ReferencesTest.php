@@ -13,6 +13,7 @@ use App\Services\Bibtex;
 use App\Services\Grobid;
 use App\Services\References;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -47,6 +48,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testValidateChoicesReferencesByUser_Success(): void
     {
         // Arrange
@@ -105,6 +107,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testValidateChoicesReferencesByUser_WithDeletions(): void
     {
         // Arrange
@@ -150,6 +153,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferences_AllType_ReturnsFormatted(): void
     {
         // Arrange — flat arrays, no JSON string wrapping
@@ -199,6 +203,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testAddNewReference_WithDoi_Success(): void
     {
         // Arrange
@@ -255,6 +260,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPersistOrderRef_UpdatesOrdering(): void
     {
         // Arrange

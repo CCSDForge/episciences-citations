@@ -9,6 +9,7 @@ use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
 use App\Services\Tei;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -30,6 +31,7 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferencesInTei_ValidTei_ExtractsReferences(): void
     {
         // Arrange - Use the TEI sample file
@@ -50,6 +52,7 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferencesInTei_InvalidXml_ReturnsEmpty(): void
     {
         // Arrange - Invalid XML
@@ -64,6 +67,7 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferencesInDB_NewDocument_CreatesDocumentAndReferences(): void
     {
         // Arrange — references are now flat arrays, not JSON strings
@@ -105,6 +109,7 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferencesInDB_ExistingDocument_PreservesAcceptedReferences(): void
     {
         // Arrange — references are now flat arrays

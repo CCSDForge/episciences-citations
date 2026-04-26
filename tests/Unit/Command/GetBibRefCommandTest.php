@@ -11,6 +11,9 @@ use App\Services\Doi;
 use App\Services\References;
 use App\Services\Semanticsscholar;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -39,15 +42,15 @@ class GetBibRefCommandTest extends TestCase
         );
     }
 
-    /**
-     * @dataProvider urlInTitleProvider
-     */
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    #[DataProvider('urlInTitleProvider')]
     public function testHasUrlInTitle(string $title, bool $expected): void
     {
         $this->assertSame($expected, $this->command->hasUrlInTitle($title));
     }
 
-    public function urlInTitleProvider(): array
+    public static function urlInTitleProvider(): array
     {
         return [
             'https at start' => ['https://example.com some title', true],
