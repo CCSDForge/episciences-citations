@@ -14,7 +14,7 @@
     "doctrine/annotations": "^2.0",
     "doctrine/doctrine-bundle": "^2.18",
     "doctrine/doctrine-migrations-bundle": "^3.7",
-    "doctrine/orm": "^2.2",
+    "doctrine/orm": "^3.0",
     "guzzlehttp/guzzle": "^7.10",
     "l3/cas-guard-bundle": "^1.1",
     "phpdocumentor/reflection-docblock": "^5.3",
