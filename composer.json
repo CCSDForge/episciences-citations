@@ -17,7 +17,7 @@
     "doctrine/orm": "^2.2",
     "guzzlehttp/guzzle": "^7.10",
     "l3/cas-guard-bundle": "^1.1",
-    "phpdocumentor/reflection-docblock": "^5.3",
+    "phpdocumentor/reflection-docblock": "^6.0",
     "renanbr/bibtex-parser": "^2.2",
     "seboettg/citeproc-php": "^2.6",
     "symfony/apache-pack": "^1.0",
