@@ -11,6 +11,7 @@ use App\Repository\PaperReferencesRepository;
 use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Doi;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,6 +24,7 @@ class BibtexTest extends TestCase
     private MockObject $doi;
     private MockObject $entityManager;
     private MockObject $logger;
+    private MockObject $solrReferenceEnricher;
 
     protected function setUp(): void
     {
@@ -31,13 +33,16 @@ class BibtexTest extends TestCase
 
         // Mock logger to accept any log calls (void methods)
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
         // No need to configure mock for void methods - they're automatically handled
 
         // Create service - this initializes the singleton logger
         $this->service = new Bibtex(
             $this->doi,
             $this->entityManager,
-            $this->logger
+            $this->logger,
+            $this->solrReferenceEnricher
         );
     }
 

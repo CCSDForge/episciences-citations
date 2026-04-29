@@ -10,6 +10,7 @@ use App\Services\Bibtex;
 use App\Services\Doi;
 use App\Services\References;
 use App\Services\Semanticsscholar;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -33,6 +34,7 @@ class GetBibRefCommand extends Command
         private readonly DocumentRepository     $documentRepository,
         private readonly LoggerInterface        $logger,
         private readonly Bibtex                 $bibtexService,
+        private readonly SolrReferenceEnricher  $solrReferenceEnricher,
     )
     {
         parent::__construct();
@@ -249,7 +251,7 @@ class GetBibRefCommand extends Command
             $user->setSurname('Episciences');
             $user->setName('System');
         }
-        $reference = $refRetrieved;
+        $reference = $this->solrReferenceEnricher->enrichReference($refRetrieved);
         $ref = new PaperReferences();
         $ref->setReference($reference);
         $ref->setSource($source);

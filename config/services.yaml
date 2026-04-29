@@ -7,6 +7,10 @@ parameters:
     deposit_pdf: '%kernel.project_dir%/var/data'
     api_extract_token_default: ''
     api_extract_token: '%env(default:api_extract_token_default:API_EXTRACT_TOKEN)%'
+    solr_reference_enrichment_enabled_default: false
+    solr_base_url_default: 'http://localhost:8983/solr'
+    solr_collection_default: 'ref_pps'
+    solr_batch_size_default: 100
     app.cache_folder: '%kernel.project_dir%/var/tmp'
     cas_login_target: '%env(string:CAS_LOGIN_TARGET)%'
     cas_logout_target: '%env(string:CAS_LOGOUT_TARGET)%'
@@ -59,6 +63,12 @@ services:
     App\Services\Semanticsscholar:
         arguments:
             $apiKeyS2: '%env(string:API_S2_KEY)%'
+    App\Services\SolrReferenceEnricher:
+        arguments:
+            $enabled: '%env(bool:default:solr_reference_enrichment_enabled_default:APP_SOLR_REFERENCE_ENRICHMENT_ENABLED)%'
+            $solrBaseUrl: '%env(string:default:solr_base_url_default:APP_SOLR_BASE_URL)%'
+            $collection: '%env(string:default:solr_collection_default:APP_SOLR_COLLECTION)%'
+            $batchSize: '%env(int:default:solr_batch_size_default:APP_SOLR_BATCH_SIZE)%'
 
     # CORS Event Listener pour les routes API (centralise la gestion CORS)
     App\EventListener\CorsEventListener:

@@ -12,6 +12,7 @@ use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Grobid;
 use App\Services\References;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,6 +24,7 @@ class ReferencesTest extends TestCase
     private MockObject $entityManager;
     private MockObject $grobid;
     private MockObject $bibtex;
+    private MockObject $solrReferenceEnricher;
     private MockObject $refRepository;
     private MockObject $userRepository;
     private MockObject $documentRepository;
@@ -33,6 +35,9 @@ class ReferencesTest extends TestCase
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->grobid = $this->createMock(Grobid::class);
         $this->bibtex = $this->createMock(Bibtex::class);
+        $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $this->solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
+        $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
 
         // Mock repositories
         $this->refRepository = $this->createMock(PaperReferencesRepository::class);
@@ -43,7 +48,8 @@ class ReferencesTest extends TestCase
         $this->service = new References(
             $this->entityManager,
             $this->grobid,
-            $this->bibtex
+            $this->bibtex,
+            $this->solrReferenceEnricher
         );
     }
 
@@ -164,6 +170,9 @@ class ReferencesTest extends TestCase
         $ref1->setReference([
             'raw_reference' => 'Test ref 1',
             'csl' => ['type' => 'article', 'title' => 'Test'],
+            'detectors' => ['clayFeet', 'paperMill'],
+            'status' => ['watch'],
+            'pubpeerurl' => ['https://pubpeer.example/10.1234/test'],
         ]);
         $ref1->setAccepted(1);
         $ref1->setReferenceOrder(0);
@@ -195,7 +204,10 @@ class ReferencesTest extends TestCase
         $this->assertCount(2, $result);
         $this->assertArrayHasKey(1, $result);
         $this->assertArrayHasKey(2, $result);
-        $this->assertEquals($formattedRef, $result[1]['ref']);
+        $this->assertSame($formattedRef['raw_reference'], $result[1]['ref']['raw_reference']);
+        $this->assertSame(['clayFeet', 'paperMill'], $result[1]['ref']['detectors']);
+        $this->assertSame(['watch'], $result[1]['ref']['status']);
+        $this->assertSame(['https://pubpeer.example/10.1234/test'], $result[1]['ref']['pubpeerurl']);
         $this->assertEquals(1, $result[1]['isAccepted']);
         $this->assertEquals(0, $result[1]['referenceOrder']);
         $this->assertArrayHasKey('csl', $result[1]);    // CSL present in ref1

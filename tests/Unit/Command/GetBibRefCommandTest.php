@@ -10,6 +10,7 @@ use App\Services\Bibtex;
 use App\Services\Doi;
 use App\Services\References;
 use App\Services\Semanticsscholar;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -30,6 +31,8 @@ class GetBibRefCommandTest extends TestCase
         $documentRepository = $this->createMock(DocumentRepository::class);
         $logger = $this->createMock(LoggerInterface::class);
         $bibtexService = $this->createMock(Bibtex::class);
+        $solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
 
         $this->command = new GetBibRefCommand(
             $doiService,
@@ -38,7 +41,8 @@ class GetBibRefCommandTest extends TestCase
             $entityManager,
             $documentRepository,
             $logger,
-            $bibtexService
+            $bibtexService,
+            $solrReferenceEnricher
         );
     }
 
