@@ -68,11 +68,16 @@ class EpisciencesTest extends TestCase
     {
         // Arrange - la regex cherche /(\d+)(?:/|$) donc le nombre doit être suivi de / ou fin de chaîne
         $testCases = [
-            'https://episciences.org/journal/123456' => '123456',
-            'https://episciences.org/journal/123456/' => '123456',
-            'http://test.org/article/789/view' => '789',
-            'https://episciences.org/999' => '999',
-            'https://episciences.org/999/' => '999',
+            // Standard Episciences URL formats
+            'https://episciences.org/articles/14776'            => '14776',
+            'https://episciences.org/14776'                     => '14776',
+            'https://episciences.org/article/view/17204'        => '17204',
+            // Trailing slash
+            'https://episciences.org/articles/14776/'           => '14776',
+            'https://episciences.org/journal/123456/'           => '123456',
+            // Query string and fragment are ignored (parse_url strips them)
+            'https://episciences.org/articles/14776?format=pdf' => '14776',
+            'https://episciences.org/14776#section'             => '14776',
         ];
 
         foreach ($testCases as $url => $expectedId) {

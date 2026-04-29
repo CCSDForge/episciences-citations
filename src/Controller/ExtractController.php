@@ -318,14 +318,14 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
         }
 
-        $docIdParam = $request->query->get('docId');
+        $docIdParam = $request->query->get('docid');
         $docId = $docIdParam !== null
             ? (int) $docIdParam
             : (int) $this->episciences->getDocIdFromUrl($url);
 
         if ($docId === 0) {
             return new JsonResponse(
-                ['success' => false, 'error' => 'Could not determine a document ID. Provide a docId parameter or use an Episciences URL.'],
+                ['success' => false, 'error' => 'Could not determine a document ID. Provide a docid parameter or use an Episciences URL.'],
                 Response::HTTP_BAD_REQUEST
             );
         }

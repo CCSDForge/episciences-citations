@@ -71,8 +71,8 @@ class Episciences {
 
     public function getDocIdFromUrl(string $url): string
     {
-        // Extraire directement le premier segment numérique de l'URL (optimisation)
-        if (preg_match('#/(\d+)(?:/|$)#', $url, $matches)) {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        if (preg_match('#/(\d+)/?$#', $path, $matches)) {
             return $matches[1];
         }
         return '';
