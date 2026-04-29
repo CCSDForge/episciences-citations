@@ -11,7 +11,7 @@ security:
             pattern: ^/(_(profiler|wdt|error)|css|images|js)/
             security: false
         api_public:
-            pattern: ^/visualize-citations
+            pattern: ^/(visualize-citations|api/extract)
             security: false
         l3_firewall:
             pattern: ^/
