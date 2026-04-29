@@ -1,11 +1,31 @@
 {% extends 'base.html.twig' %}
-{% block title %}Episciences - Citations{% endblock %}
-{% block javascripts %}
-    {{ parent() }}
-    {{ encore_entry_script_tags('extract') }}
-{% endblock %}
+
+{% block title %}403 – {{ 'Access Denied'|trans }}{% endblock %}
+
 {% block body %}
-    <div class="d-flex align-items-center justify-content-center vh-100">
-        <div class="fw-bolder">{{ "You do not have access rights to this page, please contact the Episciences helpdesk (episciences-support@ccsd.cnrs.fr)."|trans }}</div>
+<div class="d-flex align-items-center justify-content-center vh-100">
+    <div class="text-center px-4" style="max-width: 540px;">
+
+        <i class="fas fa-lock fa-4x text-danger mb-3" aria-hidden="true"></i>
+
+        <h1 class="display-1 fw-bold text-danger lh-1 mb-2">403</h1>
+        <h2 class="h4 mb-3">{{ 'Access Denied'|trans }}</h2>
+
+        <p class="text-muted mb-2">
+            {{ 'You do not have the necessary rights to access this page.'|trans }}
+        </p>
+        <p class="text-muted mb-4">
+            {{ 'For assistance, contact the Episciences helpdesk:'|trans }}
+            <a href="mailto:episciences-support@ccsd.cnrs.fr" class="text-decoration-none">
+                episciences-support@ccsd.cnrs.fr
+            </a>
+        </p>
+
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>
+            {{ 'Go back'|trans }}
+        </a>
+
     </div>
+</div>
 {% endblock %}
