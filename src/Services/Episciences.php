@@ -26,9 +26,34 @@ class Episciences {
         return $this->downloadPdf($url, (int) $docId);
     }
 
+    /**
+     * Resolves an Episciences article URL to its direct PDF download URL.
+     *
+     * Known patterns:
+     *   /{journal}/articles/{id}[/] → /download   (e.g. transformations.episciences.org)
+     *   /{id}[/]                    → /pdf         (e.g. lmcs.episciences.org)
+     */
+    public function resolvePdfUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $base = rtrim($url, '/');
+
+        if (preg_match('#/articles/\d+/?$#', $path)) {
+            return $base . '/download';
+        }
+
+        if (preg_match('#^/\d+/?$#', $path)) {
+            return $base . '/pdf';
+        }
+
+        return $url;
+    }
+
     public function downloadPdf(string $url, int $docId): array|bool
     {
         $this->createDirDataPdf();
+
+        $url = $this->resolvePdfUrl($url);
 
         if ($this->forceHttp && str_contains($url, 'episciences.org') && str_starts_with($url, 'https://')) {
             $url = str_replace('https://', 'http://', $url);

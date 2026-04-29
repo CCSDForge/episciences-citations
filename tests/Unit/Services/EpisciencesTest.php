@@ -64,6 +64,40 @@ class EpisciencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_ArticlesPattern_AppendsDownload(): void
+    {
+        $cases = [
+            'https://transformations.episciences.org/articles/14776'  => 'https://transformations.episciences.org/articles/14776/download',
+            'https://transformations.episciences.org/articles/14776/' => 'https://transformations.episciences.org/articles/14776/download',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_BareIdPattern_AppendsPdf(): void
+    {
+        $cases = [
+            'https://lmcs.episciences.org/18068'  => 'https://lmcs.episciences.org/18068/pdf',
+            'https://lmcs.episciences.org/18068/' => 'https://lmcs.episciences.org/18068/pdf',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_UnknownPattern_ReturnsUrlUnchanged(): void
+    {
+        $url = 'https://arxiv.org/pdf/2506.15295v1';
+        $this->assertEquals($url, $this->service->resolvePdfUrl($url));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_ValidUrl_ExtractsId(): void
     {
         // Arrange - la regex cherche /(\d+)(?:/|$) donc le nombre doit être suivi de / ou fin de chaîne
