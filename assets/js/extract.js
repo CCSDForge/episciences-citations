@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         importBibModal = new Modal(document.getElementById('modal-importbib'));
     }
     if (document.getElementById('closing-info-toast')) {
-        new Toast(document.getElementById('closing-info-toast'), { autohide: false }).show();
+        new Toast(document.getElementById('closing-info-toast'), { autohide: true, delay: 5000 }).show();
     }
 
     changeValueFormByToggled();
@@ -157,7 +157,19 @@ function changeValueOfReference() {
 
                 acceptRefModificationsDone(idRef);
                 let referenceValueForm   = document.getElementById('reference-'+idRef);
-                referenceValueForm.value = JSON.stringify({'raw_reference': showedText.value, 'doi': doiContent});
+                let referenceValue = {};
+                try {
+                    referenceValue = JSON.parse(referenceValueForm.value || '{}');
+                } catch (error) {
+                    referenceValue = {};
+                }
+                referenceValue.raw_reference = showedText.value;
+                if (doiContent !== '') {
+                    referenceValue.doi = doiContent;
+                } else {
+                    delete referenceValue.doi;
+                }
+                referenceValueForm.value = JSON.stringify(referenceValue);
                 const isDirty = document.querySelector(`input[data-dirty-ref="${idRef}"]`).value;
                 const accepted = document.getElementById('accepted-'+idRef).value;
                 autosave({ refId: idRef, reference: referenceValueForm.value, accepted, isDirty });

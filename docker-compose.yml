@@ -62,6 +62,7 @@ services:
       - "api-dev.episciences.org:host-gateway"
     networks:
       - epi-citations-network
+      - epi-network
 
 
 
@@ -119,5 +120,4 @@ networks:
 
 volumes:
   epi-citations-mysql-db:
-
 

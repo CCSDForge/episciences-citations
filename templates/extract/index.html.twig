@@ -145,9 +145,22 @@
                     {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
                     {% set doiDecodedRef = '' %}
                     {% set isDeclined = paperReferences.vars.value.accepted is same as(0) %}
+                    {% set hasDetectors = jsonDecodedRef['detectors'] is defined and jsonDecodedRef['detectors'] is not empty %}
+                    {% set pubpeerUrl = null %}
+                    {% if jsonDecodedRef['pubpeerurl'] is defined and jsonDecodedRef['pubpeerurl'] is not empty %}
+                        {% if jsonDecodedRef['pubpeerurl'] is iterable %}
+                            {% for candidatePubpeerUrl in jsonDecodedRef['pubpeerurl'] %}
+                                {% if pubpeerUrl is null and candidatePubpeerUrl matches '#^https?://[^\\s"<>]+$#i' %}
+                                    {% set pubpeerUrl = candidatePubpeerUrl %}
+                                {% endif %}
+                            {% endfor %}
+                        {% elseif jsonDecodedRef['pubpeerurl'] matches '#^https?://[^\\s"<>]+$#i' %}
+                            {% set pubpeerUrl = jsonDecodedRef['pubpeerurl'] %}
+                        {% endif %}
+                    {% endif %}
 
                     <div id="container-reference"
-                         class="card mb-2 shadow-sm{% if isDeclined %} filtered declinedRef{% endif %}"
+                         class="card mb-2 shadow-sm{% if isDeclined %} filtered declinedRef{% endif %}{% if hasDetectors %} border border-danger{% endif %}"
                          data-idref="{{ paperReferences.id.vars.value }}">
                         <div class="card-body p-3">
 
@@ -229,10 +242,31 @@
                                     }
                                 }) }}
 
-                                {# Source badge #}
-                                <span class="badge source-color-{{ paperReferences.vars.data.source|lower }} ms-auto">
-                                    {{ paperReferences.vars.data.source|trans }}
-                                </span>
+                                {# Enrichment and source badges #}
+                                <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end ms-auto">
+                                    {% if jsonDecodedRef['detectors'] is defined and jsonDecodedRef['detectors'] is not empty %}
+                                        {% if jsonDecodedRef['detectors'] is iterable %}
+                                            {% for detector in jsonDecodedRef['detectors'] %}
+                                                <span class="badge bg-danger">⚠️ {{ detector }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="badge bg-danger">⚠️ {{ jsonDecodedRef['detectors'] }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if pubpeerUrl is not null %}
+                                        <a href="{{ pubpeerUrl }}"
+                                           class="btn btn-sm btn-info text-white py-0 px-2"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           title="PubPeer">
+                                            <i class="fas fa-circle-info" aria-hidden="true"></i>
+                                            <span class="visually-hidden">PubPeer</span>
+                                        </a>
+                                    {% endif %}
+                                    <span class="badge source-color-{{ paperReferences.vars.data.source|lower }}">
+                                        {{ paperReferences.vars.data.source|trans }}
+                                    </span>
+                                </div>
                             </div>
 
                         </div>

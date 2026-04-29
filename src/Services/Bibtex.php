@@ -23,7 +23,12 @@ class Bibtex
 {
     public const REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
     private static LoggerInterface $loggerSingleton;
-    public function __construct(private readonly Doi $doi,private readonly EntityManagerInterface $entityManager, private readonly LoggerInterface $logger)
+    public function __construct(
+        private readonly Doi $doi,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly LoggerInterface $logger,
+        private readonly SolrReferenceEnricher $solrReferenceEnricher
+    )
     {
         $this->initStatic();
     }
@@ -150,14 +155,17 @@ class Bibtex
             $user->setName($userInfo['LASTNAME']);
         }
         $document = $this->entityManager->getRepository(Document::class)->find($docId);
+        $references = [];
         foreach ($bibtex as $bibtexInfo) {
             if (array_key_exists('crossref_doi', $bibtexInfo)) {
                 $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
-                $reference = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
+                $references[] = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
                     'doi' => $bibtexInfo['crossref_doi']];
             } else {
-                $reference = ['csl' => self::generateCSL($bibtexInfo)];
+                $references[] = ['csl' => self::generateCSL($bibtexInfo)];
             }
+        }
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
             $ref = new PaperReferences();
             $ref->setReference($reference);
             $ref->setSource(PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT);

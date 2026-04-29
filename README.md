@@ -329,7 +329,94 @@ curl -H "Authorization: Bearer mytoken" \
 
 #### `GET /visualize-citations`
 
-Returns accepted citations for a document in formatted JSON (used by the Episciences platform widget).
+Returns bibliographic references for a document in formatted JSON. This endpoint is used by the Episciences platform widget.
+
+**Query parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `url` | Yes | Episciences document URL or PDF URL. The document ID is extracted from this URL. |
+| `all` | No | When set to `1`, returns all references. Otherwise, only accepted references are returned. |
+
+**Example**
+
+```bash
+curl 'https://citations-dev.episciences.org/visualize-citations?url=http%3A%2F%2Fdev.episciences.org%2F17458%2Fpdf&all=1'
+```
+
+**Successful response format**
+
+The response is a JSON object keyed by internal reference ID. Each value contains the formatted reference data and display metadata.
+
+```json
+{
+  "12345": {
+    "ref": {
+      "raw_reference": "Doe, J. (2024). Example article. Example Journal.",
+      "doi": "10.1234/example",
+      "detectors": ["clayFeet"],
+      "status": ["watch"],
+      "pubpeerurl": ["https://pubpeer.com/publications/10.1234/example"]
+    },
+    "csl": {
+      "raw_reference": "Doe, J. (2024). Example article. Example Journal.",
+      "doi": "10.1234/example",
+      "csl": {
+        "type": "article-journal",
+        "title": "Example article"
+      },
+      "detectors": ["clayFeet"],
+      "status": ["watch"],
+      "pubpeerurl": ["https://pubpeer.com/publications/10.1234/example"]
+    },
+    "isAccepted": 1,
+    "referenceOrder": 0
+  }
+}
+```
+
+**Reference object fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ref` | object | Formatted reference data. It always contains the displayable `raw_reference` when available. |
+| `ref.raw_reference` | string | Human-readable reference text. For CSL references, it is rendered from the CSL payload. |
+| `ref.doi` | string | DOI of the reference, when known. |
+| `ref.detectors` | string[] | Optional Solr enrichment field. Contains detector names returned for the DOI. |
+| `ref.status` | string[] | Optional Solr enrichment field. Possible values are `Problematic` and `Genuine`. |
+| `ref.pubpeerurl` | string[] | Optional Solr enrichment field. Contains PubPeer URLs returned for the DOI. Values may be absent when no valid Solr match exists. |
+| `csl` | object | Present only when the stored reference contains CSL metadata. This object contains the original stored reference payload, including the nested `csl` data. |
+| `isAccepted` | integer | `1` when the reference is accepted, `0` otherwise. |
+| `referenceOrder` | integer | Display order of the reference in the document. |
+
+Solr enrichment fields are optional and are only present when the reference was enriched by DOI. When Solr has no match for a DOI, these keys are omitted from the reference object.
+
+Known `detectors` values currently returned by the Solr facet are:
+
+```text
+clayFeet
+annulled
+tortured
+expression-of-concern
+suspect
+citejacked
+deindexed
+Seek&Blastn
+journal-cases
+scigen
+problematic-cell-lines
+mathgen
+sbir
+```
+
+**Other responses**
+
+| Status | Body | Description |
+|--------|------|-------------|
+| `200 OK` | `{"status": 200, "message": "No reference found"}` | The document exists but no matching references were found for the requested mode. |
+| `400 Bad Request` | `{"status": 400, "message": "An URL is missing"}` | `url` parameter absent. |
+| `400 Bad Request` | `{"status": 400, "message": "A docid is missing"}` | The document ID could not be extracted from the URL. |
+| `403 Forbidden` | `{"status": 403, "message": "Forbidden"}` | Request blocked by CORS origin validation. |
 
 For other endpoints, refer to the controller annotations in `src/Controller/`.
 

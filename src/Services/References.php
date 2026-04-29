@@ -7,8 +7,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
+    private const SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
-    public function __construct(private readonly EntityManagerInterface $entityManager,private readonly Grobid $grobid, private readonly Bibtex $bibtex)
+
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly Grobid $grobid,
+        private readonly Bibtex $bibtex,
+        private readonly SolrReferenceEnricher $solrReferenceEnricher
+    )
     {
     }
 
@@ -30,10 +37,14 @@ class References {
             $this->entityManager->persist($user);
         }
 
+        $referencesToEnrich = [];
         foreach ($form['paperReferences'] as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
             if (!isset($paperReference['checkboxIdTodelete'])) {
                 if (!is_null($ref) && isset($paperReference['accepted'])) {
+                    if (isset($paperReference['reference'])) {
+                        $ref->setReference($this->normalizeReferenceInput($paperReference['reference']));
+                    }
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                     }
@@ -42,6 +53,7 @@ class References {
                     $ref->setUid($user);
                     $user->addPaperReferences($ref);
                     $this->entityManager->persist($ref);
+                    $referencesToEnrich[] = $ref;
                     $refChanged++;
                 }
             } elseif (!is_null($ref)) {
@@ -50,6 +62,7 @@ class References {
             }
 
         }
+        $this->enrichPaperReferences($referencesToEnrich);
         $orderChanged = $this->persistOrderRef($form['orderRef'], $orderChanged);
 
         // UN SEUL flush() pour toutes les opérations (optimisation performance - gain 80-90%)
@@ -81,7 +94,14 @@ class References {
                 continue;
             }
 
-            $rawReferences[$refId]['ref'] = $this->bibtex->getCslRefText($refData);
+            $formattedReference = $this->bibtex->getCslRefText($refData);
+            foreach (self::SOLR_REFERENCE_FIELDS as $field) {
+                if (array_key_exists($field, $refData)) {
+                    $formattedReference[$field] = $refData[$field];
+                }
+            }
+
+            $rawReferences[$refId]['ref'] = $formattedReference;
 
             if (array_key_exists('csl', $refData)) {
                 $rawReferences[$refId]['csl'] = $refData;
@@ -114,6 +134,7 @@ class References {
                 }
                 $refInfo['doi'] = $form['addReferenceDoi'];
             }
+            $refInfo = $this->solrReferenceEnricher->enrichReference($refInfo);
             $ref->setReference($refInfo);
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -201,6 +222,7 @@ class References {
         }
 
         $refData = json_decode($referenceJson, true) ?? [];
+        $refData = $this->solrReferenceEnricher->enrichReference($refData);
         $ref->setReference($refData);
         $ref->setAccepted($accepted);
         if ($isDirty) {
@@ -211,5 +233,38 @@ class References {
         $user->addPaperReferences($ref);
         $this->entityManager->persist($ref);
         $this->entityManager->flush();
+    }
+
+    private function normalizeReferenceInput(mixed $reference): array
+    {
+        if (is_array($reference)) {
+            return $reference;
+        }
+
+        if (is_string($reference)) {
+            $decoded = json_decode($reference, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<int, PaperReferences> $paperReferences
+     */
+    private function enrichPaperReferences(array $paperReferences): void
+    {
+        if ($paperReferences === []) {
+            return;
+        }
+
+        $references = array_map(
+            static fn (PaperReferences $paperReference): array => $paperReference->getReference(),
+            $paperReferences
+        );
+
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $index => $reference) {
+            $paperReferences[$index]->setReference($reference);
+        }
     }
 }

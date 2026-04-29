@@ -11,7 +11,8 @@ class Tei
 {
 
     public function __construct(private readonly EntityManagerInterface $entityManager,
-                                private readonly DocumentRepository $documentRepository)
+                                private readonly DocumentRepository $documentRepository,
+                                private readonly SolrReferenceEnricher $solrReferenceEnricher)
     {
     }
 
@@ -66,7 +67,7 @@ class Tei
             $doc = new Document();
             $doc->setId($docId);
         }
-        foreach ($references as $reference) {
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
             if (!in_array(serialize($reference), $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
                 $refs->setReference($reference);
