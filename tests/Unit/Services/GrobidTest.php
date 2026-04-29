@@ -41,7 +41,8 @@ class GrobidTest extends TestCase
             $this->tei,
             $this->entityManager,
             $this->grobidUrl,
-            $this->grobidCache
+            $this->grobidCache,
+            $this->createMock(\Psr\Log\LoggerInterface::class)
         );
     }
 
