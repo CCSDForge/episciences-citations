@@ -112,6 +112,10 @@ class EpisciencesTest extends TestCase
             // Query string and fragment are ignored (parse_url strips them)
             'https://episciences.org/articles/14776?format=pdf' => '14776',
             'https://episciences.org/14776#section'             => '14776',
+            // /pdf and /download suffixes are stripped before extraction
+            'http://dev.episciences.org/17458/pdf'              => '17458',
+            'http://dev.episciences.org/17458/download'         => '17458',
+            'https://episciences.org/articles/14776/download'   => '14776',
         ];
 
         foreach ($testCases as $url => $expectedId) {

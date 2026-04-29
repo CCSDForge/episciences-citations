@@ -97,6 +97,7 @@ class Episciences {
     public function getDocIdFromUrl(string $url): string
     {
         $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $path = preg_replace('#/(pdf|download)/?$#i', '', $path) ?? $path;
         if (preg_match('#/(\d+)/?$#', $path, $matches)) {
             return $matches[1];
         }
