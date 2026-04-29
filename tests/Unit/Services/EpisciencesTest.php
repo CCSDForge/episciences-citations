@@ -139,24 +139,56 @@ class EpisciencesTest extends TestCase
     #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_FileAlreadyExists_ReturnsTrue(): void
     {
-        // Arrange
-        $url = 'https://episciences.org/pdf/123456.pdf';
+        // URL must contain a segment matching /digits/ for getDocIdFromUrl to extract the ID
+        $url = 'https://episciences.org/pdf/123456/';
 
-        // Create folder and existing PDF file
         if (!is_dir($this->pdfFolder)) {
             mkdir($this->pdfFolder, 0777, true);
         }
         file_put_contents($this->pdfFolder . '123456.pdf', 'existing PDF content');
 
-        // HTTP client should NOT be called (file already exists)
         $this->httpClient->expects($this->never())
             ->method('request');
 
-        // Act
         $result = $this->service->getPaperPDF($url);
 
-        // Assert
         $this->assertTrue($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_FileAlreadyExists_ReturnsTrue(): void
+    {
+        if (!is_dir($this->pdfFolder)) {
+            mkdir($this->pdfFolder, 0777, true);
+        }
+        file_put_contents($this->pdfFolder . '99999.pdf', 'cached PDF');
+
+        $this->httpClient->expects($this->never())
+            ->method('request');
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 99999);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_DownloadsToExpectedPath(): void
+    {
+        $pdfContent = 'arxiv PDF content';
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getContent')->willReturn($pdfContent);
+
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', 'https://arxiv.org/pdf/2506.15295v1', $this->anything())
+            ->willReturn($response);
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 77777);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($this->pdfFolder . '77777.pdf');
     }
 
     #[Test]
@@ -213,7 +245,7 @@ class EpisciencesTest extends TestCase
         // Logger should be called for 404
         $this->logger->expects($this->once())
             ->method('warning')
-            ->with('PDF NOT FOUND ON EPISCIENCES', ['DOCID' => '999999']);
+            ->with('PDF download failed', $this->arrayHasKey('url'));
 
         // Act
         $result = $this->service->getPaperPDF($url);

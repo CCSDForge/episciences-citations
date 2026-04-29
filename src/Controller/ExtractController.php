@@ -318,9 +318,16 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
         }
 
-        $docId = (int) $this->episciences->getDocIdFromUrl($url);
+        $docIdParam = $request->query->get('docId');
+        $docId = $docIdParam !== null
+            ? (int) $docIdParam
+            : (int) $this->episciences->getDocIdFromUrl($url);
+
         if ($docId === 0) {
-            return new JsonResponse(['success' => false, 'error' => 'Could not extract a document ID from the provided URL'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(
+                ['success' => false, 'error' => 'Could not determine a document ID. Provide a docId parameter or use an Episciences URL.'],
+                Response::HTTP_BAD_REQUEST
+            );
         }
 
         $referenceCount = $this->grobid->countAllReferencesFromDB($docId);
@@ -328,7 +335,7 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => true, 'referenceCount' => $referenceCount]);
         }
 
-        $getPdf = $this->episciences->getPaperPDF($url);
+        $getPdf = $this->episciences->downloadPdf($url, $docId);
         if (is_array($getPdf)) {
             $status = $getPdf['status'] === 404 ? Response::HTTP_NOT_FOUND : Response::HTTP_BAD_GATEWAY;
             return new JsonResponse(['success' => false, 'error' => $getPdf['message']], $status);

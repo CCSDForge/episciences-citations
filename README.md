@@ -296,21 +296,21 @@ If `API_EXTRACT_TOKEN` is empty or unset, authentication is disabled and the end
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `url` | Yes | URL of the Episciences article (must contain a numeric document ID) |
+| `url` | Yes | URL of the PDF to download (any publicly accessible URL) |
+| `docId` | Conditional | Episciences document ID to associate the references with. Required when the URL does not contain a numeric ID (e.g. arXiv, HAL, external repository). |
 
-**Example — first extraction:**
-
-```bash
-curl -H "Authorization: Bearer mytoken" \
-  'https://citations-dev.episciences.org/api/extract?url=https://episciences.org/article/view/17204'
-```
-
-**Example — document already processed (instant response):**
+**Examples**
 
 ```bash
-# Re-calling the endpoint returns immediately — GROBID is not invoked again
+# Episciences URL — docId extracted automatically
 curl -H "Authorization: Bearer mytoken" \
   'https://citations-dev.episciences.org/api/extract?url=https://episciences.org/article/view/17204'
+
+# External PDF URL — docId must be provided explicitly
+curl -H "Authorization: Bearer mytoken" \
+  'https://citations-dev.episciences.org/api/extract?url=https://arxiv.org/pdf/2506.15295v1&docId=17204'
+
+# Document already processed — returns immediately, GROBID not invoked again
 # → {"success":true,"docId":17204,"alreadyExtracted":true,"referenceCount":42}
 ```
 
