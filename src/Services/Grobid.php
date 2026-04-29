@@ -104,4 +104,9 @@ class Grobid {
         return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId, 'accepted'=>1], ['referenceOrder'=>'ASC']);
 
     }
+
+    public function countAllReferencesFromDB(int $docId): int
+    {
+        return $this->entityManager->getRepository(PaperReferences::class)->count(['document' => $docId]);
+    }
 }

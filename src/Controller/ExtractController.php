@@ -297,6 +297,63 @@ class ExtractController extends AbstractController
         return new JsonResponse(['success' => $insertRef !== false]);
     }
 
+    /**
+     * @throws ClientExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws JsonException
+     * @throws NotFoundExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
+     */
+    #[Route('/api/extract', name: 'app_api_extract', methods: ['GET'])]
+    public function apiExtract(Request $request): JsonResponse
+    {
+        if (!$this->isValidApiToken($request)) {
+            return new JsonResponse(['success' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $url = (string) $request->query->get('url', '');
+        if ($url === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $docId = (int) $this->episciences->getDocIdFromUrl($url);
+        if ($docId === 0) {
+            return new JsonResponse(['success' => false, 'error' => 'Could not extract a document ID from the provided URL'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $referenceCount = $this->grobid->countAllReferencesFromDB($docId);
+        if ($referenceCount > 0) {
+            return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => true, 'referenceCount' => $referenceCount]);
+        }
+
+        $getPdf = $this->episciences->getPaperPDF($url);
+        if (is_array($getPdf)) {
+            $status = $getPdf['status'] === 404 ? Response::HTTP_NOT_FOUND : Response::HTTP_BAD_GATEWAY;
+            return new JsonResponse(['success' => false, 'error' => $getPdf['message']], $status);
+        }
+
+        $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
+        if ($insertRef === false) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
+                $this->references->createDocumentId($docId);
+            }
+            return new JsonResponse(['success' => false, 'docId' => $docId, 'error' => 'No references found in the PDF'], Response::HTTP_OK);
+        }
+
+        return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => false]);
+    }
+
+    private function isValidApiToken(Request $request): bool
+    {
+        $expected = (string) $this->getParameter('api_extract_token');
+        if ($expected === '') {
+            return true;
+        }
+        return $request->headers->get('Authorization') === 'Bearer ' . $expected;
+    }
+
     private function renderProcessingPage(int $docId, Request $request): Response
     {
         return $this->render('extract/processing.html.twig', [

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- **`GET /api/extract` endpoint**: new synchronous API route that downloads the PDF from Episciences and triggers GROBID extraction in a single call, returning JSON. Returns immediately with `alreadyExtracted: true` if references already exist, avoiding redundant GROBID calls. Protected by a configurable Bearer token (`API_EXTRACT_TOKEN` env var, disabled when empty).
 - **PHP 8.3 Migration**:
   - Upgraded project to PHP 8.3.
   - Integrated Rector for automated code modernization and quality.
