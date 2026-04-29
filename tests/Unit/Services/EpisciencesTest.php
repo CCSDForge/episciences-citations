@@ -64,15 +64,58 @@ class EpisciencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_ArticlesPattern_AppendsDownload(): void
+    {
+        $cases = [
+            'https://transformations.episciences.org/articles/14776'  => 'https://transformations.episciences.org/articles/14776/download',
+            'https://transformations.episciences.org/articles/14776/' => 'https://transformations.episciences.org/articles/14776/download',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_BareIdPattern_AppendsPdf(): void
+    {
+        $cases = [
+            'https://lmcs.episciences.org/18068'  => 'https://lmcs.episciences.org/18068/pdf',
+            'https://lmcs.episciences.org/18068/' => 'https://lmcs.episciences.org/18068/pdf',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_UnknownPattern_ReturnsUrlUnchanged(): void
+    {
+        $url = 'https://arxiv.org/pdf/2506.15295v1';
+        $this->assertEquals($url, $this->service->resolvePdfUrl($url));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_ValidUrl_ExtractsId(): void
     {
         // Arrange - la regex cherche /(\d+)(?:/|$) donc le nombre doit être suivi de / ou fin de chaîne
         $testCases = [
-            'https://episciences.org/journal/123456' => '123456',
-            'https://episciences.org/journal/123456/' => '123456',
-            'http://test.org/article/789/view' => '789',
-            'https://episciences.org/999' => '999',
-            'https://episciences.org/999/' => '999',
+            // Standard Episciences URL formats
+            'https://episciences.org/articles/14776'            => '14776',
+            'https://episciences.org/14776'                     => '14776',
+            'https://episciences.org/article/view/17204'        => '17204',
+            // Trailing slash
+            'https://episciences.org/articles/14776/'           => '14776',
+            'https://episciences.org/journal/123456/'           => '123456',
+            // Query string and fragment are ignored (parse_url strips them)
+            'https://episciences.org/articles/14776?format=pdf' => '14776',
+            'https://episciences.org/14776#section'             => '14776',
+            // /pdf and /download suffixes are stripped before extraction
+            'http://dev.episciences.org/17458/pdf'              => '17458',
+            'http://dev.episciences.org/17458/download'         => '17458',
+            'https://episciences.org/articles/14776/download'   => '14776',
         ];
 
         foreach ($testCases as $url => $expectedId) {
@@ -139,24 +182,56 @@ class EpisciencesTest extends TestCase
     #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_FileAlreadyExists_ReturnsTrue(): void
     {
-        // Arrange
-        $url = 'https://episciences.org/pdf/123456.pdf';
+        // URL must contain a segment matching /digits/ for getDocIdFromUrl to extract the ID
+        $url = 'https://episciences.org/pdf/123456/';
 
-        // Create folder and existing PDF file
         if (!is_dir($this->pdfFolder)) {
             mkdir($this->pdfFolder, 0777, true);
         }
         file_put_contents($this->pdfFolder . '123456.pdf', 'existing PDF content');
 
-        // HTTP client should NOT be called (file already exists)
         $this->httpClient->expects($this->never())
             ->method('request');
 
-        // Act
         $result = $this->service->getPaperPDF($url);
 
-        // Assert
         $this->assertTrue($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_FileAlreadyExists_ReturnsTrue(): void
+    {
+        if (!is_dir($this->pdfFolder)) {
+            mkdir($this->pdfFolder, 0777, true);
+        }
+        file_put_contents($this->pdfFolder . '99999.pdf', 'cached PDF');
+
+        $this->httpClient->expects($this->never())
+            ->method('request');
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 99999);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_DownloadsToExpectedPath(): void
+    {
+        $pdfContent = 'arxiv PDF content';
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getContent')->willReturn($pdfContent);
+
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', 'https://arxiv.org/pdf/2506.15295v1', $this->anything())
+            ->willReturn($response);
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 77777);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($this->pdfFolder . '77777.pdf');
     }
 
     #[Test]
@@ -213,7 +288,7 @@ class EpisciencesTest extends TestCase
         // Logger should be called for 404
         $this->logger->expects($this->once())
             ->method('warning')
-            ->with('PDF NOT FOUND ON EPISCIENCES', ['DOCID' => '999999']);
+            ->with('PDF download failed', $this->arrayHasKey('url'));
 
         // Act
         $result = $this->service->getPaperPDF($url);

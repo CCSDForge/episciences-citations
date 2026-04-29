@@ -266,13 +266,72 @@ episciences-citations/
 
 ## API Documentation
 
-The application provides both a web interface and API endpoints:
+The application provides both a web interface and API endpoints.
 
-- **Web Interface**: `/` - Main application interface
-- **View References**: `/en/viewref/{docId}` or `/fr/viewref/{docId}`
-- **Public API**: Various endpoints for citation retrieval and management
+### Web Interface
 
-For detailed API documentation, refer to the controller annotations in `src/Controller/`.
+| Route | Description |
+|-------|-------------|
+| `/` | Main application interface |
+| `/{en\|fr}/viewref/{docid}` | View and manage references for a document |
+
+### Public API Endpoints
+
+#### `GET /api/extract`
+
+Downloads the PDF from Episciences and extracts its bibliographic references via GROBID. This is a synchronous endpoint — the request blocks until extraction completes (typically a few seconds). If references have already been extracted for this document, returns immediately without re-running GROBID.
+
+**Authentication**
+
+The endpoint is protected by a Bearer token when `API_EXTRACT_TOKEN` is configured (see `.env.dist`). Pass the token in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer <your-token>" \
+  'https://citations-dev.episciences.org/api/extract?url=...'
+```
+
+If `API_EXTRACT_TOKEN` is empty or unset, authentication is disabled and the endpoint is publicly accessible.
+
+**Query parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `url` | Yes | URL of the PDF to download (any publicly accessible URL) |
+| `docid` | Conditional | Episciences document ID to associate the references with. Required when the URL does not contain a numeric ID (e.g. arXiv, HAL, external repository). |
+
+**Examples**
+
+```bash
+# Episciences URL — docid extracted automatically
+curl -H "Authorization: Bearer mytoken" \
+  'https://citations-dev.episciences.org/api/extract?url=https://episciences.org/article/view/17204'
+
+# External PDF URL — docid must be provided explicitly
+curl -H "Authorization: Bearer mytoken" \
+  'https://citations-dev.episciences.org/api/extract?url=https://arxiv.org/pdf/2506.15295v1&docid=17204'
+
+# Document already processed — returns immediately, GROBID not invoked again
+# → {"success":true,"docid":17204,"alreadyExtracted":true,"referenceCount":42}
+```
+
+**Responses**
+
+| Status | Body | Description |
+|--------|------|-------------|
+| `200 OK` | `{"success": true, "docid": 17204, "alreadyExtracted": false}` | Extraction succeeded |
+| `200 OK` | `{"success": true, "docid": 17204, "alreadyExtracted": true, "referenceCount": 42}` | Already extracted — no GROBID call made |
+| `200 OK` | `{"success": false, "docid": 17204, "error": "No references found in the PDF"}` | PDF parsed but no references detected |
+| `400 Bad Request` | `{"success": false, "error": "Missing required parameter: url"}` | `url` parameter absent |
+| `400 Bad Request` | `{"success": false, "error": "Could not extract a document ID from the provided URL"}` | URL contains no numeric ID |
+| `401 Unauthorized` | `{"success": false, "error": "Unauthorized"}` | Token missing or incorrect |
+| `404 Not Found` | `{"success": false, "error": "..."}` | PDF not found on Episciences |
+| `502 Bad Gateway` | `{"success": false, "error": "..."}` | Episciences API error |
+
+#### `GET /visualize-citations`
+
+Returns accepted citations for a document in formatted JSON (used by the Episciences platform widget).
+
+For other endpoints, refer to the controller annotations in `src/Controller/`.
 
 ## Testing
 

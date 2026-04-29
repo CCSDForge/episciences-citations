@@ -20,7 +20,10 @@ services:
       - epi-citations-php-fpm
       - epi-citations-db
     networks:
-      - epi-citations-network
+      epi-citations-network:
+      epi-network:
+        aliases:
+          - citations-dev.episciences.org
     command: >
       /bin/sh -c "chown -R www-data:www-data /var/www/data /var/www/cache /var/www/logs && httpd-foreground"
 
@@ -111,6 +114,8 @@ networks:
   epi-citations-network:
     name: epi-citations-network
     driver: bridge
+  epi-network:
+    external: true  # ← network created by episciences-gpl
 
 volumes:
   epi-citations-mysql-db:

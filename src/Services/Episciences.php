@@ -19,33 +19,60 @@ class Episciences {
 
     public function getPaperPDF(string $url): array|bool
     {
-        $this->createDirDataPdf();
         $docId = $this->getDocIdFromUrl($url);
+        if ($docId === '') {
+            return false;
+        }
+        return $this->downloadPdf($url, (int) $docId);
+    }
 
-        // Force HTTP instead of HTTPS for internal episciences domains when configured
+    /**
+     * Resolves an Episciences article URL to its direct PDF download URL.
+     *
+     * Known patterns:
+     *   /{journal}/articles/{id}[/] → /download   (e.g. transformations.episciences.org)
+     *   /{id}[/]                    → /pdf         (e.g. lmcs.episciences.org)
+     */
+    public function resolvePdfUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $base = rtrim($url, '/');
+
+        if (preg_match('#/articles/\d+/?$#', $path)) {
+            return $base . '/download';
+        }
+
+        if (preg_match('#^/\d+/?$#', $path)) {
+            return $base . '/pdf';
+        }
+
+        return $url;
+    }
+
+    public function downloadPdf(string $url, int $docId): array|bool
+    {
+        $this->createDirDataPdf();
+
+        $url = $this->resolvePdfUrl($url);
+
         if ($this->forceHttp && str_contains($url, 'episciences.org') && str_starts_with($url, 'https://')) {
             $url = str_replace('https://', 'http://', $url);
         }
 
-        if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
-            try {
+        if (file_exists($this->pdfFolder . $docId . '.pdf')) {
+            return true;
+        }
+
+        try {
             $response = $this->client->request('GET', $url, [
-                'headers' => [
-                    "Accept" => "application/octet-stream"
-                ]
+                'headers' => ['Accept' => 'application/octet-stream'],
             ])->getContent();
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
-            $message = $this->manageHttpErrorMessagePDF($e->getCode(),$e->getMessage());
-            if ($e->getCode() === 404) {
-                $this->logger->warning('PDF NOT FOUND ON EPISCIENCES',['DOCID' => $docId]);
-                return ['status' => $e->getCode(),
-                    'message' => $this->manageHttpErrorMessagePDF($e->getCode(),"pdf Not Found")];
-            }
-            return ['status' => $e->getCode(), 'message' => $message];
+            $this->logger->warning('PDF download failed', ['url' => $url, 'docId' => $docId, 'code' => $e->getCode()]);
+            return ['status' => $e->getCode(), 'message' => $this->manageHttpErrorMessagePDF($e->getCode(), $e->getMessage())];
         }
-            return $this->putPdfInCache($docId, $response);
-        }
-        return true;
+
+        return $this->putPdfInCache((string) $docId, $response);
     }
     public function putPdfInCache(string $name, $response): bool
     {
@@ -69,8 +96,9 @@ class Episciences {
 
     public function getDocIdFromUrl(string $url): string
     {
-        // Extraire directement le premier segment numérique de l'URL (optimisation)
-        if (preg_match('#/(\d+)(?:/|$)#', $url, $matches)) {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $path = preg_replace('#/(pdf|download)/?$#i', '', $path) ?? $path;
+        if (preg_match('#/(\d+)/?$#', $path, $matches)) {
             return $matches[1];
         }
         return '';

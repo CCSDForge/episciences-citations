@@ -5,6 +5,8 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     deposit_pdf: '%kernel.project_dir%/var/data'
+    api_extract_token_default: ''
+    api_extract_token: '%env(default:api_extract_token_default:API_EXTRACT_TOKEN)%'
     app.cache_folder: '%kernel.project_dir%/var/tmp'
     cas_login_target: '%env(string:CAS_LOGIN_TARGET)%'
     cas_logout_target: '%env(string:CAS_LOGOUT_TARGET)%'
