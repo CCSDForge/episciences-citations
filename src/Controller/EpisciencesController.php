@@ -51,7 +51,7 @@ class EpisciencesController extends AbstractController
         $this->logger->info("API called for {$type} references with docid", [$docId]);
 
         // Récupération des références
-        $refs = $this->references->getReferences($docId, $type);
+        $refs = $this->references->getReferences((int) $docId, $type);
 
         if ($refs === []) {
             $this->logger->info('API called but no references were found for: ', [$docId]);

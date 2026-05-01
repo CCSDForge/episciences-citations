@@ -17,6 +17,9 @@ class Episciences {
     {
     }
 
+    /**
+     * @return array{status: int, message: string}|bool
+     */
     public function getPaperPDF(string $url): array|bool
     {
         $docId = $this->getDocIdFromUrl($url);
@@ -49,6 +52,9 @@ class Episciences {
         return $url;
     }
 
+    /**
+     * @return array{status: int, message: string}|bool
+     */
     public function downloadPdf(string $url, int $docId): array|bool
     {
         $this->createDirDataPdf();
@@ -74,7 +80,7 @@ class Episciences {
 
         return $this->putPdfInCache((string) $docId, $response);
     }
-    public function putPdfInCache(string $name, $response): bool
+    public function putPdfInCache(string $name, string $response): bool
     {
         $fp = fopen($this->pdfFolder.$name.'.pdf', 'wb');
         if (fwrite($fp, (string) $response) === false) {

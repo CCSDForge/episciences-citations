@@ -17,9 +17,6 @@ class DefaultController extends AbstractController
     {
     }
 
-    /**
-     * @param LoggerInterface $logger
-     */
     #[Route('/login', name: 'login')]
     public function login(Request $request) : RedirectResponse {
 
@@ -38,7 +35,7 @@ class DefaultController extends AbstractController
     #[Route('/logout', name: 'logout')]
     public function logout(): void
     {
-        if (($this->getParameter('cas_logout_target') !== null) && (!empty($this->getParameter('cas_logout_target')))) {
+        if (!empty($this->getParameter('cas_logout_target'))) {
             \phpCAS::logoutWithRedirectService($this->getParameter('cas_logout_target'));
         } else {
             \phpCAS::logout();

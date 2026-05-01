@@ -20,6 +20,10 @@ class SolrReferenceEnricher
     ) {
     }
 
+    /**
+     * @param array<string, mixed> $reference
+     * @return array<string, mixed>
+     */
     public function enrichReference(array $reference, bool $force = false): array
     {
         return $this->enrichReferences([$reference], $force)[0] ?? $reference;

@@ -29,6 +29,9 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 class CasAuthenticator extends AbstractAuthenticator
 {
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(
         private readonly array $config,
         private readonly EventDispatcherInterface $eventDispatcher

@@ -7,6 +7,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use \Symfony\Component\Security\Core\User\UserProviderInterface;
 
 
+/** @implements UserProviderInterface<User> */
 class UserProvider implements UserProviderInterface {
 
 

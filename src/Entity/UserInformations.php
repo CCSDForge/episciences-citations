@@ -20,6 +20,7 @@ class UserInformations
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $surname = null;
 
+    /** @var Collection<int, PaperReferences> */
     #[ORM\OneToMany(targetEntity: PaperReferences::class, mappedBy: 'uid', cascade: ['persist'])]
     private Collection $paperReferences;
 

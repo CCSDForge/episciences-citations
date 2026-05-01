@@ -13,6 +13,10 @@ use Seboettg\CiteProc\CiteProc;
 
 class JsonGrobidExtension
 {
+    /**
+     * @param array<int, array<string, mixed>> $authors
+     * @return array<int, array<string, mixed>>
+     */
     #[AsTwigFunction(name: 'getAuthors')]
     public function getAuthors(array $authors): array
     {
@@ -48,6 +52,9 @@ class JsonGrobidExtension
         return $infoAuthor;
     }
 
+    /**
+     * @param array<string, mixed> $author
+     */
     public function getOrcid(array $author): ?string
     {
         if (array_key_exists("idno", $author)) {
@@ -56,13 +63,19 @@ class JsonGrobidExtension
         return null;
     }
 
+    /**
+     * @param array<string> $names
+     */
     public function composeNames(array $names): string
     {
         return implode(" ", $names);
     }
 
+    /**
+     * @param string|array<string, mixed> $date
+     */
     #[AsTwigFunction(name: 'getDateInJson')]
-    public function getDateInJson(string|array $date)
+    public function getDateInJson(string|array $date): mixed
     {
         if (is_array($date)) {
             foreach ($date as $attr) {
@@ -74,6 +87,9 @@ class JsonGrobidExtension
         return $date;
     }
 
+    /**
+     * @param string|array<string> $identifier
+     */
     #[AsTwigFunction(name: 'getJournalIdentifier')]
     public function getJournalIdentifier(string|array $identifier): string
     {
@@ -84,6 +100,9 @@ class JsonGrobidExtension
 
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     #[AsTwigFunction(name: 'prettyReference')]
     public function prettyReference(string $jsonRawReference): array
     {

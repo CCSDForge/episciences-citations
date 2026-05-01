@@ -8,6 +8,8 @@ use Symfony\Component\Form\DataTransformerInterface;
 
 /**
  * Handles transforming json to array and backward
+ *
+ * @implements DataTransformerInterface<array<string, mixed>, string>
  */
 class JsonTransformer implements DataTransformerInterface
 {

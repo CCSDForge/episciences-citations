@@ -24,6 +24,7 @@ class PaperReferences
     #[ORM\Column]
     private ?\DateTimeImmutable $updated_at = null;
 
+    /** @var array<array-key, mixed> */
     #[ORM\Column]
     private array $reference = [];
 
@@ -79,11 +80,17 @@ class PaperReferences
         return $this;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function getReference(): array
     {
         return $this->reference;
     }
 
+    /**
+     * @param array<array-key, mixed> $reference
+     */
     public function setReference(array $reference): self
     {
         $this->reference = $reference;

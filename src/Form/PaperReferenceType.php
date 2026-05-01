@@ -14,6 +14,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 
+/** @extends AbstractType<PaperReferences> */
 class PaperReferenceType extends AbstractType
 {
     public function __construct(

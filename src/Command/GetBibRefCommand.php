@@ -41,7 +41,7 @@ class GetBibRefCommand extends Command
     }
 
     /**
-     * @return mixed|string
+     * @param array<string> $bibArray
      * @throws \JsonException
      */
     public function processS2Ref(mixed $semanticsRef, OutputInterface $output, int $counterRef, int|string $docId, array $bibArray, mixed $outopt): mixed
@@ -78,6 +78,9 @@ class GetBibRefCommand extends Command
             $rSemantics['citedPaper']['citationStyles']['bibtex']);
     }
 
+    /**
+     * @param array<string> $bibArray
+     */
     public function writeBibtexToFile(mixed $outopt, int|string $docId, array $bibArray): void
     {
         if (!is_dir($outopt) && !mkdir($outopt, 0777, true) && !is_dir($outopt)) {
@@ -95,10 +98,7 @@ class GetBibRefCommand extends Command
             && isset($rSemantics['citedPaper']['externalIds']['ArXiv']);
     }
 
-    /**
-     * @param $title
-     */
-    public function hasUrlInTitle($title): bool
+    public function hasUrlInTitle(mixed $title): bool
     {
         return str_contains((string) $title, 'https://') || str_contains((string) $title, 'http://');
     }
@@ -117,8 +117,7 @@ class GetBibRefCommand extends Command
     }
 
     /**
-     * @param $externalIds
-     * @return mixed|string
+     * @param array<string, mixed> $externalIds
      * @throws \JsonException
      */
     public function insertRefFromArXivIdS2(OutputInterface $output, array $externalIds, int $counterRef, int|string $docId): mixed
@@ -146,7 +145,8 @@ class GetBibRefCommand extends Command
     }
 
     /**
-     * @param $citedPaper
+     * @param array<string, mixed> $citedPaper
+     * @return array<string, mixed>
      */
     public function InsertFromUrlText(OutputInterface $output, array $citedPaper, int $counterRef, int|string $docId): array
     {
@@ -166,7 +166,7 @@ class GetBibRefCommand extends Command
     }
 
     /**
-     * @param $bibtex
+     * @return list<array<string, mixed>>
      */
     public function insertCslFromBibtexS2(OutputInterface $output, string $bibtex, int $counterRef, int|string $docId): array
     {
@@ -218,6 +218,8 @@ class GetBibRefCommand extends Command
     }
 
     /**
+     * @param array<string> $arrayDoiInDb
+     * @param array<string> $arrayRefTxt
      * @throws \JsonException
      */
     public function processCslToGetRef(string $csl, array $arrayDoiInDb, array $arrayRefTxt, OutputInterface $output, int $counterRef, int|string $docId): mixed
@@ -242,6 +244,9 @@ class GetBibRefCommand extends Command
         return $refRetrieved;
     }
 
+    /**
+     * @return array{0: PaperReferences, 1: int}
+     */
     public function insertRefInDb(mixed $refRetrieved, int $counterRef, int|string $docId, string $source = PaperReferences::SOURCE_METADATA_EPI_USER): array
     {
         $user = $this->entityManager->getRepository(UserInformations::class)->find(666);
@@ -268,6 +273,9 @@ class GetBibRefCommand extends Command
         return [$ref, $counterRef];
     }
 
+    /**
+     * @return array<string, list<array<string, string>>>
+     */
     public function processCsv(InputInterface $input): array
     {
         $pathCsv = $input->getArgument('csv');
@@ -283,7 +291,7 @@ class GetBibRefCommand extends Command
         }
         return $globalData;
     }
-    public function getBibtexFromDoi($id, $idType='doi'): string{
+    public function getBibtexFromDoi(string $id, string $idType = 'doi'): string {
         if ($idType === 'arxiv'){
             $id = $this->processArXivDoi($id);
         }
@@ -291,7 +299,7 @@ class GetBibRefCommand extends Command
         return $this->doiService->getBibtex($id);
     }
 
-    public function processArXivDoi($id): string{
+    public function processArXivDoi(string $id): string {
         $arxivId = $id;
         // case with have arxiv but not doi -> doi.org with arxiv
         if (!strpos((string) $arxivId, 'arxiv')) {

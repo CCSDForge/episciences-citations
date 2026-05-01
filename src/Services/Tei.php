@@ -17,10 +17,9 @@ class Tei
     }
 
     /**
-     * @param $tei
      * @return array<int, array<string, string>>
      */
-    public function getReferencesInTei($tei): array
+    public function getReferencesInTei(string $tei): array
     {
         $tei = simplexml_load_string((string) $tei);
         $info = [];
@@ -46,6 +45,9 @@ class Tei
         return [];
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $references
+     */
     public function insertReferencesInDB(array $references, int $docId, string $source): void
     {
         $this->removeAllRefGrobidSource($docId);
