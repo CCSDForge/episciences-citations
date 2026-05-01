@@ -2,6 +2,8 @@
 
 namespace App\Tests\Unit\Services;
 
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Query;
 use PHPUnit\Framework\MockObject\MockObject;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
@@ -232,8 +234,8 @@ class ReferencesTest extends TestCase
             'addReferenceDoi' => 'https://doi.org/10.1234/test-new',
         ];
 
-        $qb = $this->createMock(\Doctrine\ORM\QueryBuilder::class);
-        $query = $this->createMock(\Doctrine\ORM\AbstractQuery::class);
+        $qb = $this->createMock(QueryBuilder::class);
+        $query = $this->createMock(Query::class);
         $qb->method('select')->willReturnSelf();
         $qb->method('where')->willReturnSelf();
         $qb->method('setParameter')->willReturnSelf();

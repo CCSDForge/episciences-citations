@@ -2,8 +2,8 @@
 
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
-![Symfony](https://img.shields.io/badge/Symfony-6.4-black)
-![PHP](https://img.shields.io/badge/PHP-8.3-777BB4)
+![Symfony](https://img.shields.io/badge/Symfony-7.4-black)
+![PHP](https://img.shields.io/badge/PHP-8.3%20%2F%208.4-777BB4)
 
 [![Tests](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml)
 [![Lint](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml)
@@ -38,14 +38,14 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 - **Multi-language Support**: Interface available in English and French
 - **Export Capabilities**: Export citations in various formats
 - **User Authentication**: Secure CAS-based authentication system
-- **Modern UI**: Responsive interface built with Tailwind CSS
+- **Modern UI**: Responsive interface built with Bootstrap 5
 
 ## Tech Stack
 
 **Backend:**
-- PHP 8.3
-- Symfony 6.4 (LTS)
-- Doctrine ORM
+- PHP 8.3 or 8.4
+- Symfony 7.4
+- Doctrine ORM 3.0
 - MySQL/MariaDB
 
 **Analysis & Modernization:**
@@ -53,10 +53,10 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 - Rector 2.4 (Automated Upgrades)
 
 **Frontend:**
-- Tailwind CSS 3.2.7
+- Bootstrap 5.3.8
 - Stimulus (Hotwired)
 - Webpack Encore
-- FontAwesome 6.4.0
+- FontAwesome 7.1.0
 
 **External Services:**
 - GROBID (for PDF citation extraction)
@@ -65,7 +65,7 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 ## Requirements
 
-- PHP 8.3 or higher
+- PHP 8.3 or 8.4
 - Composer
 - Node.js 16+ and npm/yarn
 - MySQL 5.7+ or MariaDB 10.3+
@@ -180,6 +180,7 @@ DATABASE_URL="mysql://user:password@127.0.0.1:3306/episciences_citations?serverV
 # External Services
 GROBID_URL=http://grobid-server:8070
 SEMANTIC_SCHOLAR_API_URL=https://api.semanticscholar.org/
+API_S2_KEY=your-semantic-scholar-api-key-here
 
 # CAS Authentication
 CAS_SERVER_URL=your-cas-server-url
@@ -237,7 +238,7 @@ make rector                              # Apply PHP migration changes
 
 - **PHP**: Follow Symfony coding standards (PSR-12)
 - **JavaScript**: ES6+ syntax with Stimulus controllers
-- **CSS**: Tailwind utility-first approach with custom components
+- **CSS**: Bootstrap utility classes with custom SCSS components
 
 ## Project Structure
 
@@ -246,7 +247,7 @@ episciences-citations/
 ├── assets/                 # Frontend assets
 │   ├── controllers/       # Stimulus controllers
 │   ├── js/               # JavaScript files
-│   └── styles/           # CSS/Tailwind files
+│   └── styles/           # CSS/Bootstrap/Sass files
 ├── config/               # Symfony configuration
 ├── docker/              # Docker configuration files
 ├── migrations/          # Database migrations
@@ -419,6 +420,53 @@ sbir
 | `403 Forbidden` | `{"status": 403, "message": "Forbidden"}` | Request blocked by CORS origin validation. |
 
 For other endpoints, refer to the controller annotations in `src/Controller/`.
+
+## Importing References via Semantic Scholar
+
+The application supports importing and enriching references for a batch of documents using the [Semantic Scholar API](https://www.semanticscholar.org/product/api).
+
+### 1. Configuration
+
+Obtain a Semantic Scholar API key and add it to your `.env.local` file:
+
+```env
+API_S2_KEY=your_api_key_here
+```
+
+### 2. Prepare the Input File
+
+Create a CSV file containing the list of documents to process. The CSV must include a header row with at least two columns:
+- `docid`: The Episciences internal document ID.
+- `doi`: The DOI of the paper for which you want to retrieve references.
+
+Example `import.csv`:
+```csv
+docid,doi
+17204,10.1038/s41586-021-03430-5
+17458,10.1126/science.abc1234
+```
+
+### 3. Run the Import Command
+
+Execute the following console command to process the CSV:
+
+```bash
+# Inside Docker
+docker exec epi-citations-php-fpm php bin/console app:get-bibref path/to/import.csv --api S2
+
+# Manual setup
+php bin/console app:get-bibref path/to/import.csv --api S2
+```
+
+### 4. Optional: BibTeX Export
+
+To export the retrieved references to BibTeX files (one per document), use the `--output` option:
+
+```bash
+php bin/console app:get-bibref path/to/import.csv --api S2 --output ./var/export/bib/
+```
+
+The command will generate files named `{docid}.bib` in the specified directory.
 
 ## Testing
 

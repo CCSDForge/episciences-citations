@@ -32,7 +32,7 @@ class MigrateReferenceFormatCommand extends Command
             if (!empty($data) && array_keys($data) === [0] && is_string($data[0])) {
                 try {
                     $decoded = json_decode($data[0], true, 512, JSON_THROW_ON_ERROR);
-                    if (is_array($decoded) && !empty($decoded)) {
+                    if (is_array($decoded) && $decoded !== []) {
                         $ref->setReference($decoded);
                         $this->entityManager->persist($ref);
                         $migrated++;

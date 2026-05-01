@@ -13,6 +13,7 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\ClickableInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -55,7 +56,7 @@ class ExtractController extends AbstractController
     {
 
 
-        $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
+        $docId = (int) $this->episciences->getDocIdFromUrl($request->query->get('url'));
         $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
 
         $this->logger->info('Extracting for docid ', ['DocId' => $docId]);
@@ -153,7 +154,10 @@ class ExtractController extends AbstractController
             }
             if ($form->isSubmitted() && $form->isValid()) {
                 $session->set('openModalClose', 0);
-                if ($form->get('submitNewRef')->isClicked()) {
+                $submitNewRef = $form->get('submitNewRef');
+                $submitSave = $form->get('save');
+                $submitImportBib = $form->get('submitImportBib');
+                if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
                     $newRef = $this->references->addNewReference($request->request->all($form->getName()),
                         $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->logger->info('New reference added');
@@ -168,11 +172,11 @@ class ExtractController extends AbstractController
                             $this->translator->trans('Title missing to add new reference')
                         );
                     }
-                } elseif ($form->get('save')->isClicked()) {
+                } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
                     $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
                         $this->container->get('security.token_storage')->getToken()->getAttributes());
                     $this->flashMessageForChoices($userChoice);
-                } elseif ($form->get('submitImportBib')->isClicked()) {
+                } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
                     $bibtexFile = $form->get('bibtexFile')->getData();
                     if ($bibtexFile !== null) {
                         $process = $this->bibtex->processBibtex($bibtexFile,
@@ -219,12 +223,12 @@ class ExtractController extends AbstractController
      */
     public function isAuthorizeForApp(int $docId): bool
     {
-        return $this->episciences->getRightUser($docId,
+        return $this->episciences->getRightUser((string) $docId,
             $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 
     /**
-     * @param TranslatorInterface $translator
+     * @param array<string, int> $userChoice
      */
     public function flashMessageForChoices(array $userChoice): void
     {
@@ -256,10 +260,10 @@ class ExtractController extends AbstractController
     public function autosave(int $docId, Request $request): JsonResponse
     {
         if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
-            return new JsonResponse(['success' => false], 403);
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
         if (!$this->isAuthorizeForApp($docId)) {
-            return new JsonResponse(['success' => false], 403);
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->request->all();
@@ -294,7 +298,7 @@ class ExtractController extends AbstractController
             }
             $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
         }
-        return new JsonResponse(['success' => $insertRef !== false]);
+        return new JsonResponse(['success' => $insertRef]);
     }
 
     /**

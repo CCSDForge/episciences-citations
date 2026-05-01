@@ -8,19 +8,19 @@
         <button class="btn btn-outline-secondary dropdown-toggle" type="button"
                 id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fas fa-globe text-primary me-1" aria-hidden="true"></i>
-            <span class="text-uppercase fw-semibold">{{ app.request.locale }}</span>
+            <span class="text-uppercase fw-semibold">{{ app.request ? app.request.locale : 'en' }}</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
             <li>
-                <a class="dropdown-item {% if app.request.locale == 'en' %}active{% endif %}"
-                   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all|merge({_locale: 'en'}))) }}">
+                <a class="dropdown-item {% if app.request and app.request.locale == 'en' %}active{% endif %}"
+                   href="{{ app.request ? path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all|merge({_locale: 'en'}))) : '#' }}">
                     <span class="fw-medium">EN</span>
                     <small class="text-muted d-block">English</small>
                 </a>
             </li>
             <li>
-                <a class="dropdown-item {% if app.request.locale == 'fr' %}active{% endif %}"
-                   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all|merge({_locale: 'fr'}))) }}">
+                <a class="dropdown-item {% if app.request and app.request.locale == 'fr' %}active{% endif %}"
+                   href="{{ app.request ? path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all|merge({_locale: 'fr'}))) : '#' }}">
                     <span class="fw-medium">FR</span>
                     <small class="text-muted d-block">Français</small>
                 </a>

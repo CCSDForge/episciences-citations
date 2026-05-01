@@ -42,6 +42,10 @@ class Doi
 
 
 
+    /**
+     * @param array<string, mixed> $csl
+     * @return array<int, array<string, mixed>>
+     */
     public function retrieveReferencesFromCsl(array $csl): array
     {
         $refs = [];

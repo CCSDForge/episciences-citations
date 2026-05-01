@@ -2,6 +2,7 @@
 // src/Twig/AppExtension.php
 namespace App\Twig;
 
+use Twig\Attribute\AsTwigFunction;
 use App\Services\Bibtex;
 use JsonException;
 use Twig\Extension\AbstractExtension;
@@ -10,21 +11,13 @@ use Seboettg\CiteProc\Exception\CiteProcException;
 use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\CiteProc;
 
-class JsonGrobidExtension extends AbstractExtension
+class JsonGrobidExtension
 {
     /**
-     * @return TwigFunction[]
+     * @param array<int, array<string, mixed>> $authors
+     * @return array<int, array<string, mixed>>
      */
-    public function getFunctions(): array
-    {
-        return [
-            new TwigFunction('getAuthors', $this->getAuthors(...)),
-            new TwigFunction('getDateInJson', $this->getDateInJson(...)),
-            new TwigFunction('getJournalIdentifier', $this->getJournalIdentifier(...)),
-            new TwigFunction('prettyReference', $this->prettyReference(...)),
-        ];
-    }
-
+    #[AsTwigFunction(name: 'getAuthors')]
     public function getAuthors(array $authors): array
     {
         $infoAuthor = [];
@@ -59,6 +52,9 @@ class JsonGrobidExtension extends AbstractExtension
         return $infoAuthor;
     }
 
+    /**
+     * @param array<string, mixed> $author
+     */
     public function getOrcid(array $author): ?string
     {
         if (array_key_exists("idno", $author)) {
@@ -67,12 +63,19 @@ class JsonGrobidExtension extends AbstractExtension
         return null;
     }
 
+    /**
+     * @param array<string> $names
+     */
     public function composeNames(array $names): string
     {
         return implode(" ", $names);
     }
 
-    public function getDateInJson(string|array $date)
+    /**
+     * @param string|array<string, mixed> $date
+     */
+    #[AsTwigFunction(name: 'getDateInJson')]
+    public function getDateInJson(string|array $date): mixed
     {
         if (is_array($date)) {
             foreach ($date as $attr) {
@@ -84,6 +87,10 @@ class JsonGrobidExtension extends AbstractExtension
         return $date;
     }
 
+    /**
+     * @param string|array<string> $identifier
+     */
+    #[AsTwigFunction(name: 'getJournalIdentifier')]
     public function getJournalIdentifier(string|array $identifier): string
     {
         if (is_array($identifier)) {
@@ -93,6 +100,10 @@ class JsonGrobidExtension extends AbstractExtension
 
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    #[AsTwigFunction(name: 'prettyReference')]
     public function prettyReference(string $jsonRawReference): array
     {
         $jsonReference = [];

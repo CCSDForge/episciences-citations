@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Entity\PaperReferences;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
-use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -22,7 +22,7 @@ class Grobid {
         private readonly Tei $tei,
         private readonly EntityManagerInterface $entityManager,
         private readonly string $grobidUrl,
-        private readonly CacheInterface $grobidCache,
+        private readonly CacheItemPoolInterface $grobidCache,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -57,11 +57,7 @@ class Grobid {
         return true;
     }
 
-    /**
-     * @param $name
-     * @param $response
-     */
-    public function putGrobidReferencesInCache($name, $response): void
+    public function putGrobidReferencesInCache(string $name, mixed $response): void
     {
         try {
             $item = $this->grobidCache->getItem($name);
@@ -74,11 +70,7 @@ class Grobid {
         }
     }
 
-    /**
-     * @param $name
-     * @return false|mixed
-     */
-    public function getGrobidReferencesInCache($name): mixed
+    public function getGrobidReferencesInCache(string $name): mixed
     {
         try {
             $item = $this->grobidCache->getItem($name);
@@ -94,13 +86,16 @@ class Grobid {
     }
 
     /**
-     * @param $docId
-     * @return PaperReferences[]|array|object[]
+     * @return PaperReferences[]
      */
-    public function getAllGrobidReferencesFromDB($docId) {
+    public function getAllGrobidReferencesFromDB(int $docId): array {
         return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
     }
-    public function getAcceptedReferencesFromDB($docId){
+
+    /**
+     * @return PaperReferences[]
+     */
+    public function getAcceptedReferencesFromDB(int $docId): array {
         return $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId, 'accepted'=>1], ['referenceOrder'=>'ASC']);
 
     }

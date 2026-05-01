@@ -77,5 +77,13 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    # Override the L3 CAS authenticator with our Symfony 7.4-compatible version.
+    # The L3 bundle registers cas.security.authentication.authenticator; we replace
+    # it here so security.yaml continues to reference the same service ID.
+    cas.security.authentication.authenticator:
+        class: App\Security\CasAuthenticator
+        arguments: ['%cas%', '@event_dispatcher']
+        public: false
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

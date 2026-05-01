@@ -13,11 +13,9 @@ security:
         api_public:
             pattern: ^/(visualize-citations|api/extract)
             security: false
-        l3_firewall:
-            pattern: ^/
-            security: true
-            custom_authenticators:
-                - cas.security.authentication.authenticator
+        home:
+            pattern: ^/(fr/?|login)?$
+            security: false
         main:
             pattern: ^/
             security: true
@@ -36,7 +34,6 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-            - { path: ^/login, roles: [ROLE_USER,ROLE_ANO] }
             - { path: ^/force, roles: [ROLE_USER,ROLE_ANO] }
             - { path: ^/(en|fr)/viewref, roles: [ROLE_USER] }
         # - { path: ^/admin, roles: ROLE_ADMIN }
@@ -74,9 +71,6 @@ when@test:
                 security: false
             api_public:
                 pattern: ^/visualize-citations
-                security: false
-            l3_firewall:
-                pattern: ^/Shibboleth.sso
                 security: false
             main:
                 pattern: ^/

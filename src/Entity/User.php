@@ -9,11 +9,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class User implements UserInterface
 {
 
-    private $id;
+    /** @phpstan-ignore property.unusedType */
+    private ?int $id = null;
 
-    private $username;
+    private ?string $username = null;
     private ?string $email = null;
-    private $uid;
+    private mixed $uid = null;
 
     public function getId(): ?int
     {
@@ -50,6 +51,9 @@ class User implements UserInterface
         return ($this->username === '__NO_USER__') ? ['ROLE_ANO'] :  ['ROLE_USER'] ;
     }
 
+    /**
+     * @param array<string> $roles
+     */
     public function setRoles(array $roles): self
     {
     return $this;

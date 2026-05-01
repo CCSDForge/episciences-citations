@@ -14,7 +14,8 @@ class Document
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\OneToMany(mappedBy: 'document', targetEntity: PaperReferences::class)]
+    /** @var Collection<int, PaperReferences> */
+    #[ORM\OneToMany(targetEntity: PaperReferences::class, mappedBy: 'document')]
     #[ORM\OrderBy(["referenceOrder" => "ASC"])]
     private Collection $paperReferences;
 

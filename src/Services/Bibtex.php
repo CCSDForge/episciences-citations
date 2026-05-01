@@ -34,10 +34,10 @@ class Bibtex
     }
 
     /**
-     * @param $bibtexFile
-     * @return string[]
+     * @param mixed $bibtexFile file path (string/UploadedFile) or raw BibTeX string
+     * @return list<array<string, mixed>>|array{error: string}
      */
-    public static function convertBibtexToArray($bibtexFile, $isFile = true): array
+    public static function convertBibtexToArray(mixed $bibtexFile, bool $isFile = true): array
     {
         // Create and configure a Listener
         $listener = new Listener();
@@ -78,6 +78,10 @@ class Bibtex
     {
         return self::$loggerSingleton;
     }
+    /**
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
     public static function generateCSL(array $entry): array
     {
         $csl = [
@@ -106,7 +110,7 @@ class Bibtex
             if (isset($entry['volume'])){
                 $csl['volume'] = $entry['volume'];
             }
-            if (isset($csl['issue'])){
+            if (isset($entry['number'])){
                 $csl['issue'] = $entry['number'];
             }
             if (isset($entry['pages'])){
@@ -124,19 +128,17 @@ class Bibtex
     }
 
     /**
-     * @param $bibtexFile
-     * @param $userInfo
-     * @param $docId
-     * @return array|string[]
+     * @param array<string, mixed> $userInfo
+     * @return array{error: string}|array{}
      * @throws \JsonException
      */
-    public function processBibtex($bibtexFile,array $userInfo,$docId): array
+    public function processBibtex(mixed $bibtexFile, array $userInfo, int $docId): array
     {
         $allBibFromDocId = $this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
         $countAllRef = count($this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId]));
-        if (!empty($allBibFromDocId)){
+        if ($allBibFromDocId !== []){
             foreach ($allBibFromDocId as $bib){
                 $this->entityManager->remove($bib);
             }
@@ -181,6 +183,8 @@ class Bibtex
     }
 
     /**
+     * @param array<string, mixed> $refData
+     * @return array<string, mixed>
      * @throws CiteProcException
      * @throws \JsonException
      */

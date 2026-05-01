@@ -17,9 +17,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class EpisciencesTest extends TestCase
 {
     private Episciences $service;
-    private MockObject $entityManager;
     private MockObject $httpClient;
-    private MockObject $params;
     private MockObject $logger;
     private string $pdfFolder;
     private string $apiRight = 'http://mock-api';
@@ -35,10 +33,7 @@ class EpisciencesTest extends TestCase
                 unlink($file);
             }
         }
-
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->httpClient = $this->createMock(HttpClientInterface::class);
-        $this->params = $this->createMock(ContainerBagInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
 
         $this->service = new Episciences(

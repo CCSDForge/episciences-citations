@@ -7,7 +7,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
-    private const SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const array SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
 
     public function __construct(
@@ -20,7 +20,9 @@ class References {
     }
 
     /**
-     * @return int[]
+     * @param array<string, mixed> $form
+     * @param array<string, mixed> $userInfo
+     * @return array{orderPersisted: int, referencePersisted: int}
      */
     public function validateChoicesReferencesByUser(array $form, array $userInfo) : array
     {
@@ -72,15 +74,16 @@ class References {
     }
 
     /**
+     * @param 'all'|'accepted' $type
+     * @return array<int, array<string, mixed>>
      * @throws CiteProcException
      */
-    public function getReferences(int $docId,string $type = "all"|"accepted"): array
+    public function getReferences(int $docId, string $type = 'all'): array
     {
         // Récupérer les références selon le type (utilise match pour PHP 8+)
         $references = match($type) {
             'all' => $this->grobid->getAllGrobidReferencesFromDB($docId),
             'accepted' => $this->grobid->getAcceptedReferencesFromDB($docId),
-            default => throw new \InvalidArgumentException("Invalid type: {$type}")
         };
 
         $rawReferences = [];
@@ -114,14 +117,15 @@ class References {
         return $rawReferences;
     }
 
-    /**
-     * @param $docId
-     */
-    public function getDocument($docId): ?Document
+    public function getDocument(int $docId): ?Document
     {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 
+    /**
+     * @param array<string, mixed> $form
+     * @param array<string, mixed> $userInfo
+     */
     public function addNewReference(array $form, array $userInfo): bool
     {
         if ($form['addReference'] !== ""){
@@ -157,10 +161,7 @@ class References {
         return false;
     }
 
-    /**
-     * @param $orderRef
-     */
-    public function persistOrderRef($orderRef, int $orderChanged): int
+    public function persistOrderRef(string $orderRef, int $orderChanged): int
     {
         $orderRefArray = explode(";", (string) $orderRef);
         foreach ($orderRefArray as $order => $pkRef) {
@@ -175,7 +176,7 @@ class References {
         return $orderChanged;
     }
 
-    public function documentAlreadyExtracted($docId): bool {
+    public function documentAlreadyExtracted(int $docId): bool {
         return $this->getDocument($docId) instanceof Document;
     }
     public function createDocumentId(int $docId): Document{
@@ -205,6 +206,9 @@ class References {
         $this->entityManager->flush();
     }
 
+    /**
+     * @param array<string, mixed> $userInfo
+     */
     public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): void
     {
         $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
@@ -235,6 +239,9 @@ class References {
         $this->entityManager->flush();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function normalizeReferenceInput(mixed $reference): array
     {
         if (is_array($reference)) {

@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:solr:enrich-references', description: 'Enrich existing references with Solr metadata by DOI')]
 class SolrEnrichReferencesCommand extends Command
 {
-    private const SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const array SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
