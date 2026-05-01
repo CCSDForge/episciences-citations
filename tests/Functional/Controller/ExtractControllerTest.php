@@ -14,7 +14,7 @@ use Symfony\Component\Security\Core\User\InMemoryUser;
 
 class ExtractControllerTest extends WebTestCase
 {
-    private const TEST_TOKEN = 'test-extract-token';
+    private const string TEST_TOKEN = 'test-extract-token';
 
     private function authenticateClient(KernelBrowser $client, string $username = 'test_user', array $roles = ['ROLE_USER']): void
     {
@@ -226,6 +226,6 @@ class ExtractControllerTest extends WebTestCase
 
         $client->request(Request::METHOD_GET, '/fr/viewref/123456');
 
-        $this->assertLessThan(500, $client->getResponse()->getStatusCode());
+        $this->assertLessThan(Response::HTTP_INTERNAL_SERVER_ERROR, $client->getResponse()->getStatusCode());
     }
 }

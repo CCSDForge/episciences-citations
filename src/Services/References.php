@@ -7,7 +7,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
-    private const SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const array SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
 
     public function __construct(

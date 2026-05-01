@@ -107,8 +107,8 @@ class CorsEventListener implements EventSubscriberInterface
     private function isValidCorsOrigin(Request $request): bool
     {
         // Ensure values are non-null strings (PHP 8.2 strict)
-        $origin = (string) ($request->headers->get('origin') ?? '');
-        $host = (string) ($request->headers->get('host') ?? '');
+        $origin = $request->headers->get('origin') ?? '';
+        $host = $request->headers->get('host') ?? '';
 
         $this->logger->info('Checking CORS', [
             'origin' => $origin,
@@ -134,7 +134,7 @@ class CorsEventListener implements EventSubscriberInterface
     private function addCorsHeaders(Response $response, Request $request): void
     {
         // Ensure origin is a non-null string (PHP 8.2 strict)
-        $origin = (string) ($request->headers->get('origin') ?? '');
+        $origin = $request->headers->get('origin') ?? '';
 
         if ($origin !== '') {
             $response->headers->set('Access-Control-Allow-Origin', $origin);

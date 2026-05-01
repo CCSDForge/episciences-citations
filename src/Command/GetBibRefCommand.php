@@ -100,7 +100,7 @@ class GetBibRefCommand extends Command
      */
     public function hasUrlInTitle($title): bool
     {
-        return strpos((string) $title, 'https://') !== false || strpos((string) $title, 'http://') !== false;
+        return str_contains((string) $title, 'https://') || str_contains((string) $title, 'http://');
     }
 
     public function hasBibTeX(mixed $rSemantics): bool

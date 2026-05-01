@@ -53,13 +53,10 @@ class DocumentType extends AbstractType
             'mapped' => false,
             'required' => false,
             'constraints' => [
-                new File([
-                    'mimeTypes' => [
-                        'text/plain',
-                        'text/x-bibtex',
-                    ],
-                    'mimeTypesMessage' => 'Please upload a valid BibTeX document',
-                ])
+                new File(mimeTypes: [
+                    'text/plain',
+                    'text/x-bibtex',
+                ], mimeTypesMessage: 'Please upload a valid BibTeX document')
             ],
         ]);
         $builder->add('btnModalImportBibtex',ButtonType::class,

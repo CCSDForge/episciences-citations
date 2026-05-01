@@ -27,8 +27,8 @@ class DefaultController extends AbstractController
         $url = 'https://'
             . $this->getParameter('cas_host') . $this->getParameter('cas_path')
             . '/login?service=';
-        $bibExportAsked = ($request->get('exportbib') === "1") ? urlencode('&exportbib=1'): "";
-        $journalUrl = $this->loadHttpsOrHttp($request->get('url'));
+        $bibExportAsked = ($request->query->get('exportbib') === "1") ? urlencode('&exportbib=1'): "";
+        $journalUrl = $this->loadHttpsOrHttp($request->query->get('url') ?? '');
         $this->logger->info('page CAS');
         $this->logger->info("journal_url",[$journalUrl]);
         $this->logger->info("url complete",[$url . $target . '/force?url='.$journalUrl.$bibExportAsked]);
@@ -51,18 +51,13 @@ class DefaultController extends AbstractController
         $this->logger->notice('force page');
         $this->logger->info('cas_gateway',[$this->getParameter("cas_gateway")]);
         $this->logger->info('session before gateway',[$_SESSION]);
-        $this->logger->info("USER INFO AFTER FORCE", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->getParameter("cas_gateway")) {
-            if (!isset($_SESSION)) {
-                session_start();
-            }
-
-            session_destroy();
+            $request->getSession()->invalidate();
         }
 
-        $this->logger->info('SESSION',[$_SESSION]);
-        $option = ['url'=> $request->get('url'), 'exportbib' => $request->get('exportbib')];
-        $this->setSessionEpiUrlPdf($request,$request->get('url'));
+        $url = $request->query->get('url') ?? '';
+        $option = ['url' => $url, 'exportbib' => $request->query->get('exportbib')];
+        $this->setSessionEpiUrlPdf($request, $url);
         $this->setSessionModal($request);
         return $this->redirectToRoute('app_extract', $option);
     }
@@ -70,9 +65,6 @@ class DefaultController extends AbstractController
     #[Route(path: ['en' => '/', 'fr' => '/fr'], name: 'index')]
     public function index(): Response
     {
-        $this->logger->info("USER INFO", [$this->container->get('security.token_storage')->getToken()->getAttributes()]);
-        $this->logger->info('ROLE CAS',[$this->getUser()->getRoles()]);
-        $this->logger->info('index page',[$_SESSION]);
         return $this->render('base.html.twig', []);
     }
 
@@ -96,7 +88,7 @@ class DefaultController extends AbstractController
      * @return void
      * In case with need to reextract in the app we have infos of which one to extract
      */
-    private function setSessionEpiUrlPdf(Request $request, $url): void
+    private function setSessionEpiUrlPdf(Request $request, bool|float|int|string $url): void
     {
         $session = $request->getSession();
         $session->set('EpiPdfUrltoExtract', '');

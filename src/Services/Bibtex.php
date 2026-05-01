@@ -136,7 +136,7 @@ class Bibtex
             ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
         $countAllRef = count($this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId]));
-        if (!empty($allBibFromDocId)){
+        if ($allBibFromDocId !== []){
             foreach ($allBibFromDocId as $bib){
                 $this->entityManager->remove($bib);
             }

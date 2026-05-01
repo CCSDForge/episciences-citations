@@ -7,8 +7,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class SolrReferenceEnricher
 {
-    private const SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
-    private const MAX_BATCH_SIZE = 100;
+    private const array SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const int MAX_BATCH_SIZE = 100;
 
     public function __construct(
         private readonly HttpClientInterface $client,

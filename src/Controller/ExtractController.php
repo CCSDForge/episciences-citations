@@ -256,10 +256,10 @@ class ExtractController extends AbstractController
     public function autosave(int $docId, Request $request): JsonResponse
     {
         if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
-            return new JsonResponse(['success' => false], 403);
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
         if (!$this->isAuthorizeForApp($docId)) {
-            return new JsonResponse(['success' => false], 403);
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->request->all();
@@ -294,7 +294,7 @@ class ExtractController extends AbstractController
             }
             $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
         }
-        return new JsonResponse(['success' => $insertRef !== false]);
+        return new JsonResponse(['success' => $insertRef]);
     }
 
     /**

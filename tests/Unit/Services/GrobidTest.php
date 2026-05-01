@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use Psr\Log\LoggerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use App\Repository\PaperReferencesRepository;
 use App\Entity\PaperReferences;
@@ -23,7 +24,6 @@ class GrobidTest extends TestCase
     private MockObject $tei;
     private MockObject $entityManager;
     private FilesystemAdapter $grobidCache;
-    private string $cacheFolder = '/tmp/grobid_cache';
     private string $grobidUrl = 'http://mock-grobid/api/processReferences';
 
     protected function setUp(): void
@@ -42,7 +42,7 @@ class GrobidTest extends TestCase
             $this->entityManager,
             $this->grobidUrl,
             $this->grobidCache,
-            $this->createMock(\Psr\Log\LoggerInterface::class)
+            $this->createMock(LoggerInterface::class)
         );
     }
 

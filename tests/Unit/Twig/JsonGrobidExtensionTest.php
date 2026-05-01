@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Twig;
 
+use Twig\TwigFunction;
 use App\Twig\JsonGrobidExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -79,7 +80,7 @@ class JsonGrobidExtensionTest extends TestCase
     public function testGetFunctions_ContainsExpectedFunctions(): void
     {
         $functions = $this->extension->getFunctions();
-        $names = array_map(fn($f) => $f->getName(), $functions);
+        $names = array_map(fn(TwigFunction $f): string => $f->getName(), $functions);
 
         $this->assertContains('getAuthors', $names);
         $this->assertContains('getDateInJson', $names);
