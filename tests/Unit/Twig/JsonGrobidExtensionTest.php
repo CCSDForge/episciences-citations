@@ -2,7 +2,6 @@
 
 namespace App\Tests\Unit\Twig;
 
-use Twig\TwigFunction;
 use App\Twig\JsonGrobidExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -79,12 +78,17 @@ class JsonGrobidExtensionTest extends TestCase
     #[Test]
     public function testGetFunctions_ContainsExpectedFunctions(): void
     {
-        $functions = $this->extension->getFunctions();
-        $names = array_map(fn(TwigFunction $f): string => $f->getName(), $functions);
+        $registeredNames = [];
+        $reflection = new \ReflectionClass(JsonGrobidExtension::class);
+        foreach ($reflection->getMethods() as $method) {
+            foreach ($method->getAttributes(\Twig\Attribute\AsTwigFunction::class) as $attribute) {
+                $registeredNames[] = $attribute->newInstance()->name;
+            }
+        }
 
-        $this->assertContains('getAuthors', $names);
-        $this->assertContains('getDateInJson', $names);
-        $this->assertContains('getJournalIdentifier', $names);
-        $this->assertContains('prettyReference', $names);
+        $this->assertContains('getAuthors', $registeredNames);
+        $this->assertContains('getDateInJson', $registeredNames);
+        $this->assertContains('getJournalIdentifier', $registeredNames);
+        $this->assertContains('prettyReference', $registeredNames);
     }
 }

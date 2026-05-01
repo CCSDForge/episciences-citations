@@ -72,9 +72,6 @@ when@test:
             api_public:
                 pattern: ^/visualize-citations
                 security: false
-            l3_firewall:
-                pattern: ^/Shibboleth.sso
-                security: false
             main:
                 pattern: ^/
                 # Désactive complètement la sécurité pour les tests
