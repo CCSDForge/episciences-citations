@@ -178,8 +178,11 @@ lint: ## Run all linters (PHP + JS)
 	@echo "$(GREEN)✓ All linting passed$(NC)"
 
 lint-php: ## Run PHPStan analysis
-	@echo "$(YELLOW)Running PHPStan...$(NC)"
-	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/phpstan analyse --memory-limit=512M
+	@make phpstan
+
+phpstan: ## Run PHPStan with customizable level and path (usage: make phpstan level=6 path=src)
+	@echo "$(YELLOW)Running PHPStan (level $(if $(level),$(level),6)) on $(if $(path),$(path),src bin config public)...$(NC)"
+	$(DOCKER) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) vendor/bin/phpstan analyse -l $(if $(level),$(level),6) $(if $(path),$(path),src bin config public) --memory-limit=512M
 	@echo "$(GREEN)✓ PHPStan analysis completed$(NC)"
 
 lint-js: ## Run ESLint
