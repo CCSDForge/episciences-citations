@@ -35,7 +35,7 @@ class JsonGrobidExtensionTest extends TestCase
     }
 
     #[Test]
-    public function testPrettyReference_ReferenceWithCsl_RendersAndSetsForbiddenModify(): void
+    public function testPrettyReference_ReferenceWithCsl_RendersReference(): void
     {
         // Arrange — reference with CSL data
         $refData = [
@@ -58,7 +58,7 @@ class JsonGrobidExtensionTest extends TestCase
         $this->assertArrayNotHasKey('csl', $result, 'CSL key should be removed after rendering');
         $this->assertArrayHasKey('raw_reference', $result);
         $this->assertStringContainsString('Doe', $result['raw_reference']);
-        $this->assertEquals(1, $result['forbiddenModify']);
+        $this->assertArrayNotHasKey('forbiddenModify', $result);
     }
 
     #[Test]

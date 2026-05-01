@@ -313,6 +313,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testValidateChoicesReferencesByUser_WithEmptyForm(): void
     {
         // Arrange

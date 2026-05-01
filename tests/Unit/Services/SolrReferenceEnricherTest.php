@@ -66,7 +66,7 @@ class SolrReferenceEnricherTest extends TestCase
     #[Test]
     public function testSolrErrorKeepsExistingMetadata(): void
     {
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willThrowException(new \RuntimeException('Solr unavailable'));
 
         $service = $this->createService($client);
@@ -78,7 +78,7 @@ class SolrReferenceEnricherTest extends TestCase
     #[Test]
     public function testBatchSizeIsCappedAtOneHundred(): void
     {
-        $service = $this->createService($this->createMock(HttpClientInterface::class));
+        $service = $this->createService($this->createStub(HttpClientInterface::class));
 
         $this->assertSame(100, $service->getEffectiveBatchSize(250));
         $this->assertSame(1, $service->getEffectiveBatchSize(0));
@@ -86,7 +86,7 @@ class SolrReferenceEnricherTest extends TestCase
 
     private function createServiceWithDocs(array $docs): SolrReferenceEnricher
     {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn([
             'response' => [
                 'numFound' => count($docs),
@@ -94,7 +94,7 @@ class SolrReferenceEnricherTest extends TestCase
             ],
         ]);
 
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
         return $this->createService($client);
@@ -104,7 +104,7 @@ class SolrReferenceEnricherTest extends TestCase
     {
         return new SolrReferenceEnricher(
             $client,
-            $this->createMock(LoggerInterface::class),
+            $this->createStub(LoggerInterface::class),
             $enabled,
             'http://mock-solr/solr',
             'ref_pps',

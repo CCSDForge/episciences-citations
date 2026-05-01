@@ -106,7 +106,7 @@ class ExtractControllerTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $grobidMock = $this->createMock(Grobid::class);
+        $grobidMock = $this->createStub(Grobid::class);
         $grobidMock->method('countAllReferencesFromDB')->willReturn(3);
         static::getContainer()->set(Grobid::class, $grobidMock);
 
@@ -144,7 +144,7 @@ class ExtractControllerTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $grobidMock = $this->createMock(Grobid::class);
+        $grobidMock = $this->createStub(Grobid::class);
         $grobidMock->method('countAllReferencesFromDB')->willReturn(0);
         static::getContainer()->set(Grobid::class, $grobidMock);
 
