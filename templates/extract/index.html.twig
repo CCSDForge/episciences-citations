@@ -46,6 +46,7 @@
 
         {% include("extract/popupaddref.html.twig") with form %}
         {% include("extract/popupimportbib.html.twig") with form %}
+        {% include("extract/popupimportsemanticscholar.html.twig") %}
 
         {# Sticky toolbar — single row #}
         <div class="sticky-top bg-white border-bottom px-3 py-2 shadow-sm">
@@ -85,6 +86,12 @@
                                 {{ 'Import BibTeX'|trans }}
                             </button>
                             {% do form.btnModalImportBibtex.setRendered() %}
+                        </li>
+                        <li>
+                            <button type="button" id="btn-import-semantic-scholar" class="dropdown-item">
+                                <i class="fas fa-graduation-cap me-2 text-primary" aria-hidden="true"></i>
+                                {{ 'Import from Semantic Scholar'|trans }}
+                            </button>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>

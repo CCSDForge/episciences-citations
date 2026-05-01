@@ -25,12 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bootstrap modal initialisation
     let addRefModal = null;
     let importBibModal = null;
+    let importS2Modal = null;
 
     if (document.getElementById('modal-addref')) {
         addRefModal = new Modal(document.getElementById('modal-addref'));
     }
     if (document.getElementById('modal-importbib')) {
         importBibModal = new Modal(document.getElementById('modal-importbib'));
+    }
+    if (document.getElementById('modal-import-semantic-scholar')) {
+        importS2Modal = new Modal(document.getElementById('modal-import-semantic-scholar'));
     }
     if (document.getElementById('closing-info-toast')) {
         new Toast(document.getElementById('closing-info-toast'), { autohide: true, delay: 5000 }).show();
@@ -47,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     rextract();
     checkIsDirty();
     manageBibtex(importBibModal);
+    manageSemanticScholarImport(importS2Modal);
     removeReference();
 });
 
@@ -371,5 +376,127 @@ function showAutosaveToast() {
     container.appendChild(el);
     const toast = new Toast(el, { autohide: true, delay: 2000 });
     toast.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+function manageSemanticScholarImport(modal) {
+    const triggerBtn = document.getElementById('btn-import-semantic-scholar');
+    const importBtn  = document.getElementById('s2-import-btn');
+    if (!triggerBtn || !importBtn || !modal) return;
+
+    const modalEl   = document.getElementById('modal-import-semantic-scholar');
+    const inputEl   = document.getElementById('s2-paper-id-input');
+    const errorDiv  = document.getElementById('s2-error-msg');
+    const errorText = document.getElementById('s2-error-text');
+
+    modalEl.addEventListener('show.bs.modal', () => {
+        inputEl.value = '';
+        errorDiv.classList.add('d-none');
+        importBtn.disabled = false;
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-download me-2';
+        icon.setAttribute('aria-hidden', 'true');
+        importBtn.textContent = '';
+        importBtn.appendChild(icon);
+        importBtn.appendChild(document.createTextNode(importBtn.dataset.labelImport));
+    });
+
+    triggerBtn.addEventListener('click', () => modal.show());
+
+    importBtn.addEventListener('click', async () => {
+        const paperId = inputEl.value.trim();
+        errorDiv.classList.add('d-none');
+
+        if (!paperId) {
+            errorText.textContent = 'Please enter a paper ID.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        importBtn.disabled = true;
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner-border spinner-border-sm me-2';
+        spinner.setAttribute('role', 'status');
+        importBtn.textContent = '';
+        importBtn.appendChild(spinner);
+        importBtn.appendChild(document.createTextNode(importBtn.dataset.labelImporting));
+
+        try {
+            const body = new URLSearchParams({ paperId, _token: importBtn.dataset.csrf });
+            const res  = await fetch(importBtn.dataset.url, {
+                method: 'POST',
+                body,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                modal.hide();
+                showImportToast('success', json.message);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                errorText.textContent = json.error ?? 'Import failed.';
+                errorDiv.classList.remove('d-none');
+                restoreImportBtn(importBtn);
+            }
+        } catch {
+            errorText.textContent = 'A network error occurred.';
+            errorDiv.classList.remove('d-none');
+            restoreImportBtn(importBtn);
+        }
+    });
+}
+
+function restoreImportBtn(btn) {
+    btn.disabled = false;
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-download me-2';
+    icon.setAttribute('aria-hidden', 'true');
+    btn.textContent = '';
+    btn.appendChild(icon);
+    btn.appendChild(document.createTextNode(btn.dataset.labelImport));
+}
+
+function showImportToast(type, message) {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1100';
+        document.body.appendChild(container);
+    }
+
+    const bgClass   = type === 'success' ? 'text-bg-success' : 'text-bg-danger';
+    const iconClass = type === 'success' ? 'fas fa-circle-check' : 'fas fa-circle-xmark';
+
+    const icon = document.createElement('i');
+    icon.className = iconClass + ' flex-shrink-0';
+    icon.setAttribute('aria-hidden', 'true');
+
+    const body = document.createElement('div');
+    body.className = 'toast-body d-flex align-items-center gap-2';
+    body.appendChild(icon);
+    body.appendChild(document.createTextNode(message));
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
+    closeBtn.setAttribute('data-bs-dismiss', 'toast');
+
+    const row = document.createElement('div');
+    row.className = 'd-flex';
+    row.appendChild(body);
+    row.appendChild(closeBtn);
+
+    const progress = document.createElement('div');
+    progress.className = 'toast-progress';
+
+    const el = document.createElement('div');
+    el.className = `toast align-items-center ${bgClass} border-0`;
+    el.appendChild(row);
+    el.appendChild(progress);
+
+    container.appendChild(el);
+    new Toast(el, { autohide: true, delay: 5000 }).show();
     el.addEventListener('hidden.bs.toast', () => el.remove());
 }

@@ -8,6 +8,7 @@ use App\Services\Bibtex;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
+use App\Services\SemanticScholarImporter;
 use JsonException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -32,13 +33,14 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 class ExtractController extends AbstractController
 {
 
-    public function __construct(private readonly Grobid             $grobid,
-                                private readonly References         $references,
-                                private readonly Episciences        $episciences,
-                                private readonly Bibtex             $bibtex,
-                                private readonly LoggerInterface    $logger,
-                                private readonly TranslatorInterface $translator,
-                                private readonly ValidatorInterface $validator)
+    public function __construct(private readonly Grobid                   $grobid,
+                                private readonly References               $references,
+                                private readonly Episciences              $episciences,
+                                private readonly Bibtex                   $bibtex,
+                                private readonly LoggerInterface          $logger,
+                                private readonly TranslatorInterface      $translator,
+                                private readonly ValidatorInterface       $validator,
+                                private readonly SemanticScholarImporter  $semanticsScholarImporter)
     {
     }
 
@@ -370,6 +372,40 @@ class ExtractController extends AbstractController
         return $this->render('extract/processing.html.twig', [
             'extractRunUrl' => $this->generateUrl('app_extract_run', ['docId' => $docId]),
             'viewRefUrl'    => $this->generateUrl('app_view_ref', ['docId' => $docId, '_locale' => $request->getLocale()]),
+        ]);
+    }
+
+    #[Route('/{_locale<en|fr>}/viewref/{docId}/import-semantic-scholar', name: 'app_import_semantic_scholar', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function importFromSemanticScholar(int $docId, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('import-semantic-scholar', $request->request->get('_token'))) {
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+        }
+        if (!$this->isAuthorizeForApp($docId)) {
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+        }
+
+        $paperId = trim((string) $request->request->get('paperId', ''));
+        if ($paperId === '') {
+            return new JsonResponse(
+                ['success' => false, 'error' => $this->translator->trans('Please enter a paper ID.')],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $startOrder = count($this->references->getReferences($docId, 'all'));
+
+        try {
+            $count = $this->semanticsScholarImporter->importByPaperId($paperId, $docId, $startOrder);
+        } catch (\RuntimeException $e) {
+            return new JsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        }
+
+        return new JsonResponse([
+            'success' => true,
+            'count'   => $count,
+            'message' => $this->translator->trans('%count% reference(s) imported from Semantic Scholar', ['%count%' => $count]),
         ]);
     }
 

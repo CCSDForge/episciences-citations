@@ -41,12 +41,11 @@ class SemanticsscholarTest extends TestCase
     }
 
     #[Test]
-    public function testConstant_S2_URL_IsCorrect(): void
+    public function testConstant_S2_BASE_URL_IsCorrect(): void
     {
-        // Assert - vérifier les constantes de l'API
         $this->assertEquals(
-            'https://api.semanticscholar.org/graph/v1/paper/DOI:',
-            Semanticsscholar::S2_URL
+            'https://api.semanticscholar.org/graph/v1/paper/',
+            Semanticsscholar::S2_BASE_URL
         );
     }
 

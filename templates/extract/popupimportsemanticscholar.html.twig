@@ -1,0 +1,69 @@
+<div class="modal fade" id="modal-import-semantic-scholar" tabindex="-1"
+     aria-labelledby="importS2ModalTitle" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importS2ModalTitle">
+                    <i class="fas fa-graduation-cap me-2 text-primary" aria-hidden="true"></i>
+                    {{ 'Import from Semantic Scholar'|trans }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="{{ 'Close'|trans }}"></button>
+            </div>
+            <div class="modal-body">
+                <label for="s2-paper-id-input" class="form-label fw-semibold">
+                    {{ 'Paper ID'|trans }}
+                </label>
+                <input type="text" id="s2-paper-id-input" class="form-control"
+                       placeholder="e.g. DOI:10.1145/3290605.3300312" autocomplete="off">
+
+                <div class="mt-2">
+                    <button type="button"
+                            class="btn btn-link btn-sm p-0 text-decoration-none text-muted"
+                            data-bs-toggle="collapse" data-bs-target="#s2-formats-help"
+                            aria-expanded="false" aria-controls="s2-formats-help">
+                        <i class="fas fa-circle-question me-1" aria-hidden="true"></i>
+                        {{ 'Supported ID formats'|trans }}
+                    </button>
+                    <div class="collapse mt-2" id="s2-formats-help">
+                        <div class="card card-body py-2 px-3 small text-muted">
+                            <ul class="mb-0 ps-3">
+                                <li><code>DOI:10.18653/v1/N18-3011</code></li>
+                                <li><code>ARXIV:2106.15928</code></li>
+                                <li><code>PMID:19872477</code></li>
+                                <li><code>PMCID:2323736</code></li>
+                                <li><code>ACL:W12-3903</code></li>
+                                <li><code>MAG:112218234</code></li>
+                                <li><code>CorpusId:215416146</code></li>
+                                <li><code>649def34f8be52c8b66281af98ae884c09aef38b</code> (SHA)</li>
+                                <li><code>URL:https://arxiv.org/abs/2106.15928v1</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="s2-error-msg"
+                     class="alert alert-danger mt-3 mb-0 d-flex align-items-center gap-2 d-none"
+                     role="alert">
+                    <i class="fas fa-triangle-exclamation flex-shrink-0" aria-hidden="true"></i>
+                    <span id="s2-error-text"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                <button type="button" id="s2-import-btn" class="btn btn-primary"
+                        data-url="{{ path('app_import_semantic_scholar', {
+                            '_locale': app.request.locale,
+                            'docId': app.request.attributes.get('docId')
+                        }) }}"
+                        data-csrf="{{ csrf_token('import-semantic-scholar') }}"
+                        data-label-import="{{ 'Import'|trans }}"
+                        data-label-importing="{{ 'Importing...'|trans }}">
+                    <i class="fas fa-download me-2" aria-hidden="true"></i>
+                    {{ 'Import'|trans }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

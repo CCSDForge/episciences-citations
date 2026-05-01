@@ -6,10 +6,9 @@ use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
 use App\Repository\DocumentRepository;
-use App\Services\Bibtex;
 use App\Services\Doi;
 use App\Services\References;
-use App\Services\Semanticsscholar;
+use App\Services\SemanticScholarImporter;
 use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -25,196 +24,17 @@ use Psr\Log\LoggerInterface;
 class GetBibRefCommand extends Command
 {
 
-    public const PREFIX_ARXIV = "10.48550/";
     public function __construct(
         private readonly Doi                    $doiService,
         private readonly References             $references,
-        private readonly Semanticsscholar       $semanticsscholar,
+        private readonly SemanticScholarImporter $semanticsScholarImporter,
         private readonly EntityManagerInterface $entityManager,
         private readonly DocumentRepository     $documentRepository,
         private readonly LoggerInterface        $logger,
-        private readonly Bibtex                 $bibtexService,
         private readonly SolrReferenceEnricher  $solrReferenceEnricher,
     )
     {
         parent::__construct();
-    }
-
-    /**
-     * @param array<string> $bibArray
-     * @throws \JsonException
-     */
-    public function processS2Ref(mixed $semanticsRef, OutputInterface $output, int $counterRef, int|string $docId, array $bibArray, mixed $outopt): mixed
-    {
-        if ($semanticsRef !== '' && isset($semanticsRef['data'])) {
-            foreach ($semanticsRef['data'] as $rSemantics) {
-                if ($this->hasDoi($rSemantics)) {
-                    $this->insertRefS2fromDoi($output, $rSemantics['citedPaper']['externalIds']['DOI'], $counterRef, $docId);
-                    $bibArray[] = $this->getBibtexFromDoi($rSemantics['citedPaper']['externalIds']['DOI']);
-                } elseif ($this->hasBibTeX($rSemantics)) {
-                    if ($this->hasMandatoryBibtexInfo($rSemantics)) {
-                        //case no ID but Bibtex is in
-                        $this->insertCslFromBibtexS2($output, $rSemantics['citedPaper']['citationStyles']['bibtex'], $counterRef, $docId);
-                        $bibArray[] = $rSemantics['citedPaper']['citationStyles']['bibtex'];
-                    } elseif ($this->hasUrlInTitle($rSemantics['citedPaper']['title'])) {
-                        //case url in title and nothing else in array get the most info possible
-                        $this->InsertFromUrlText($output, $rSemantics['citedPaper'], $counterRef, $docId);
-                    }
-                } elseif ($this->hasArxiv($rSemantics)) {
-                    $this->insertRefFromArXivIdS2($output, $rSemantics['citedPaper']['externalIds'], $counterRef, $docId);
-                    $bibArray[] = $this->getBibtexFromDoi($rSemantics['citedPaper']['externalIds']['ArXiv'], 'arxiv');
-                }
-            }
-            $this->writeBibtexToFile($outopt, $docId, $bibArray);
-        }
-        return $semanticsRef;
-    }
-
-    public function hasMandatoryBibtexInfo(mixed $rSemantics): bool
-    {
-        return isset($rSemantics['citedPaper']['title'],
-            $rSemantics['citedPaper']['year'],
-            $rSemantics['citedPaper']['authors'],
-            $rSemantics['citedPaper']['citationStyles']['bibtex']);
-    }
-
-    /**
-     * @param array<string> $bibArray
-     */
-    public function writeBibtexToFile(mixed $outopt, int|string $docId, array $bibArray): void
-    {
-        if (!is_dir($outopt) && !mkdir($outopt, 0777, true) && !is_dir($outopt)) {
-            throw new \RuntimeException(sprintf('Directory "%s" was not created', $outopt));
-        }
-        if ($outopt !== '') {
-            array_map(trim(...), $bibArray);
-            file_put_contents($outopt . $docId . '.bib', implode(',', $bibArray));
-        }
-    }
-
-    public function hasArxiv(mixed $rSemantics): bool
-    {
-        return !isset($rSemantics['citedPaper']['externalIds']['DOI'])
-            && isset($rSemantics['citedPaper']['externalIds']['ArXiv']);
-    }
-
-    public function hasUrlInTitle(mixed $title): bool
-    {
-        return str_contains((string) $title, 'https://') || str_contains((string) $title, 'http://');
-    }
-
-    public function hasBibTeX(mixed $rSemantics): bool
-    {
-        return !isset($rSemantics['citedPaper']['externalIds']) ||
-            (!isset($rSemantics['citedPaper']['externalIds']['DOI']) && !isset($rSemantics['citedPaper']['externalIds']['ArXiv']));
-    }
-
-    public function hasDoi(mixed $rSemantics): bool
-    {
-        return isset($rSemantics['citedPaper']['externalIds']['DOI'])
-            && !empty($rSemantics['citedPaper']['externalIds'])
-            && $rSemantics['citedPaper']['externalIds']['DOI'] !== '';
-    }
-
-    /**
-     * @param array<string, mixed> $externalIds
-     * @throws \JsonException
-     */
-    public function insertRefFromArXivIdS2(OutputInterface $output, array $externalIds, int $counterRef, int|string $docId): mixed
-    {
-        // case arxiv in IDS
-        $output->writeln('ArXiv founded => ' . $externalIds['ArXiv']);
-        $this->logger->info('SCRIPT CSV => ArXiv founded => ' . $externalIds['ArXiv']);
-        $arxivId = $externalIds['ArXiv'];
-        // case with have arxiv but not doi -> doi.org with arxiv
-        if (!strpos((string) $externalIds['ArXiv'], 'arxiv')) {
-            $arxivId = 'arxiv.' . $arxivId;
-        }
-        $arxivId = self::PREFIX_ARXIV . $arxivId;
-        $csl = $this->doiService->getCsl($arxivId);
-        if ($csl !== '') {
-            $this->logger->info('SCRIPT CSV => CSL From ARXIV ID founded => ' . $csl);
-            $newRef = (['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                'doi' => $arxivId]);
-            $this->insertRefInDb($newRef, $counterRef, $docId, PaperReferences::SOURCE_SEMANTICS_SCHOLAR);
-        } else {
-            $this->logger->info('CSL From ARXIV ID/Resource not found => ' . $externalIds['DOI']);
-            $output->writeln('SCRIPT CSV => CSL From ARXIV ID/Resource not found =>' . $externalIds['DOI']);
-        }
-        return $csl;
-    }
-
-    /**
-     * @param array<string, mixed> $citedPaper
-     * @return array<string, mixed>
-     */
-    public function InsertFromUrlText(OutputInterface $output, array $citedPaper, int $counterRef, int|string $docId): array
-    {
-        $output->writeln('URL FOUNDED IN TITLE AND NO IDS AND BIBTEX NEITHER, CREATION OF SPECIFIC CSL => ' . $citedPaper['title']);
-        $this->logger->info(('SCRIPT CSV => URL FOUNDED IN TITLE AND NO IDS AND BIBTEX NEITHER CREATION OF SPECIFIC CSL => ' . $citedPaper['title']));
-        $entry = [
-            'title' => $citedPaper['title'] ?? '',
-            'type' => $citedPaper['type'] ?? '',
-            'author' => $citedPaper['authors'] ?? [],
-            'year' => $citedPaper['year'] ?? '',
-        ];
-        $csl = $this->bibtexService::generateCSL($entry);
-        $this->logger->info('SCRIPT CSV => SPECIFIC CSL => ', ['csl' => $csl]);
-        $reference = (['csl' => $csl]);
-        $this->insertRefInDb($reference, $counterRef, $docId, PaperReferences::SOURCE_SEMANTICS_SCHOLAR);
-        return $csl;
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    public function insertCslFromBibtexS2(OutputInterface $output, string $bibtex, int $counterRef, int|string $docId): array
-    {
-        $output->writeln('NO IDS BUT BIBTEX FOUND IN S2 CITED PAPER => ' . $bibtex);
-        $this->logger->info('SCRIPT CSV => NO IDS BUT BIBTEX FOUND IN S2 CITED PAPER => ' . $bibtex);
-        $bibInfo = $this->bibtexService::convertBibtexToArray($bibtex, false);
-        $csl = $this->bibtexService::generateCSL($bibInfo[0]);
-        $this->logger->info('SCRIPT CSV => CUSTOM CSL => ', ['csl' => $csl]);
-        $reference = (['csl' => $csl]);
-        $this->insertRefInDb($reference, $counterRef, $docId, PaperReferences::SOURCE_SEMANTICS_SCHOLAR);
-        return [$csl, $reference];
-    }
-
-    /**
-     * @param $doi
-     */
-    public function removeAllS2RefFromDb(int|string $docId, OutputInterface $output, string $doi): void
-    {
-        $allSchoFromDocId = $this->entityManager->getRepository(PaperReferences::class)
-            ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_SEMANTICS_SCHOLAR]);
-        $output->writeln('SEARCH CITED PAPER FOR ' . $doi);
-        $output->writeln('Remove all S2 Ref => ' . $docId);
-        foreach ($allSchoFromDocId as $schoInfo) {
-            $this->logger->info('SCRIPT CSV => Remove all S2 Ref => ' . $docId);
-            $this->entityManager->remove($schoInfo);
-        }
-    }
-
-
-    /**
-     * @param $doi
-     * @throws \JsonException
-     */
-    public function insertRefS2fromDoi(OutputInterface $output, string $doi, int $counterRef, int|string $docId): void
-    {
-        //case Doi in IDS
-        $output->writeln('DOI FOUND IN S2 CITED PAPER => ' . $doi);
-        $this->logger->info('SCRIPT CSV => DOI FOUND IN S2 CITED PAPER => ' . $doi);
-        $csl = $this->doiService->getCsl($doi);
-        if ($csl !== '') {
-            $this->logger->info('SCRIPT CSV => CSL FOUNDED => ' . $csl);
-            $newRef = (['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                'doi' => $doi]);
-            $this->insertRefInDb($newRef, $counterRef, $docId, PaperReferences::SOURCE_SEMANTICS_SCHOLAR);
-        } else {
-            $output->writeln('SCRIPT CSV => CSL/Resource not found => ' . $doi);
-            $this->logger->info('SCRIPT CSV => CSL/Resource not found => ' . $doi);
-        }
     }
 
     /**
@@ -291,22 +111,6 @@ class GetBibRefCommand extends Command
         }
         return $globalData;
     }
-    public function getBibtexFromDoi(string $id, string $idType = 'doi'): string {
-        if ($idType === 'arxiv'){
-            $id = $this->processArXivDoi($id);
-        }
-
-        return $this->doiService->getBibtex($id);
-    }
-
-    public function processArXivDoi(string $id): string {
-        $arxivId = $id;
-        // case with have arxiv but not doi -> doi.org with arxiv
-        if (!strpos((string) $arxivId, 'arxiv')) {
-            $arxivId = 'arxiv.' . $arxivId;
-        }
-        return self::PREFIX_ARXIV.$arxivId;
-    }
     protected function configure(): void
     {
         $this
@@ -375,12 +179,7 @@ class GetBibRefCommand extends Command
             foreach ($allRef as $ref) {
                 $optionValue = $input->getOption('api');
                 if (!is_null($optionValue) && $optionValue !== false && $optionValue === "S2") {
-                    $bibArray = [];
-                    $outopt = $input->getOption('output');
-                    $this->removeAllS2RefFromDb($docId, $output, $ref['doi']);
-                    $semanticsRef = $this->semanticsscholar->getRef($ref['doi']);
-                    $semanticsRef = json_decode($semanticsRef, true, 512, JSON_THROW_ON_ERROR);
-                    $this->processS2Ref($semanticsRef, $output, $counterRef, $docId, $bibArray, $outopt);
+                    $this->semanticsScholarImporter->importByPaperId('DOI:' . $ref['doi'], (int) $docId, $counterRef);
                 } else {
                     $csl = $this->doiService->getCsl($ref['doi']);
                     $refRetrieved = $this->processCslToGetRef($csl, $arrayDoiInDb, $arrayRefTxt, $output, $counterRef, $docId);

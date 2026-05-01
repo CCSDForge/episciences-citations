@@ -40,7 +40,8 @@ class References {
         }
 
         $referencesToEnrich = [];
-        foreach ($form['paperReferences'] as $paperReference) {
+        $paperReferences = $form['paperReferences'] ?? [];
+        foreach ($paperReferences as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
             if (!isset($paperReference['checkboxIdTodelete'])) {
                 if (!is_null($ref) && isset($paperReference['accepted'])) {
@@ -65,7 +66,7 @@ class References {
 
         }
         $this->enrichPaperReferences($referencesToEnrich);
-        $orderChanged = $this->persistOrderRef($form['orderRef'], $orderChanged);
+        $orderChanged = $this->persistOrderRef($form['orderRef'] ?? '', $orderChanged);
 
         // UN SEUL flush() pour toutes les opérations (optimisation performance - gain 80-90%)
         $this->entityManager->flush();
@@ -128,15 +129,17 @@ class References {
      */
     public function addNewReference(array $form, array $userInfo): bool
     {
-        if ($form['addReference'] !== ""){
+        $addReference = $form['addReference'] ?? "";
+        if ($addReference !== ""){
             $ref = new PaperReferences();
-            $refInfo = ['raw_reference'=>$form['addReference']];
-            if ($form['addReferenceDoi'] !== "") {
+            $refInfo = ['raw_reference'=>$addReference];
+            $addReferenceDoi = $form['addReferenceDoi'] ?? "";
+            if ($addReferenceDoi !== "") {
                 $regexDoiOrg = "/^https?:\\/\\/(?:dx\\.|www\\.)?doi\\.org\\/(10\\.\\d{4,}(?:\\.\\d+)*(?:\\/|%2F)(?:(?![\"&\\'])\\S)+)/";
-                if (preg_match($regexDoiOrg, (string) $form['addReferenceDoi'],$matches)) {
-                    $form['addReferenceDoi'] = $matches[1];
+                if (preg_match($regexDoiOrg, (string) $addReferenceDoi,$matches)) {
+                    $addReferenceDoi = $matches[1];
                 }
-                $refInfo['doi'] = $form['addReferenceDoi'];
+                $refInfo['doi'] = $addReferenceDoi;
             }
             $refInfo = $this->solrReferenceEnricher->enrichReference($refInfo);
             $ref->setReference($refInfo);
@@ -151,8 +154,9 @@ class References {
             $ref->setUid($user);
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
-            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($form['id']));
-            $counter = $this->getLastOrder((int) $form['id']) + 1;
+            $docId = (int) ($form['id'] ?? 0);
+            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($docId));
+            $counter = $this->getLastOrder($docId) + 1;
             $ref->setReferenceOrder($counter);
             $this->entityManager->persist($ref);
             $this->entityManager->flush();

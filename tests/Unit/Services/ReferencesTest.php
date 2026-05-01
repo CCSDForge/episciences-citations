@@ -311,4 +311,34 @@ class ReferencesTest extends TestCase
         $this->assertEquals(1, $ref2->getReferenceOrder()); // ref2 → order 1
         $this->assertEquals(2, $ref3->getReferenceOrder()); // ref8 → order 2
     }
+
+    #[Test]
+    public function testValidateChoicesReferencesByUser_WithEmptyForm(): void
+    {
+        // Arrange
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $form = [
+            // 'paperReferences' is missing
+            'orderRef' => ''
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function($class) use ($user) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            return $this->createMock(PaperReferencesRepository::class);
+        });
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertEquals(0, $result['referencePersisted']);
+    }
 }

@@ -6,14 +6,12 @@ namespace App\Tests\Unit\Command;
 
 use App\Command\GetBibRefCommand;
 use App\Repository\DocumentRepository;
-use App\Services\Bibtex;
 use App\Services\Doi;
 use App\Services\References;
-use App\Services\Semanticsscholar;
+use App\Services\SemanticScholarImporter;
 use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -22,48 +20,32 @@ class GetBibRefCommandTest extends TestCase
 {
     private GetBibRefCommand $command;
 
+    #[AllowMockObjectsWithoutExpectations]
     protected function setUp(): void
     {
-        $doiService = $this->createMock(Doi::class);
-        $references = $this->createMock(References::class);
-        $semanticsscholar = $this->createMock(Semanticsscholar::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $documentRepository = $this->createMock(DocumentRepository::class);
-        $logger = $this->createMock(LoggerInterface::class);
-        $bibtexService = $this->createMock(Bibtex::class);
-        $solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $doiService             = $this->createMock(Doi::class);
+        $references             = $this->createMock(References::class);
+        $semanticsScholarImporter = $this->createMock(SemanticScholarImporter::class);
+        $entityManager          = $this->createMock(EntityManagerInterface::class);
+        $documentRepository     = $this->createMock(DocumentRepository::class);
+        $logger                 = $this->createMock(LoggerInterface::class);
+        $solrReferenceEnricher  = $this->createMock(SolrReferenceEnricher::class);
         $solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
 
         $this->command = new GetBibRefCommand(
             $doiService,
             $references,
-            $semanticsscholar,
+            $semanticsScholarImporter,
             $entityManager,
             $documentRepository,
             $logger,
-            $bibtexService,
             $solrReferenceEnricher
         );
     }
 
     #[Test]
-    #[AllowMockObjectsWithoutExpectations]
-    #[DataProvider('urlInTitleProvider')]
-    public function testHasUrlInTitle(string $title, bool $expected): void
+    public function testCommandCanBeInstantiated(): void
     {
-        $this->assertSame($expected, $this->command->hasUrlInTitle($title));
-    }
-
-    public static function urlInTitleProvider(): array
-    {
-        return [
-            'https at start' => ['https://example.com some title', true],
-            'http at start' => ['http://example.com some title', true],
-            'https in middle' => ['Some title with https://example.com', true],
-            'http in middle' => ['Some title with http://example.com', true],
-            'no url' => ['Some title without url', false],
-            'empty string' => ['', false],
-            'partial url' => ['http: is not enough', false],
-        ];
+        $this->assertInstanceOf(GetBibRefCommand::class, $this->command);
     }
 }

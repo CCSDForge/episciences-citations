@@ -22,6 +22,7 @@ Reference: Référence
 The previous BibTeX references will be overwritten.: Les références BibTeX précédentes seront écrasées.
 GROBID: PDF
 USER: UTILISATEUR
+SEMANTICS: Semantic Scholar
 No references were extracted or found: Aucune référence n'a été extraites ou trouvée
 Please upload a valid BibTeX document: Merci de téléverser un fichier de type BibTeX
 Cancel Delete: Annuler la suppression
@@ -47,3 +48,12 @@ Access Denied: Accès refusé
 You do not have the necessary rights to access this page.: Vous n'avez pas les droits nécessaires pour accéder à cette page.
 For assistance, contact the Episciences helpdesk:: Pour obtenir de l'aide, contactez le support Episciences :
 Go back: Retour
+Import from Semantic Scholar: Importer depuis Semantic Scholar
+Importing...: Import en cours...
+Paper ID: Identifiant du document
+Supported ID formats: Formats d'identifiants supportés
+Please enter a paper ID.: Veuillez saisir un identifiant de document.
+'%count% reference(s) imported from Semantic Scholar': '%count% référence(s) importée(s) depuis Semantic Scholar'
+DOI not found in Semantic Scholar: Identifiant non trouvé dans Semantic Scholar
+No references found for this paper ID: Aucune référence trouvée pour cet identifiant
+Import: Importer
