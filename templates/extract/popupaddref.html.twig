@@ -9,16 +9,33 @@
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
-                    <label class="col-sm-4 col-form-label fw-semibold">{{ form_label(form.addReference) }}</label>
-                    <div class="col-sm-8">{{ form_widget(form.addReference, {'attr': {'class': 'form-control textarea-height'}}) }}</div>
+                    <label class="col-sm-4 col-form-label fw-semibold" for="{{ form.addReferenceDoi.vars.id }}">{{ form_label(form.addReferenceDoi) }}</label>
+                    <div class="col-sm-8">
+                        <div class="input-group">
+                            {{ form_widget(form.addReferenceDoi, {'attr': {'class': 'form-control', 'placeholder': 'DOI, URL'}}) }}
+                            <div id="doi-loading-indicator" class="input-group-text d-none" aria-live="polite">
+                                <span class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">{{ 'Loading citation...'|trans }}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="doi-error-msg" class="text-danger small mt-1 d-none" aria-live="assertive"></div>
+                    </div>
                 </div>
                 <div class="row mb-3">
-                    <label class="col-sm-4 col-form-label fw-semibold">{{ form_label(form.addReferenceDoi) }}</label>
-                    <div class="col-sm-8">{{ form_widget(form.addReferenceDoi, {'attr': {'class': 'form-control', 'placeholder': 'DOI, URL'}}) }}</div>
+                    <label class="col-sm-4 col-form-label fw-semibold" for="{{ form.addReference.vars.id }}">{{ form_label(form.addReference) }}</label>
+                    <div class="col-sm-8 position-relative">
+                        {{ form_widget(form.addReference, {'attr': {'class': 'form-control textarea-height'}}) }}
+                        <div id="reference-loading-overlay" class="d-none position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75 rounded" style="z-index: 5;">
+                            <div class="spinner-grow text-primary" role="status">
+                                <span class="visually-hidden">{{ 'Fetching citation...'|trans }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                {{ form_widget(btnCancelAddNewReference, {'id': 'cancel-adding', 'attr': {'class': 'btn btn-outline-secondary', 'data-bs-dismiss': 'modal'}}) }}
+                {{ form_widget(btnCancelAddNewReference, {'id': 'cancel-adding', 'attr': {'class': 'btn btn-secondary', 'data-bs-dismiss': 'modal'}}) }}
                 {{ form_widget(submitNewRef, {'id': 'confirm-adding', 'attr': {'class': 'btn btn-success'}}) }}
             </div>
         </div>

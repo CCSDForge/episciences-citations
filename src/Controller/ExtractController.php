@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Document;
 use App\Form\DocumentType;
 use App\Services\Bibtex;
+use App\Services\Doi;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
@@ -37,6 +38,7 @@ class ExtractController extends AbstractController
                                 private readonly References               $references,
                                 private readonly Episciences              $episciences,
                                 private readonly Bibtex                   $bibtex,
+                                private readonly Doi                      $doiService,
                                 private readonly LoggerInterface          $logger,
                                 private readonly TranslatorInterface      $translator,
                                 private readonly ValidatorInterface       $validator,
@@ -47,11 +49,11 @@ class ExtractController extends AbstractController
     /**
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
-     * @throws JsonException @throws \JsonException
+     * @throws JsonException
      * @throws NotFoundExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ServerExceptionInterface
-     * @throws TransportExceptionInterface @throws \JsonException
+     * @throws TransportExceptionInterface
      */
     #[Route('/extract', name: 'app_extract')]
     public function extract(Request $request): RedirectResponse|Response
@@ -154,54 +156,66 @@ class ExtractController extends AbstractController
                     );
                 }
             }
-            if ($form->isSubmitted() && $form->isValid()) {
-                $session->set('openModalClose', 0);
-                $submitNewRef = $form->get('submitNewRef');
-                $submitSave = $form->get('save');
-                $submitImportBib = $form->get('submitImportBib');
-                if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
-                    $newRef = $this->references->addNewReference($request->request->all($form->getName()),
-                        $this->container->get('security.token_storage')->getToken()->getAttributes());
-                    $this->logger->info('New reference added');
-                    if ($newRef) {
-                        $this->addFlash(
-                            'success',
-                            $this->translator->trans('New Reference Added')
-                        );
-                    } else {
-                        $this->addFlash(
-                            'error',
-                            $this->translator->trans('Title missing to add new reference')
-                        );
-                    }
-                } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
-                    $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
-                        $this->container->get('security.token_storage')->getToken()->getAttributes());
-                    $this->flashMessageForChoices($userChoice);
-                } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
-                    $bibtexFile = $form->get('bibtexFile')->getData();
-                    if ($bibtexFile !== null) {
-                        $process = $this->bibtex->processBibtex($bibtexFile,
-                            $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
-                        if ($process !== []) {
+            if ($form->isSubmitted()) {
+                if ($form->isValid()) {
+                    $session = $request->getSession();
+                    $session->set('openModalClose', 0);
+                    $submitNewRef = $form->get('submitNewRef');
+                    $submitSave = $form->get('save');
+                    $submitImportBib = $form->get('submitImportBib');
+                    if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
+                        $newRef = $this->references->addNewReference($request->request->all($form->getName()),
+                            $this->container->get('security.token_storage')->getToken()->getAttributes());
+                        $this->logger->info('New reference added');
+                        if ($newRef) {
+                            $this->addFlash(
+                                'success',
+                                $this->translator->trans('New Reference Added')
+                            );
+                        } else {
                             $this->addFlash(
                                 'error',
-                                $this->translator->trans($process['error'])
+                                $this->translator->trans('Title missing to add new reference')
                             );
                         }
-                    } else {
-                        $this->addFlash(
-                            'error',
-                            $this->translator->trans('Please add a BibTeX file')
-                        );
+                    } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
+                        $this->logger->info('Manual save triggered', ['locale' => $request->getLocale()]);
+                        $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
+                            $this->container->get('security.token_storage')->getToken()->getAttributes());
+                        $this->logger->info('Manual save result', $userChoice);
+                        $this->flashMessageForChoices($userChoice);
+                    } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
+                        $bibtexFile = $form->get('bibtexFile')->getData();
+                        if ($bibtexFile !== null) {
+                            $process = $this->bibtex->processBibtex($bibtexFile,
+                                $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
+                            if ($process !== []) {
+                                $this->addFlash(
+                                    'error',
+                                    $this->translator->trans($process['error'])
+                                );
+                            }
+                        } else {
+                            $this->addFlash(
+                                'error',
+                                $this->translator->trans('Please add a BibTeX file')
+                            );
+                        }
                     }
+                    $session->set('openModalClose', 0);
+                    if ($session->get('isAlreadyopenModal') === 0) {
+                        $session->set('openModalClose', 1);
+                        $session->set('isAlreadyopenModal', 1);
+                    }
+                    return $this->redirect($request->getUri());
+                } else {
+                    $this->logger->warning('Form is invalid', [
+                        'docId' => $docId,
+                        'locale' => $request->getLocale(),
+                        'errors' => (string) $form->getErrors(true, false)
+                    ]);
+                    $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
                 }
-                $session->set('openModalClose', 0);
-                if ($session->get('isAlreadyopenModal') === 0) {
-                    $session->set('openModalClose', 1);
-                    $session->set('isAlreadyopenModal', 1);
-                }
-                return $this->redirect($request->getUri());
             }
             return $this->render('extract/index.html.twig', [
                 'form' => $form->createView(),
@@ -262,28 +276,33 @@ class ExtractController extends AbstractController
     public function autosave(int $docId, Request $request): JsonResponse
     {
         if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
-            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+            $this->logger->warning('Autosave: Invalid CSRF token');
+            return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token'], Response::HTTP_FORBIDDEN);
         }
         if (!$this->isAuthorizeForApp($docId)) {
-            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+            $this->logger->warning('Autosave: Access Denied', ['docId' => $docId]);
+            return new JsonResponse(['success' => false, 'error' => 'Access Denied'], Response::HTTP_FORBIDDEN);
         }
 
         $data = $request->request->all();
+        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
         $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
 
         if (isset($data['orderRef'])) {
             $this->references->autosaveOrder($data['orderRef']);
+            return new JsonResponse(['success' => true]);
         } elseif (isset($data['refId'])) {
-            $this->references->autosaveReference(
+            $enrichedReference = $this->references->autosaveReference(
                 (int) $data['refId'],
                 $data['reference'] ?? '{}',
                 (int) ($data['accepted'] ?? 0),
                 ($data['isDirty'] ?? '0') === '1',
                 $userInfo
             );
+            return new JsonResponse(['success' => true, 'reference' => $enrichedReference]);
         }
 
-        return new JsonResponse(['success' => true]);
+        return new JsonResponse(['success' => false, 'error' => 'No data to save']);
     }
 
     #[Route('/extract/run', name: 'app_extract_run')]
@@ -415,5 +434,28 @@ class ExtractController extends AbstractController
         $this->logger->info('get PDF in cache => ', ['path' => $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf"]);
         return (new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK))
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $docId . ".pdf");
+    }
+
+    #[Route('/doi/enrich', name: 'app_doi_enrich', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function enrichFromDoi(Request $request): JsonResponse
+    {
+        $doi = trim((string) $request->query->get('doi', ''));
+        if ($doi === '') {
+            return new JsonResponse(['success' => false, 'error' => 'DOI is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $citation = $this->doiService->getFormattedCitation($doi);
+        $cslJson = $this->doiService->getCsl($doi);
+
+        if ($citation === '' && $cslJson === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Could not fetch data for this DOI'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse([
+            'success'  => true,
+            'citation' => $citation,
+            'csl'      => json_decode($cslJson, true)
+        ]);
     }
 }

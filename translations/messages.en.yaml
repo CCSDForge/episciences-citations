@@ -1,2 +1,95 @@
+New Reference Added: New reference added
+Title missing to add new reference: A title is required to add a new reference
+References and sorting saved: The references and sorting have been saved
+References saved: The references have been saved
+You can use drag and drop to sort references: You can use drag-and-drop to sort references
+Add reference: Add reference
+Cancel: Cancel
+Change reference: Change reference
+Save: Save
+Confirm: Confirm
+Edit: Edit
+You are not authorized to access at this page: You are not authorized to access this page
+Welcome to Episciences citation manager: Welcome to the Episciences citation manager
+You do not have access rights to this page, please contact the Episciences helpdesk (episciences-support@ccsd.cnrs.fr).: You do not have access rights to this page. Please contact the Episciences helpdesk (episciences-support@ccsd.cnrs.fr).
+Accept all references: Accept all references
+Decline all references: Decline all references
+Close the application: Close the application
+Continue editing: Continue editing
+To view your changes, go to your Episciences document page. You can continue editing if you wish.: To view your changes, go to your Episciences document page. You can continue editing if you wish.
+Extract references from PDF: Extract references from PDF
+Reference: Reference
+The previous BibTeX references will be overwritten.: The previous BibTeX references will be overwritten.
 GROBID: PDF
+USER: Added by user
 SEMANTICS: Semantic Scholar
+BIBTEX: BibTeX
+No references were extracted or found: No references were found or extracted
+Please upload a valid BibTeX document: Please upload a valid BibTeX document
+Cancel Delete: Cancel deletion
+Remove: Remove
+Remove references: Remove references
+To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button: To delete references, select the ones you want to remove and click on the Save button
+Please add a BibTeX file: Please add a BibTeX file
+No reference found in the PDF: No reference found in the PDF
+The references and sorting have been saved: The references and sorting have been saved
+The references have been saved: The references have been saved
+The sorting has been saved: The sorting has been saved
+Nothing was changed: No changes were made
+No references found in the PDF: No references found in the PDF
+Select all: Select all
+Deselect all: Deselect all
+Click to edit: Click to edit
+Double-click to edit: Double-click to edit
+Deactivated: Deactivated
+annulled: Annulled
+clayFeet: Clay Feet
+tortured: Tortured phrases
+expression-of-concern: Expression of concern
+suspect: Suspect
+citejacked: Citejacked
+deindexed: Deindexed
+Seek&Blastn: Seek&Blastn
+journal-cases: Journal cases
+scigen: SCIgen
+problematic-cell-lines: Problematic cell lines
+mathgen: Mathgen
+sbir: SBIR
+Accept reference: Accept reference
+Extraction in progress...: Extraction in progress...
+The first extraction may take more than a minute. Please wait.: The first extraction may take more than a minute. Please wait.
+Saving...: Saving...
+Loading...: Loading...
+Access Denied: Access Denied
+You do not have the necessary rights to access this page.: You do not have the necessary rights to access this page.
+For assistance, contact the Episciences helpdesk:: For assistance, contact the Episciences helpdesk:
+Go back: Go back
+Import from Semantic Scholar: Import from Semantic Scholar
+Importing...: Importing...
+Paper ID: Paper ID
+Supported ID formats: Supported ID formats
+Please enter a paper ID.: Please enter a paper ID.
+'%count% reference(s) imported from Semantic Scholar': '%count% reference(s) imported from Semantic Scholar'
+DOI not found in Semantic Scholar: DOI not found in Semantic Scholar
+No references found for this paper ID: No references found for this paper ID
+Import: Import
+Invalid data submitted: Invalid data submitted
+Actions: Actions
+Enrich: Enrich
+Enrich from DOI: Enrich from DOI
+Confirm reference addition: Confirm adding reference
+Cancel adding: Cancel
+Enriching reference...: Enriching reference...
+The DOI was not found: The DOI was not found
+Failed to fetch DOI metadata: Failed to fetch DOI metadata
+Could not reach the server or invalid response: Could not reach the server or invalid response
+Reference enriched successfully: Reference enriched successfully
+Enrichment failed: Enrichment failed
+A network error occurred or the server returned an invalid response: A network error occurred or the server returned an invalid response
+Saved: Saved
+Activate/Deactivate: Activate/Deactivate
+Close: Close
+Added by user: Added by user
+BibTeX: BibTeX
+PDF: PDF
+Semantic Scholar: Semantic Scholar

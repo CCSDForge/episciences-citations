@@ -40,6 +40,29 @@ class Doi
         }
     }
 
+    /**
+     * @param string $doi
+     * @param string $style
+     * @param string $lang
+     * @return string
+     */
+    public function getFormattedCitation(string $doi, string $style = 'apa', string $lang = 'en-GB'): string
+    {
+        $client = new Client();
+        try {
+            $response = $client->get('https://citation.doi.org/format', [
+                'query' => [
+                    'doi' => $doi,
+                    'style' => $style,
+                    'lang' => $lang
+                ]
+            ]);
+            return trim($response->getBody()->getContents());
+        } catch (GuzzleException) {
+            return "";
+        }
+    }
+
 
 
     /**

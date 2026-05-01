@@ -1,7 +1,7 @@
 New Reference Added: Nouvelle référence ajoutée
-Title missing to add new reference: Veuillez renseigner le titre manquant pour ajouter une nouvelle référence
-References and sorting saved: Les références et l'ordre sont bien enregistrés
-References saved: Références bien enregistrées
+Title missing to add new reference: Un titre est requis pour ajouter une nouvelle référence
+References and sorting saved: Les références et l'ordre de tri ont été enregistrés
+References saved: Les références ont été enregistrées
 You can use drag and drop to sort references: Vous pouvez utiliser le glisser-déposer pour trier les références
 Add reference: Ajouter une référence
 Cancel: Annuler
@@ -9,36 +9,52 @@ Change reference: Modifier la référence
 Save: Enregistrer
 Confirm: Confirmer
 Edit: Modifier
-You are not authorized to access at this page: Vous n'êtes pas autorisé à accéder avec cette page
+You are not authorized to access at this page: Vous n'êtes pas autorisé à accéder à cette page
 Welcome to Episciences citation manager: Bienvenue sur le gestionnaire de citations d'Episciences
-You do not have access rights to this page, please contact the Episciences helpdesk (episciences-support@ccsd.cnrs.fr).: Vous n’avez pas les droit d'accès à cette page, veuillez contacter le support d'Episciences (episciences-support@ccsd.cnrs.fr).
+You do not have access rights to this page, please contact the Episciences helpdesk (episciences-support@ccsd.cnrs.fr).: Vous n'avez pas les droits d'accès à cette page. Veuillez contacter le support d'Episciences (episciences-support@ccsd.cnrs.fr).
 Accept all references: Accepter toutes les références
 Decline all references: Refuser toutes les références
 Close the application: Fermer l'application
-Continue editing: Continuez l'édition
-To view your changes, go to your Episciences document page. You can continue editing if you wish.: Pour voir vos modifications, vous devez aller sur la page de votre document Episciences. Vous pouvez continuer les modifications si vous le souhaitez.
+Continue editing: Continuer les modifications
+To view your changes, go to your Episciences document page. You can continue editing if you wish.: Pour voir vos modifications, rendez-vous sur la page de votre document Episciences. Vous pouvez continuer les modifications si vous le souhaitez.
 Extract references from PDF: Extraire les références depuis le PDF
 Reference: Référence
 The previous BibTeX references will be overwritten.: Les références BibTeX précédentes seront écrasées.
 GROBID: PDF
-USER: UTILISATEUR
+USER: Ajouté par l'utilisateur
 SEMANTICS: Semantic Scholar
-No references were extracted or found: Aucune référence n'a été extraites ou trouvée
-Please upload a valid BibTeX document: Merci de téléverser un fichier de type BibTeX
+BIBTEX: BibTeX
+No references were extracted or found: Aucune référence n'a été trouvée ou extraite
+Please upload a valid BibTeX document: Veuillez téléverser un fichier BibTeX valide
 Cancel Delete: Annuler la suppression
-Remove: Effacer
-Remove references: Effacer des références
-To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button: Pour supprimer des références, sélectionner à l'aide de cases à cocher la référence que vous souhaitez supprimer et cliquer sur le bouton "Enregistrer".
+Remove: Supprimer
+Remove references: Supprimer des références
+To delete references, use the checkboxes to select the reference you wish to delete and click on the Save button: Pour supprimer des références, cochez celles que vous souhaitez retirer puis cliquez sur le bouton "Enregistrer"
 Please add a BibTeX file: Veuillez ajouter un fichier BibTeX
 No reference found in the PDF: Aucune référence trouvée dans le PDF
 The references and sorting have been saved: Les références et le tri ont été enregistrés
 The references have been saved: Les références ont été enregistrées
 The sorting has been saved: Le tri a été enregistré
-Nothing was changed: Rien n'a été modifié
+Nothing was changed: Aucune modification n'a été effectuée
 No references found in the PDF: Aucune référence trouvée dans le PDF
 Select all: Tout sélectionner
 Deselect all: Tout désélectionner
 Click to edit: Cliquer pour modifier
+Double-click to edit: Double-cliquer pour modifier
+Deactivated: Désactivée
+annulled: Annulée
+clayFeet: Clay Feet
+tortured: Tortured phrases
+expression-of-concern: Expression of concern
+suspect: Suspect
+citejacked: Citejacked
+deindexed: Deindexed
+Seek&Blastn: Seek&Blastn
+journal-cases: Journal cases
+scigen: SCIgen
+problematic-cell-lines: Problematic cell lines
+mathgen: Mathgen
+sbir: SBIR
 Accept reference: Accepter la référence
 Extraction in progress...: Extraction en cours...
 The first extraction may take more than a minute. Please wait.: La première extraction peut prendre plus d'une minute. Veuillez patienter.
@@ -49,11 +65,31 @@ You do not have the necessary rights to access this page.: Vous n'avez pas les d
 For assistance, contact the Episciences helpdesk:: Pour obtenir de l'aide, contactez le support Episciences :
 Go back: Retour
 Import from Semantic Scholar: Importer depuis Semantic Scholar
-Importing...: Import en cours...
+Importing...: Importation en cours...
 Paper ID: Identifiant du document
 Supported ID formats: Formats d'identifiants supportés
 Please enter a paper ID.: Veuillez saisir un identifiant de document.
 '%count% reference(s) imported from Semantic Scholar': '%count% référence(s) importée(s) depuis Semantic Scholar'
-DOI not found in Semantic Scholar: Identifiant non trouvé dans Semantic Scholar
+DOI not found in Semantic Scholar: DOI non trouvé dans Semantic Scholar
 No references found for this paper ID: Aucune référence trouvée pour cet identifiant
 Import: Importer
+Invalid data submitted: Données soumises invalides
+Actions: Actions
+Enrich: Enrichir
+Enrich from DOI: Enrichir via DOI
+Confirm reference addition: Confirmer l'ajout de la référence
+Cancel adding: Annuler
+Enriching reference...: Enrichissement de la référence...
+The DOI was not found: Le DOI n'a pas été trouvé
+Failed to fetch DOI metadata: Échec de la récupération des métadonnées du DOI
+Could not reach the server or invalid response: Impossible de contacter le serveur ou réponse invalide
+Reference enriched successfully: Référence enrichie avec succès
+Enrichment failed: L'enrichissement a échoué
+A network error occurred or the server returned an invalid response: Une erreur réseau est survenue ou le serveur a renvoyé une réponse invalide
+Saved: Enregistré
+Activate/Deactivate: Activer/Désactiver
+Close: Fermer
+Added by user: Ajouté par l'utilisateur
+BibTeX: BibTeX
+PDF: PDF
+Semantic Scholar: Semantic Scholar

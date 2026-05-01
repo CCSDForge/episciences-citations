@@ -1,12 +1,19 @@
 @import "~bootstrap/scss/bootstrap";
 
-// Reference declined state
+// Reference states
 .declinedRef {
-    opacity: 0.55;
-
+    // Opacity removed as requested
     &.editing {
         opacity: 1;
     }
+}
+
+.acceptedRef {
+    border: 1px solid $success !important;
+}
+
+.border-danger-important {
+    border: 1px solid $danger !important;
 }
 
 // Sortable drag-and-drop ghost

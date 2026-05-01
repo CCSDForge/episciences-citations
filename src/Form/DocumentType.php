@@ -32,13 +32,13 @@ class DocumentType extends AbstractType
         $builder->add('orderRef', HiddenType::class, ['attr' => ['data-order-ref' => ''],'mapped' => false]);
         //Add new references
         $builder->add("addReference",TextareaType::class,[
-            'attr' => ['class' => 'tinymce shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
+            'attr' => ['class' => 'shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
             'mapped' => false,
             'required' => false,
             'label' => 'Reference',
         ]);
         $builder->add("addReferenceDoi",TextType::class,[
-            'attr' => ['class' => 'tinymce shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
+            'attr' => ['class' => 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
             'mapped' => false,
             'required' => false,
             'label' => 'DOI, URL, ...',
