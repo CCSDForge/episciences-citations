@@ -32,13 +32,17 @@ class References {
         $orderChanged = 0;
 
         // Récupérer ou créer l'utilisateur UNE SEULE FOIS avant la boucle (optimisation)
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-        if (is_null($user)) {
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
+        if (is_null($user) && isset($userInfo['UID'])) {
             $user = new UserInformations();
-            $user->setId($userInfo['UID']);
-            $user->setSurname($userInfo['FIRSTNAME']);
-            $user->setName($userInfo['LASTNAME']);
+            $user->setId((int) $userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME'] ?? '');
+            $user->setName($userInfo['LASTNAME'] ?? '');
             $this->entityManager->persist($user);
+        }
+
+        if (is_null($user)) {
+             return ['orderPersisted' => 0, 'referencePersisted' => 0];
         }
 
         $referencesToEnrich = [];
@@ -236,13 +240,18 @@ class References {
             return [];
         }
 
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-        if ($user === null) {
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
+        if ($user === null && isset($userInfo['UID'])) {
             $user = new UserInformations();
-            $user->setId($userInfo['UID']);
-            $user->setSurname($userInfo['FIRSTNAME']);
-            $user->setName($userInfo['LASTNAME']);
+            $user->setId((int) $userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME'] ?? '');
+            $user->setName($userInfo['LASTNAME'] ?? '');
             $this->entityManager->persist($user);
+        }
+
+        if ($user === null) {
+             // Fallback or handle error if UID is missing
+             return [];
         }
 
         $refData = json_decode($referenceJson, true) ?? [];

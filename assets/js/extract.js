@@ -499,9 +499,12 @@ function classWhenConfirmDecline(el, confirm = true) {
 }
 
 function topAnchor() {
-    document.getElementById('document_save').addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    const docSave = document.getElementById('document_save');
+    if (docSave) {
+        docSave.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
     const confirmAdding = document.getElementById('confirm-adding');
     if (confirmAdding) {
         confirmAdding.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -509,18 +512,27 @@ function topAnchor() {
 }
 
 function rextract() {
-    document.getElementById('extract-all').onclick = function(event) {
-        event.preventDefault();
-        document.getElementById('loading-screen').classList.remove('d-none');
-        location.href = '/extract?url='+this.dataset.urlFromEpi+'&rextract';
-    };
+    const extractAll = document.getElementById('extract-all');
+    if (extractAll) {
+        extractAll.onclick = function(event) {
+            event.preventDefault();
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) loadingScreen.classList.remove('d-none');
+            location.href = '/extract?url=' + this.dataset.urlFromEpi + '&rextract';
+        };
+    }
 }
 
 function checkIsDirty() {
-    let isDirty = document.getElementById('is-dirty');
+    const isDirty = document.getElementById('is-dirty');
+    if (!isDirty) return;
+
     let formSubmitting = false;
-    document.getElementById('form-extraction').addEventListener('change', () => { isDirty.value = '1'; });
-    document.getElementById('form-extraction').addEventListener('submit', () => { formSubmitting = true; });
+    const form = document.getElementById('form-extraction');
+    if (form) {
+        form.addEventListener('change', () => { isDirty.value = '1'; });
+        form.addEventListener('submit', () => { formSubmitting = true; });
+    }
     window.addEventListener('beforeunload', function(event) {
         if (isDirty.value === '1' && formSubmitting === false) {
             event.returnValue = null;
@@ -626,7 +638,7 @@ function updateReferenceUI(idRef, referenceData) {
             if (detector) {
                 const span = document.createElement('span');
                 span.className = 'badge bg-danger';
-                span.innerHTML = '⚠️ ' + (window.translations?.[detector] || detector);
+                span.textContent = '⚠️ ' + (window.translations?.[detector] || detector);
                 // Append before the source badge (usually the last child)
                 const sourceBadge = badgeContainer.querySelector('[class^="badge source-color-"]');
                 if (sourceBadge) {

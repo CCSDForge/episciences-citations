@@ -30,6 +30,7 @@ class ReferencesTest extends TestCase
     private MockObject $refRepository;
     private MockObject $userRepository;
     private MockObject $documentRepository;
+    private MockObject $logger;
 
     protected function setUp(): void
     {
@@ -40,6 +41,7 @@ class ReferencesTest extends TestCase
         $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
         $this->solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
         $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
+        $this->logger = $this->createMock(\Psr\Log\LoggerInterface::class);
 
         // Mock repositories
         $this->refRepository = $this->createMock(PaperReferencesRepository::class);
@@ -51,7 +53,8 @@ class ReferencesTest extends TestCase
             $this->entityManager,
             $this->grobid,
             $this->bibtex,
-            $this->solrReferenceEnricher
+            $this->solrReferenceEnricher,
+            $this->logger
         );
     }
 
@@ -310,6 +313,22 @@ class ReferencesTest extends TestCase
         $this->assertEquals(0, $ref1->getReferenceOrder()); // ref5 → order 0
         $this->assertEquals(1, $ref2->getReferenceOrder()); // ref2 → order 1
         $this->assertEquals(2, $ref3->getReferenceOrder()); // ref8 → order 2
+    }
+
+    #[Test]
+    public function testAutosaveReference_WithMissingUserInfoKeys_ThrowsException(): void
+    {
+        // Arrange
+        $refId = 1;
+        $ref = new PaperReferences();
+        $this->refRepository->method('find')->willReturn($ref);
+        $this->entityManager->method('getRepository')->willReturn($this->refRepository);
+
+        $userInfo = ['UID' => 1001]; // Missing FIRSTNAME, LASTNAME
+
+        // Act & Assert
+        $this->expectException(\TypeError::class);
+        $this->service->autosaveReference($refId, '{}', 1, false, $userInfo);
     }
 
     #[Test]
