@@ -18,67 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- **`GET /api/extract` endpoint**: new synchronous API route that downloads the PDF from Episciences and triggers GROBID extraction in a single call, returning JSON. Returns immediately with `alreadyExtracted: true` if references already exist, avoiding redundant GROBID calls. Protected by a configurable Bearer token (`API_EXTRACT_TOKEN` env var, disabled when empty).
-- **PHP 8.3 Migration**:
-  - Upgraded project to PHP 8.3.
-  - Integrated Rector for automated code modernization and quality.
-  - Added Makefile commands: `make rector`, `make rector-dry`, and `make rebuild`.
-  - Upgraded PHPStan to version 2.1.
-- Modern language switcher component with dropdown menu
-- Stimulus controller for interactive language selection (`language_switcher_controller.js`)
-- **Testing Infrastructure**:
-  - Jest test framework for JavaScript unit tests
-  - Testing Library for DOM testing utilities
-  - PHPStan for PHP static analysis (level 6)
-  - ESLint for JavaScript linting
-  - Babel configuration for Jest
-  - First test suite for language_switcher_controller (3 tests)
-  - Test directory structure (Unit, Integration, Functional, Fixtures)
-  - `.env.test` configuration for test environment
-  - Test coverage reporting with configurable thresholds
-  - Makefile shortcuts for all test and lint commands
-- **GitHub CI/CD Workflows**:
-  - Automated testing workflow (PHP + JavaScript)
-  - Automated linting workflow (PHPStan + ESLint)
-  - Code coverage reporting with Codecov integration
-  - Build verification for production assets
-- Script to output BibTeX from Semantic Scholar
-- GitHub workflows configuration (CodeQL for security analysis)
-- Renovate configuration for automated dependency updates
-- Dependabot configuration
-- Docker configuration improvements with HTTPS support
-- PHP version specification for Symfony server
+- **JS Test Suite for Legacy Code**: Added a comprehensive test suite for `extract.js`, increasing its coverage from 0% to over 60%, ensuring stability for critical citation extraction features.
+- **Robustness in PHP User Management**: Added unit tests to verify that the application gracefully handles incomplete CAS user metadata during autosave operations.
 
 ### Changed
-- Replaced simple language links with modern dropdown interface
-- Updated README.md with comprehensive documentation in English
-- Refactored CORS handling for better performance
-- Refactored Composer configuration to avoid conflicts with other Docker projects
-- Renamed example `.env` file for clarity
-- Updated multiple dependencies:
-  - FontAwesome to v6.7.2
-  - Tailwind CSS to v3.4.18
-  - Webpack to v5.102.1
-  - Core-js to v3.47.0
-  - Sortable.js to v1.15.6
-  - PostCSS to v8.5.6
-  - Symfony packages to latest 6.4.x versions
-  - And many more dependencies via Renovate
-
-### Fixed
-- Security warning from CodeQL analysis
-- Deprecation warnings in Symfony and Doctrine
-- PHP 8.2+ deprecation: `preg_match()` null parameter
-- Prevented public API route from creating unnecessary cookies
-- Bumped serialize-javascript from 6.0.1 to 6.0.2 (security fix)
-
-### Improved
-- Code quality by removing dead code, unused imports, and redundant PHPDoc
-- Translation coverage with additional French and English translations
-- CI/CD pipeline with automated security scanning
-- Performance optimization through CORS refactoring
+- **JS Robustness**: Added systematic null checks for DOM elements in `extract.js` to prevent runtime errors and improved script reliability across different pages.
+- **PHP Robustness**: Improved `References` service to safely handle missing user identification keys using null coalescing and default values.
+- **Test Environment**: Enhanced Jest setup with robust mocks for `Sortable.js` and a polyfill for `HTMLFormElement.prototype.requestSubmit` to ensure better compatibility with JSDOM.
 
 ### Security
+- **XSS Fix in Citation UI**: Patched a potential XSS vulnerability in `extract.js` by switching from `innerHTML` to `textContent` when rendering detector badges for citation metadata.
 - Configured CodeQL for automated security analysis
 - Fixed security vulnerabilities in dependencies (serialize-javascript)
 - Improved HTTPS support in Docker environment
