@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class ReferencesTest extends TestCase
 {
     private References $service;
@@ -316,19 +317,33 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
-    public function testAutosaveReference_WithMissingUserInfoKeys_ThrowsException(): void
+    public function testAutosaveReference_WithMissingUserInfoKeys_HandlesGracefully(): void
     {
         // Arrange
         $refId = 1;
         $ref = new PaperReferences();
         $this->refRepository->method('find')->willReturn($ref);
-        $this->entityManager->method('getRepository')->willReturn($this->refRepository);
+        
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+                [UserInformations::class, $this->userRepository],
+            ]);
+
+        // Expect user to be persisted if new
+        $this->entityManager->expects($this->exactly(2))->method('persist');
+        $this->entityManager->expects($this->once())->method('flush');
 
         $userInfo = ['UID' => 1001]; // Missing FIRSTNAME, LASTNAME
 
-        // Act & Assert
-        $this->expectException(\TypeError::class);
-        $this->service->autosaveReference($refId, '{}', 1, false, $userInfo);
+        // Act
+        $result = $this->service->autosaveReference($refId, '{}', 1, false, $userInfo);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertNotNull($ref->getUid());
+        $this->assertEquals(1001, $ref->getUid()->getId());
+        $this->assertEquals('', $ref->getUid()->getSurname());
     }
 
     #[Test]
