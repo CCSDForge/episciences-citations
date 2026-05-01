@@ -38,3 +38,4 @@ phpstan.neon
 /coverage/
 /.editorconfig
 /.phpunit.cache/
+/config/reference.php
