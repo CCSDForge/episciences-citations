@@ -208,7 +208,7 @@ class SemanticScholarImporter
             $this->references->createDocumentId($docId);
         }
         $ref->setDocument($this->references->getDocument($docId));
-        $ref->setAccepted(0);
+        $ref->setAccepted(1);
         $ref->setUid($user);
 
         $this->entityManager->persist($ref);

@@ -74,6 +74,7 @@ class Tei
                 $refs = new PaperReferences();
                 $refs->setReference($reference);
                 $refs->setSource($source);
+                $refs->setAccepted(0);
                 $refs->setUpdatedAt(new \DateTimeImmutable());
                 $refs->setReferenceOrder($counterRef);
                 if (is_null($docExisting)) {

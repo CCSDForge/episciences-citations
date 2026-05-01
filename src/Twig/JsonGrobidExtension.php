@@ -141,7 +141,6 @@ class JsonGrobidExtension
                         $jsonReference['raw_reference']
                     );
                     unset($jsonReference['csl']);
-                    $jsonReference['forbiddenModify'] = 1;
                 }
             } catch (JsonException|CiteProcException) {
                 return [];

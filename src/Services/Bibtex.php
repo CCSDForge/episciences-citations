@@ -159,12 +159,27 @@ class Bibtex
         $document = $this->entityManager->getRepository(Document::class)->find($docId);
         $references = [];
         foreach ($bibtex as $bibtexInfo) {
+            $doi = $bibtexInfo['doi'] ?? null;
+            if ($doi === null && isset($bibtexInfo['url'])) {
+                // Try to extract DOI from URL if present
+                $doiRegex = '/10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+/';
+                if (preg_match($doiRegex, (string) $bibtexInfo['url'], $matches)) {
+                    $doi = $matches[0];
+                }
+            }
+
             if (array_key_exists('crossref_doi', $bibtexInfo)) {
                 $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
-                $references[] = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                    'doi' => $bibtexInfo['crossref_doi']];
+                $references[] = [
+                    'csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
+                    'doi' => $bibtexInfo['crossref_doi']
+                ];
             } else {
-                $references[] = ['csl' => self::generateCSL($bibtexInfo)];
+                $refData = ['csl' => self::generateCSL($bibtexInfo)];
+                if ($doi !== null) {
+                    $refData['doi'] = $doi;
+                }
+                $references[] = $refData;
             }
         }
         foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {

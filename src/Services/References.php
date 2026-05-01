@@ -4,6 +4,7 @@ use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
@@ -14,7 +15,8 @@ class References {
         private readonly EntityManagerInterface $entityManager,
         private readonly Grobid $grobid,
         private readonly Bibtex $bibtex,
-        private readonly SolrReferenceEnricher $solrReferenceEnricher
+        private readonly SolrReferenceEnricher $solrReferenceEnricher,
+        private readonly LoggerInterface $logger
     )
     {
     }
@@ -51,13 +53,26 @@ class References {
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                     }
-                    $ref->setAccepted((int) $paperReference['accepted']);
-                    $ref->setUpdatedAt(new \DateTimeImmutable());
-                    $ref->setUid($user);
-                    $user->addPaperReferences($ref);
-                    $this->entityManager->persist($ref);
-                    $referencesToEnrich[] = $ref;
-                    $refChanged++;
+                    if (isset($paperReference['accepted']) && $paperReference['accepted'] !== '') {
+                        $newAccepted = (int) $paperReference['accepted'];
+                        if ($ref->getAccepted() !== $newAccepted) {
+                            $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
+                            $ref->setAccepted($newAccepted);
+                            $refChanged++;
+                        }
+                    } elseif (is_null($ref->getAccepted())) {
+                        $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
+                        $ref->setAccepted(0);
+                        $refChanged++;
+                    }
+
+                    if (isset($paperReference['accepted'])) {
+                        $ref->setUpdatedAt(new \DateTimeImmutable());
+                        $ref->setUid($user);
+                        $user->addPaperReferences($ref);
+                        $this->entityManager->persist($ref);
+                        $referencesToEnrich[] = $ref;
+                    }
                 }
             } elseif (!is_null($ref)) {
                 $this->entityManager->remove($ref);
@@ -212,12 +227,13 @@ class References {
 
     /**
      * @param array<string, mixed> $userInfo
+     * @return array<string, mixed>
      */
-    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): void
+    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): array
     {
         $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
         if ($ref === null) {
-            return;
+            return [];
         }
 
         $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -232,7 +248,12 @@ class References {
         $refData = json_decode($referenceJson, true) ?? [];
         $refData = $this->solrReferenceEnricher->enrichReference($refData);
         $ref->setReference($refData);
-        $ref->setAccepted($accepted);
+        
+        if ($ref->getAccepted() !== $accepted) {
+            $this->logger->info('Autosave: Updating accepted state', ['id' => $refId, 'old' => $ref->getAccepted(), 'new' => $accepted]);
+            $ref->setAccepted($accepted);
+        }
+
         if ($isDirty) {
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
         }
@@ -241,6 +262,8 @@ class References {
         $user->addPaperReferences($ref);
         $this->entityManager->persist($ref);
         $this->entityManager->flush();
+
+        return $refData;
     }
 
     /**
