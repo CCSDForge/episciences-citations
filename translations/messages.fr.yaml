@@ -79,16 +79,16 @@ No references found for this paper ID: Aucune référence trouvée pour cet iden
 Import: Importer
 Invalid data submitted: Données soumises invalides
 Actions: Actions
-Enrich: Enrichir
-Enrich from DOI: Enrichir via DOI
+Enrich: Auto-corriger
+Enrich from DOI: Correction automatique via le DOI
 Confirm reference addition: Confirmer l'ajout de la référence
 Cancel adding: Annuler
-Enriching reference...: Enrichissement de la référence...
+Enriching reference...: Auto-correction de la référence via le DOI...
 The DOI was not found: Le DOI n'a pas été trouvé
 Failed to fetch DOI metadata: Échec de la récupération des métadonnées du DOI
 Could not reach the server or invalid response: Impossible de contacter le serveur ou réponse invalide
-Reference enriched successfully: Référence enrichie avec succès
-Enrichment failed: L'enrichissement a échoué
+Reference enriched successfully: Référence corrigée automatiquement avec succès
+Enrichment failed: La correction automatique a échoué
 A network error occurred or the server returned an invalid response: Une erreur réseau est survenue ou le serveur a renvoyé une réponse invalide
 Saved: Enregistré
 Activate/Deactivate: Activer/Désactiver
