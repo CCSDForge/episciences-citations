@@ -11,7 +11,6 @@
     "ext-ctype": "*",
     "ext-iconv": "*",
     "ext-simplexml": "*",
-    "doctrine/annotations": "^2.0",
     "doctrine/doctrine-bundle": "^2.13",
     "doctrine/doctrine-migrations-bundle": "^3.3",
     "doctrine/orm": "^3.0",
