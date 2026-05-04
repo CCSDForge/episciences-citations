@@ -7,6 +7,7 @@ parameters:
     deposit_pdf: '%kernel.project_dir%/var/data'
     api_extract_token_default: ''
     api_extract_token: '%env(default:api_extract_token_default:API_EXTRACT_TOKEN)%'
+    episciences_allowed_hosts_default: ''
     solr_reference_enrichment_enabled_default: false
     solr_base_url_default: 'http://localhost:8983/solr'
     solr_collection_default: 'ref_pps'
@@ -60,6 +61,7 @@ services:
             $pdfFolder: '%kernel.project_dir%/var/data/'
             $apiRight: '%env(string:API_RIGHT_URL)%'
             $forceHttp: '%env(bool:EPISCIENCES_FORCE_HTTP)%'
+            $allowedHosts: '%env(default:episciences_allowed_hosts_default:EPISCIENCES_ALLOWED_HOSTS)%'
     App\Services\Semanticsscholar:
         arguments:
             $apiKeyS2: '%env(string:API_S2_KEY)%'

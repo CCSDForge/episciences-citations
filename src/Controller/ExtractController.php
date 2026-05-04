@@ -56,12 +56,16 @@ class ExtractController extends AbstractController
      * @throws TransportExceptionInterface
      */
     #[Route('/extract', name: 'app_extract')]
+    #[IsGranted('ROLE_USER')]
     public function extract(Request $request): RedirectResponse|Response
     {
+        $rawUrl = (string) $request->query->get('url', '');
+        if (!$this->episciences->isAllowedUrl($rawUrl)) {
+            throw $this->createAccessDeniedException('URL hostname not allowed');
+        }
 
-
-        $docId = (int) $this->episciences->getDocIdFromUrl($request->query->get('url'));
-        $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        $docId = (int) $this->episciences->getDocIdFromUrl($rawUrl);
+        $getPdf = $this->episciences->getPaperPDF($rawUrl);
 
         $this->logger->info('Extracting for docid ', ['DocId' => $docId]);
         $this->logger->info('Extracting for pdf ', ['PDF' => $getPdf]);
@@ -343,6 +347,13 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
         }
 
+        if (!$this->episciences->isAllowedUrl($url)) {
+            return new JsonResponse(
+                ['success' => false, 'error' => 'URL hostname not allowed'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
         $docIdParam = $request->query->get('docid');
         $docId = $docIdParam !== null
             ? (int) $docIdParam
@@ -380,8 +391,15 @@ class ExtractController extends AbstractController
     private function isValidApiToken(Request $request): bool
     {
         $expected = (string) $this->getParameter('api_extract_token');
-        if ($expected === '') {
-            return true;
+        if ($expected === '' || $expected === 'changeme') {
+            if ($this->getParameter('kernel.environment') === 'prod') {
+                $this->logger->critical(
+                    'API_EXTRACT_TOKEN is not configured — /api/extract is unprotected in production'
+                );
+            }
+            if ($expected === '') {
+                return true;
+            }
         }
         return $request->headers->get('Authorization') === 'Bearer ' . $expected;
     }
