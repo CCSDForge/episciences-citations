@@ -225,7 +225,7 @@ async function handleEnrichment(btn) {
                 autosaveReference(idRef, '1');
             }
 
-            showImportToast('success', 'Reference enriched successfully');
+            showImportToast('success', 'Reference auto-fixed successfully');
         } else {
             console.warn('DOI Enrichment: Enrichment failed for ref', idRef, data.error);
             showImportToast('danger', data.error || 'Enrichment failed');

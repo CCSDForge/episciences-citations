@@ -75,16 +75,16 @@ No references found for this paper ID: No references found for this paper ID
 Import: Import
 Invalid data submitted: Invalid data submitted
 Actions: Actions
-Enrich: Enrich
-Enrich from DOI: Enrich from DOI
+Enrich: Auto-fix
+Enrich from DOI: Auto-fix reference from DOI citation
 Confirm reference addition: Confirm adding reference
 Cancel adding: Cancel
-Enriching reference...: Enriching reference...
+Enriching reference...: Auto-fixing reference from DOI citation...
 The DOI was not found: The DOI was not found
 Failed to fetch DOI metadata: Failed to fetch DOI metadata
 Could not reach the server or invalid response: Could not reach the server or invalid response
-Reference enriched successfully: Reference enriched successfully
-Enrichment failed: Enrichment failed
+Reference enriched successfully: Reference auto-fixed successfully
+Enrichment failed: Auto-fixing failed
 A network error occurred or the server returned an invalid response: A network error occurred or the server returned an invalid response
 Saved: Saved
 Activate/Deactivate: Activate/Deactivate
