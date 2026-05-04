@@ -22,7 +22,11 @@ class Episciences {
 
     public function isAllowedUrl(string $url): bool
     {
-        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return false;
+        }
+        $host = strtolower(rawurldecode(parse_url($url, PHP_URL_HOST) ?? ''));
         if ($host === '') {
             return false;
         }

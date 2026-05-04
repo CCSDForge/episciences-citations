@@ -22,7 +22,6 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -57,7 +56,7 @@ class ExtractController extends AbstractController
      * @throws TransportExceptionInterface
      */
     #[Route('/extract', name: 'app_extract')]
-    #[IsGranted(new Expression('is_granted("ROLE_USER") or is_granted("ROLE_ANO")'))]
+    #[IsGranted('ROLE_USER')]
     public function extract(Request $request): RedirectResponse|Response
     {
         $rawUrl = (string) $request->query->get('url', '');

@@ -475,6 +475,22 @@ class EpisciencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_PercentEncodedIp_ReturnsFalse(): void
+    {
+        // 169%2E254%2E169%2E254 decodes to 169.254.169.254 — must be blocked
+        $this->assertFalse($this->service->isAllowedUrl('http://169%2E254%2E169%2E254/latest/meta-data'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_NonHttpScheme_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('ftp://lmcs.episciences.org/123'));
+        $this->assertFalse($this->service->isAllowedUrl('file:///etc/passwd'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testIsAllowedUrl_CustomAllowedHosts_Override(): void
     {
         $custom = new Episciences(
