@@ -37,8 +37,8 @@ describe('extract.js', () => {
                             <input id="textDoiRef-1" value="10.1000/new">
                         </div>
                         <div id="editActionBtns-1" class="d-none">
-                            <button id="acceptModifyBtn-1">Confirm</button>
-                            <button id="cancelModifyBtn-1">Cancel</button>
+                            <button type="button" id="acceptModifyBtn-1">Confirm</button>
+                            <button type="button" id="cancelModifyBtn-1">Cancel</button>
                         </div>
                         <input id="reference-1" value='{}'>
                         <input id="accepted-1" value="0">
