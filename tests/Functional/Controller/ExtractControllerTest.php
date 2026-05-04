@@ -89,12 +89,54 @@ class ExtractControllerTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $client->request(Request::METHOD_GET, '/api/extract?url=https://example.com/no-numeric-id', [], [], $this->authHeaders());
+        $client->request(Request::METHOD_GET, '/api/extract?url=https://lmcs.episciences.org/no-numeric-id', [], [], $this->authHeaders());
 
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertFalse($data['success']);
         $this->assertStringContainsString('document ID', $data['error']);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/extract — SSRF protection (URL allowlist)
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function testApiExtract_SsrfBlocked_MetadataEndpoint(): void
+    {
+        $client = static::createClient();
+
+        $client->request(
+            Request::METHOD_GET,
+            '/api/extract?url=http://169.254.169.254/latest/meta-data&docid=42',
+            [],
+            [],
+            $this->authHeaders()
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertFalse($data['success']);
+        $this->assertStringContainsString('not allowed', $data['error']);
+    }
+
+    #[Test]
+    public function testApiExtract_SsrfBlocked_ArbitraryHost(): void
+    {
+        $client = static::createClient();
+
+        $client->request(
+            Request::METHOD_GET,
+            '/api/extract?url=http://internal-db:3306/123&docid=1',
+            [],
+            [],
+            $this->authHeaders()
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertFalse($data['success']);
+        $this->assertStringContainsString('not allowed', $data['error']);
     }
 
     // -------------------------------------------------------------------------

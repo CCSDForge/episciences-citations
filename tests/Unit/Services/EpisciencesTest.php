@@ -424,4 +424,84 @@ class EpisciencesTest extends TestCase
         $this->assertFileExists($this->pdfFolder . $name . '.pdf');
         $this->assertEquals($pdfContent, file_get_contents($this->pdfFolder . $name . '.pdf'));
     }
+
+    // -------------------------------------------------------------------------
+    // isAllowedUrl — SSRF allowlist
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EpisciencesSubdomain_ReturnsTrue(): void
+    {
+        $this->assertTrue($this->service->isAllowedUrl('https://lmcs.episciences.org/18068'));
+        $this->assertTrue($this->service->isAllowedUrl('https://transformations.episciences.org/articles/14776'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EpisciencesRootDomain_ReturnsTrue(): void
+    {
+        $this->assertTrue($this->service->isAllowedUrl('https://episciences.org/article/view/12345'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_MetadataEndpoint_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('http://169.254.169.254/latest/meta-data'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_InternalHost_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('http://internal-db:3306/123'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EmptyString_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl(''));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_SpoofedHostname_ReturnsFalse(): void
+    {
+        // e.g. evil.episciences.org.attacker.com should NOT match episciences.org
+        $this->assertFalse($this->service->isAllowedUrl('http://evil.episciences.org.attacker.com/123'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_PercentEncodedIp_ReturnsFalse(): void
+    {
+        // 169%2E254%2E169%2E254 decodes to 169.254.169.254 — must be blocked
+        $this->assertFalse($this->service->isAllowedUrl('http://169%2E254%2E169%2E254/latest/meta-data'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_NonHttpScheme_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('ftp://lmcs.episciences.org/123'));
+        $this->assertFalse($this->service->isAllowedUrl('file:///etc/passwd'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_CustomAllowedHosts_Override(): void
+    {
+        $custom = new Episciences(
+            $this->httpClient,
+            $this->pdfFolder,
+            $this->apiRight,
+            $this->logger,
+            false,
+            'example.org'
+        );
+        $this->assertTrue($custom->isAllowedUrl('https://sub.example.org/123'));
+        $this->assertFalse($custom->isAllowedUrl('https://lmcs.episciences.org/123'));
+    }
 }

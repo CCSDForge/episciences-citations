@@ -9,12 +9,36 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Episciences {
 
+    private const DEFAULT_ALLOWED_HOSTS = ['episciences.org'];
+
     public function __construct(private readonly HttpClientInterface $client,
                                 private readonly string $pdfFolder,
                                 private readonly string $apiRight,
                                 private readonly LoggerInterface $logger,
-                                private readonly bool $forceHttp = false)
+                                private readonly bool $forceHttp = false,
+                                private readonly string $allowedHosts = '')
     {
+    }
+
+    public function isAllowedUrl(string $url): bool
+    {
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return false;
+        }
+        $host = strtolower(rawurldecode(parse_url($url, PHP_URL_HOST) ?? ''));
+        if ($host === '') {
+            return false;
+        }
+        $allowed = $this->allowedHosts !== ''
+            ? array_map('trim', explode(',', $this->allowedHosts))
+            : self::DEFAULT_ALLOWED_HOSTS;
+        foreach ($allowed as $pattern) {
+            if ($host === $pattern || str_ends_with($host, '.' . $pattern)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
