@@ -9,7 +9,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Episciences {
 
-    private const DEFAULT_ALLOWED_HOSTS = ['episciences.org'];
+    private const array DEFAULT_ALLOWED_HOSTS = ['episciences.org'];
 
     public function __construct(private readonly HttpClientInterface $client,
                                 private readonly string $pdfFolder,
@@ -31,14 +31,9 @@ class Episciences {
             return false;
         }
         $allowed = $this->allowedHosts !== ''
-            ? array_map('trim', explode(',', $this->allowedHosts))
+            ? array_map(trim(...), explode(',', $this->allowedHosts))
             : self::DEFAULT_ALLOWED_HOSTS;
-        foreach ($allowed as $pattern) {
-            if ($host === $pattern || str_ends_with($host, '.' . $pattern)) {
-                return true;
-            }
-        }
-        return false;
+        return array_any($allowed, fn($pattern): bool => $host === $pattern || str_ends_with($host, '.' . $pattern));
     }
 
     /**
@@ -107,7 +102,7 @@ class Episciences {
     public function putPdfInCache(string $name, string $response): bool
     {
         $fp = fopen($this->pdfFolder.$name.'.pdf', 'wb');
-        if (fwrite($fp, (string) $response) === false) {
+        if (fwrite($fp, $response) === false) {
             return false;
         }
         fclose($fp);

@@ -40,12 +40,6 @@ class Doi
         }
     }
 
-    /**
-     * @param string $doi
-     * @param string $style
-     * @param string $lang
-     * @return string
-     */
     public function getFormattedCitation(string $doi, string $style = 'apa', string $lang = 'en-GB'): string
     {
         $client = new Client();

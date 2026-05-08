@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Robustness in PHP User Management**: Added unit tests to verify that the application gracefully handles incomplete CAS user metadata during autosave operations.
 
 ### Changed
+- **PHP 8.4 upgrade**: Migrated runtime from PHP 8.3 to PHP 8.4; updated Docker base image (`php:8.4-fpm`), Rector level (`UP_TO_PHP_84`), CI pipelines, and documentation.
+- **PHPUnit bridge version**: Pinned `SYMFONY_PHPUNIT_VERSION` to `12.5` for consistency with the `phpunit/phpunit ^12` Composer dependency.
 - **JS Robustness**: Added systematic null checks for DOM elements in `extract.js` to prevent runtime errors and improved script reliability across different pages.
 - **PHP Robustness**: Improved `References` service to safely handle missing user identification keys using null coalescing and default values.
 - **Test Environment**: Enhanced Jest setup with robust mocks for `Sortable.js` and a polyfill for `HTMLFormElement.prototype.requestSubmit` to ensure better compatibility with JSDOM.

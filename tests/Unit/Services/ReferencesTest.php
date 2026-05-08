@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use Psr\Log\LoggerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Query;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -42,7 +43,7 @@ class ReferencesTest extends TestCase
         $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
         $this->solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
         $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
-        $this->logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+        $this->logger = $this->createMock(LoggerInterface::class);
 
         // Mock repositories
         $this->refRepository = $this->createMock(PaperReferencesRepository::class);
@@ -360,7 +361,7 @@ class ReferencesTest extends TestCase
             'orderRef' => ''
         ];
 
-        $this->entityManager->method('getRepository')->willReturnCallback(function($class) use ($user) {
+        $this->entityManager->method('getRepository')->willReturnCallback(function($class) use ($user): MockObject {
             if ($class === UserInformations::class) {
                 $repo = $this->userRepository;
                 $repo->method('find')->willReturn($user);

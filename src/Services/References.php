@@ -186,7 +186,7 @@ class References {
 
     public function persistOrderRef(string $orderRef, int $orderChanged): int
     {
-        $orderRefArray = explode(";", (string) $orderRef);
+        $orderRefArray = explode(";", $orderRef);
         foreach ($orderRefArray as $order => $pkRef) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
             if (!is_null($ref)) {

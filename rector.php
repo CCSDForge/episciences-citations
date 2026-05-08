@@ -13,7 +13,7 @@ return RectorConfig::configure()
     ])
     ->withComposerBased(symfony: true)
     ->withSets([
-        LevelSetList::UP_TO_PHP_83,
+        LevelSetList::UP_TO_PHP_84,
         SymfonySetList::SYMFONY_CODE_QUALITY,
     ])
     // Powerful built-in sets for code health

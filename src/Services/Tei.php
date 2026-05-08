@@ -21,7 +21,7 @@ class Tei
      */
     public function getReferencesInTei(string $tei): array
     {
-        $tei = simplexml_load_string((string) $tei);
+        $tei = simplexml_load_string($tei);
         $info = [];
         if ($tei !== false) {
             foreach ($tei->text as $teInfo) {

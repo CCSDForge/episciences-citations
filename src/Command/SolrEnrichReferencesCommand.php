@@ -175,13 +175,7 @@ class SolrEnrichReferencesCommand extends Command
      */
     private function hasSolrMetadata(array $reference): bool
     {
-        foreach (self::SOLR_FIELDS as $field) {
-            if (array_key_exists($field, $reference)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(self::SOLR_FIELDS, fn($field): bool => array_key_exists($field, $reference));
     }
 
     /**

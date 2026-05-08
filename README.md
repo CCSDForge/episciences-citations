@@ -3,7 +3,7 @@
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
 ![Symfony](https://img.shields.io/badge/Symfony-7.4-black)
-![PHP](https://img.shields.io/badge/PHP-8.3%20%2F%208.4-777BB4)
+![PHP](https://img.shields.io/badge/PHP-8.4-777BB4)
 
 [![Tests](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml)
 [![Lint](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml)
@@ -43,7 +43,7 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 ## Tech Stack
 
 **Backend:**
-- PHP 8.3 or 8.4
+- PHP 8.4
 - Symfony 7.4
 - Doctrine ORM 3.0
 - MySQL/MariaDB
@@ -65,7 +65,7 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 ## Requirements
 
-- PHP 8.3 or 8.4
+- PHP 8.4
 - Composer
 - Node.js 16+ and npm/yarn
 - MySQL 5.7+ or MariaDB 10.3+

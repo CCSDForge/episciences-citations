@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Twig;
 
+use Twig\Attribute\AsTwigFunction;
 use App\Twig\JsonGrobidExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -81,7 +82,7 @@ class JsonGrobidExtensionTest extends TestCase
         $registeredNames = [];
         $reflection = new \ReflectionClass(JsonGrobidExtension::class);
         foreach ($reflection->getMethods() as $method) {
-            foreach ($method->getAttributes(\Twig\Attribute\AsTwigFunction::class) as $attribute) {
+            foreach ($method->getAttributes(AsTwigFunction::class) as $attribute) {
                 $registeredNames[] = $attribute->newInstance()->name;
             }
         }

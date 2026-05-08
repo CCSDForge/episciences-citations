@@ -212,14 +212,13 @@ class ExtractController extends AbstractController
                         $session->set('isAlreadyopenModal', 1);
                     }
                     return $this->redirect($request->getUri());
-                } else {
-                    $this->logger->warning('Form is invalid', [
-                        'docId' => $docId,
-                        'locale' => $request->getLocale(),
-                        'errors' => (string) $form->getErrors(true, false)
-                    ]);
-                    $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
                 }
+                $this->logger->warning('Form is invalid', [
+                    'docId' => $docId,
+                    'locale' => $request->getLocale(),
+                    'errors' => (string) $form->getErrors(true, false)
+                ]);
+                $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
             }
             return $this->render('extract/index.html.twig', [
                 'form' => $form->createView(),
@@ -291,11 +290,12 @@ class ExtractController extends AbstractController
         $data = $request->request->all();
         $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
         $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
-
         if (isset($data['orderRef'])) {
             $this->references->autosaveOrder($data['orderRef']);
             return new JsonResponse(['success' => true]);
-        } elseif (isset($data['refId'])) {
+        }
+
+        if (isset($data['refId'])) {
             $enrichedReference = $this->references->autosaveReference(
                 (int) $data['refId'],
                 $data['reference'] ?? '{}',
@@ -450,7 +450,7 @@ class ExtractController extends AbstractController
     public function getpdf(int $docId): BinaryFileResponse
     {
         $this->logger->info('get PDF in cache => ', ['path' => $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf"]);
-        return (new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK))
+        return new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK)
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $docId . ".pdf");
     }
 
