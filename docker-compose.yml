@@ -53,6 +53,9 @@ services:
       - APP_DEBUG=1
     expose:
       - "9000"  # Expose internal port 9000
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
     extra_hosts:
       - "dev.episciences.org:host-gateway"
       - "manager-dev.episciences.org:host-gateway"
