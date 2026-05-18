@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+- **Symfony 7.4 deprecation**: Replaced `Request::get()` with `$request->query->get()` in `EpisciencesController` as per Symfony 7.4 guidelines.
+
 ### Security
 - **API `/api/extract`**: Replaced hostname allowlist with HTTP/HTTPS scheme validation, allowing PDF sources from any public host (e.g. arxiv.org) while still rejecting `file://`, `ftp://`, and other unsafe schemes.
 

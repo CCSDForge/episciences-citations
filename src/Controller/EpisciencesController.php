@@ -26,7 +26,7 @@ class EpisciencesController extends AbstractController
     {
         // La validation CORS est maintenant gérée par CorsEventListener
         // Validation URL (early return pattern pour réduire l'imbrication)
-        $url = $request->get('url');
+        $url = $request->query->get('url');
         if (empty($url)) {
             $this->logger->warning('API called with bad URL or NULL', ['url' => $url]);
             return new JsonResponse(
