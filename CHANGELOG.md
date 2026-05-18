@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 -->
 
-## Unreleased
+## v1.2.0
 
 ### Added
 - **API Extraction Endpoint**: Introduced `GET /api/extract` with Bearer token authentication for remote citation extraction.
