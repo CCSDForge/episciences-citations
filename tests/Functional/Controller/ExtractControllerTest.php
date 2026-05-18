@@ -98,17 +98,17 @@ class ExtractControllerTest extends WebTestCase
     }
 
     // -------------------------------------------------------------------------
-    // GET /api/extract — SSRF protection (URL allowlist)
+    // GET /api/extract — URL scheme validation
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function testApiExtract_SsrfBlocked_MetadataEndpoint(): void
+    public function testApiExtract_InvalidScheme_Ftp(): void
     {
         $client = static::createClient();
 
         $client->request(
             Request::METHOD_GET,
-            '/api/extract?url=http://169.254.169.254/latest/meta-data&docid=42',
+            '/api/extract?url=ftp://arxiv.org/pdf/2411.14802v3&docid=42',
             [],
             [],
             $this->authHeaders()
@@ -117,17 +117,17 @@ class ExtractControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertFalse($data['success']);
-        $this->assertStringContainsString('not allowed', $data['error']);
+        $this->assertStringContainsString('Invalid URL', $data['error']);
     }
 
     #[Test]
-    public function testApiExtract_SsrfBlocked_ArbitraryHost(): void
+    public function testApiExtract_InvalidScheme_File(): void
     {
         $client = static::createClient();
 
         $client->request(
             Request::METHOD_GET,
-            '/api/extract?url=http://internal-db:3306/123&docid=1',
+            '/api/extract?url=file:///etc/passwd&docid=1',
             [],
             [],
             $this->authHeaders()
@@ -136,7 +136,7 @@ class ExtractControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
         $data = json_decode($client->getResponse()->getContent(), true);
         $this->assertFalse($data['success']);
-        $this->assertStringContainsString('not allowed', $data['error']);
+        $this->assertStringContainsString('Invalid URL', $data['error']);
     }
 
     // -------------------------------------------------------------------------

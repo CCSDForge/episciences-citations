@@ -5,15 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- 
 ## Unreleased
-### Fixed
-### Added
-### Changed
-### Deprecated
-### Removed
+
 ### Security
--->
+- **API `/api/extract`**: Replaced hostname allowlist with HTTP/HTTPS scheme validation, allowing PDF sources from any public host (e.g. arxiv.org) while still rejecting `file://`, `ftp://`, and other unsafe schemes.
+- **API `/api/extract`**: Fixed a bypass where an unconfigured `API_EXTRACT_TOKEN` (empty string) granted open access. The endpoint now returns 401 when the token is not properly set on the server side.
 
 ## v1.2.0
 

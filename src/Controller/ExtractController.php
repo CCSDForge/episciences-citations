@@ -347,9 +347,10 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
         }
 
-        if (!$this->episciences->isAllowedUrl($url)) {
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+        if ($scheme !== 'http' && $scheme !== 'https') {
             return new JsonResponse(
-                ['success' => false, 'error' => 'URL hostname not allowed'],
+                ['success' => false, 'error' => 'Invalid URL: only http and https are allowed'],
                 Response::HTTP_BAD_REQUEST
             );
         }
@@ -392,14 +393,8 @@ class ExtractController extends AbstractController
     {
         $expected = (string) $this->getParameter('api_extract_token');
         if ($expected === '' || $expected === 'changeme') {
-            if ($this->getParameter('kernel.environment') === 'prod') {
-                $this->logger->critical(
-                    'API_EXTRACT_TOKEN is not configured — /api/extract is unprotected in production'
-                );
-            }
-            if ($expected === '') {
-                return true;
-            }
+            $this->logger->warning('API_EXTRACT_TOKEN is not configured — /api/extract is disabled');
+            return false;
         }
         return $request->headers->get('Authorization') === 'Bearer ' . $expected;
     }
