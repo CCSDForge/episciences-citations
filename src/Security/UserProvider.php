@@ -7,6 +7,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use \Symfony\Component\Security\Core\User\UserProviderInterface;
 
 
+/** @implements UserProviderInterface<User> */
 class UserProvider implements UserProviderInterface {
 
 
@@ -15,7 +16,7 @@ class UserProvider implements UserProviderInterface {
         // TODO: Implement refreshUser() method.
         if (!$user instanceof User) {
             throw new UnsupportedUserException(
-                sprintf('Instances of "%s" are not supported.', get_class($user))
+                sprintf('Instances of "%s" are not supported.', $user::class)
             );
         }
         return $this->loadUserByUsername($user->getUsername());

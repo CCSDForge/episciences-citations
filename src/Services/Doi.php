@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use GuzzleHttp\Client;
@@ -19,7 +21,7 @@ class Doi
                 ]
             ]);
             return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
+        } catch (GuzzleException) {
             return "";
         }
     }
@@ -33,13 +35,34 @@ class Doi
                 ]
             ]);
             return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
+        } catch (GuzzleException) {
+            return "";
+        }
+    }
+
+    public function getFormattedCitation(string $doi, string $style = 'apa', string $lang = 'en-GB'): string
+    {
+        $client = new Client();
+        try {
+            $response = $client->get('https://citation.doi.org/format', [
+                'query' => [
+                    'doi' => $doi,
+                    'style' => $style,
+                    'lang' => $lang
+                ]
+            ]);
+            return trim($response->getBody()->getContents());
+        } catch (GuzzleException) {
             return "";
         }
     }
 
 
 
+    /**
+     * @param array<string, mixed> $csl
+     * @return array<int, array<string, mixed>>
+     */
     public function retrieveReferencesFromCsl(array $csl): array
     {
         $refs = [];

@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -10,7 +11,9 @@ use App\Repository\PaperReferencesRepository;
 use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Doi;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -18,9 +21,10 @@ use Psr\Log\LoggerInterface;
 class BibtexTest extends TestCase
 {
     private Bibtex $service;
-    private Doi $doi;
-    private EntityManagerInterface $entityManager;
-    private LoggerInterface $logger;
+    private MockObject $doi;
+    private MockObject $entityManager;
+    private MockObject $logger;
+    private MockObject $solrReferenceEnricher;
 
     protected function setUp(): void
     {
@@ -29,17 +33,21 @@ class BibtexTest extends TestCase
 
         // Mock logger to accept any log calls (void methods)
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
         // No need to configure mock for void methods - they're automatically handled
 
         // Create service - this initializes the singleton logger
         $this->service = new Bibtex(
             $this->doi,
             $this->entityManager,
-            $this->logger
+            $this->logger,
+            $this->solrReferenceEnricher
         );
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testConvertBibtexToArray_ValidBibtex(): void
     {
         // Arrange - Use inline BibTeX string (more reliable than file path in Docker)
@@ -70,6 +78,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testConvertBibtexToArray_InvalidBibtex(): void
     {
         // Arrange - Invalid BibTeX syntax (unclosed braces)
@@ -89,6 +98,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGenerateCSL_ArticleType(): void
     {
         // Arrange - Entry structure AFTER BibTeX parsing (with NamesProcessor)
@@ -129,6 +139,7 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testProcessBibtex_WithDoi(): void
     {
         // This test requires actual BibTeX file parsing which may not work in test environment
@@ -142,34 +153,48 @@ class BibtexTest extends TestCase
     }
 
     #[Test]
-    public function testGetCslRefText_WithCSL(): void
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_WithCSL_ReturnsArrayWithRenderedText(): void
     {
-        // Arrange
-        $jsonWithCsl = json_encode([
+        // Arrange — pass flat array, no JSON string
+        $refData = [
             'csl' => [
                 'type' => 'article-journal',
                 'title' => 'Test Article',
                 'author' => [
-                    ['family' => 'Doe', 'given' => 'John']
+                    ['family' => 'Doe', 'given' => 'John'],
                 ],
                 'issued' => ['date-parts' => [[2024]]],
-                'container-title' => 'Test Journal'
+                'container-title' => 'Test Journal',
             ],
-            'raw_reference' => 'Original raw text'
-        ]);
+            'raw_reference' => 'Original raw text',
+        ];
 
         // Act
-        $result = $this->service->getCslRefText($jsonWithCsl);
+        $result = $this->service->getCslRefText($refData);
 
-        // Assert
-        $this->assertIsString($result);
+        // Assert — result is an array, 'csl' key removed, 'raw_reference' updated
+        $this->assertIsArray($result);
+        $this->assertArrayNotHasKey('csl', $result, 'CSL key should be removed after rendering');
+        $this->assertArrayHasKey('raw_reference', $result);
+        $this->assertStringContainsString('Doe', $result['raw_reference']);
+    }
 
-        // Result should be formatted citation text (not JSON)
-        // CiteProc renders it, so we just verify it's not the original JSON
-        $this->assertStringNotContainsString('"csl"', $result);
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_WithoutCSL_ReturnsUnchangedArray(): void
+    {
+        // Arrange — reference without CSL (e.g. from GROBID)
+        $refData = [
+            'raw_reference' => 'Author et al. Title. Journal, 2024.',
+            'doi' => '10.1234/test',
+        ];
 
-        // Verify the formatted text contains author name
-        // (CiteProc will format it as "Doe, J." or similar)
-        $this->assertStringContainsString('Doe', $result);
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert — array returned as-is
+        $this->assertIsArray($result);
+        $this->assertEquals($refData, $result);
     }
 }

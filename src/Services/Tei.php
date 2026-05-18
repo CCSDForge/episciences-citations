@@ -10,19 +10,17 @@ use Doctrine\ORM\EntityManagerInterface;
 class Tei
 {
 
-    public function __construct(private EntityManagerInterface $entityManager,
-                                private DocumentRepository $documentRepository)
+    public function __construct(private readonly EntityManagerInterface $entityManager,
+                                private readonly DocumentRepository $documentRepository,
+                                private readonly SolrReferenceEnricher $solrReferenceEnricher)
     {
     }
 
     /**
-     * @param $tei
-     * @return array
-     * @throws \JsonException
+     * @return array<int, array<string, string>>
      */
-    public function getReferencesInTei($tei): array
+    public function getReferencesInTei(string $tei): array
     {
-
         $tei = simplexml_load_string($tei);
         $info = [];
         if ($tei !== false) {
@@ -39,7 +37,7 @@ class Tei
                         (string)$value->analytic->idno->attributes() === 'DOI') {
                         $raw_reference['doi'] = (string)$value->analytic->idno;
                     }
-                    $info[] = json_encode($raw_reference, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+                    $info[] = $raw_reference;
                 }
             }
             return $info;
@@ -47,6 +45,9 @@ class Tei
         return [];
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $references
+     */
     public function insertReferencesInDB(array $references, int $docId, string $source): void
     {
         $this->removeAllRefGrobidSource($docId);
@@ -57,8 +58,7 @@ class Tei
             $reOrdonateCounter = 0;
             foreach ($docExisting->getPaperReferences() as $doc) {
                 $doc->setReferenceOrder($reOrdonateCounter);
-                $referenceAlreadyAcceptedByUser[] = serialize(
-                    json_decode($doc->getReference()[0], true, 512, JSON_THROW_ON_ERROR));
+                $referenceAlreadyAcceptedByUser[] = serialize($doc->getReference());
                 $this->entityManager->persist($doc);
                 $reOrdonateCounter++;
                 $counterRef++;
@@ -69,12 +69,12 @@ class Tei
             $doc = new Document();
             $doc->setId($docId);
         }
-        foreach ($references as $reference) {
-            if (!in_array(serialize(json_decode($reference, true, 512, JSON_THROW_ON_ERROR)),
-                $referenceAlreadyAcceptedByUser, true)) {
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
+            if (!in_array(serialize($reference), $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
-                $refs->setReference((array)($reference));
+                $refs->setReference($reference);
                 $refs->setSource($source);
+                $refs->setAccepted(0);
                 $refs->setUpdatedAt(new \DateTimeImmutable());
                 $refs->setReferenceOrder($counterRef);
                 if (is_null($docExisting)) {
@@ -94,13 +94,10 @@ class Tei
     private function removeAllRefGrobidSource(int $docId): void
     {
         $refs = $this->entityManager->getRepository(PaperReferences::class)->findBy(['document' => $docId]);
-        if (!empty($refs)) {
-            foreach ($refs as $ref) {
-                if ($ref->getAccepted() === 0 || is_null($ref->getAccepted())) {
-                    $this->entityManager->remove($ref);
-                }
+        foreach ($refs as $ref) {
+            if ($ref->getAccepted() === 0 || is_null($ref->getAccepted())) {
+                $this->entityManager->remove($ref);
             }
-
         }
         $this->entityManager->flush();
     }

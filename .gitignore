@@ -36,3 +36,6 @@ phpstan.neon
 ###< phpstan/phpstan ###
 /docker/apache/ssl/
 /coverage/
+/.editorconfig
+/.phpunit.cache/
+/config/reference.php

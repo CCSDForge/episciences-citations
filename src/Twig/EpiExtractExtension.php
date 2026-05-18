@@ -10,6 +10,7 @@ class EpiExtractExtension extends AbstractExtension
     /**
      * @return TwigFunction[]
      */
+    #[\Override]
     public function getFunctions() : array
     {
         return [new TwigFunction('formatcsl', [$this, 'formatcsl']),];

@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Episciences - Citations{% endblock %}
+{% block body %}
+<div class="d-flex vh-100 align-items-center justify-content-center">
+    <div class="text-center px-4" style="max-width:480px;">
+        <div class="spinner-border text-primary mb-4" role="status" style="width:4rem;height:4rem;">
+            <span class="visually-hidden">{{ 'Loading...'|trans }}</span>
+        </div>
+        <h5 class="mb-2">{{ 'Extraction in progress...'|trans }}</h5>
+        <p class="text-muted mb-3">{{ 'The first extraction may take more than a minute. Please wait.'|trans }}</p>
+        <span id="timer" class="badge bg-secondary fs-6 px-3 py-2">0 s</span>
+    </div>
+</div>
+<script>
+(function () {
+    var seconds = 0;
+    var timerEl = document.getElementById('timer');
+
+    var interval = setInterval(function () {
+        seconds++;
+        if (seconds < 60) {
+            timerEl.textContent = seconds + ' s';
+        } else {
+            var m = Math.floor(seconds / 60);
+            var s = seconds % 60;
+            timerEl.textContent = m + ' min ' + (s < 10 ? '0' : '') + s + ' s';
+        }
+    }, 1000);
+
+    fetch({{ extractRunUrl|json_encode|raw }})
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            clearInterval(interval);
+            window.location.href = {{ viewRefUrl|json_encode|raw }};
+        })
+        .catch(function () {
+            clearInterval(interval);
+            window.location.href = {{ viewRefUrl|json_encode|raw }};
+        });
+}());
+</script>
+{% endblock %}

@@ -5,6 +5,14 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     deposit_pdf: '%kernel.project_dir%/var/data'
+    trusted_proxies_default: '127.0.0.1,REMOTE_ADDR'
+    api_extract_token_default: ''
+    api_extract_token: '%env(default:api_extract_token_default:API_EXTRACT_TOKEN)%'
+    episciences_allowed_hosts_default: ''
+    solr_reference_enrichment_enabled_default: false
+    solr_base_url_default: 'http://localhost:8983/solr'
+    solr_collection_default: 'ref_pps'
+    solr_batch_size_default: 100
     app.cache_folder: '%kernel.project_dir%/var/tmp'
     cas_login_target: '%env(string:CAS_LOGIN_TARGET)%'
     cas_logout_target: '%env(string:CAS_LOGOUT_TARGET)%'
@@ -47,7 +55,6 @@ services:
 
     App\Services\Grobid:
         arguments:
-            $cacheFolder: '%app.cache_folder%'
             $grobidUrl: '%env(APP_GROBID_URL)%'
             $grobidCache: '@grobid.references.cache'
     App\Services\Episciences:
@@ -55,9 +62,16 @@ services:
             $pdfFolder: '%kernel.project_dir%/var/data/'
             $apiRight: '%env(string:API_RIGHT_URL)%'
             $forceHttp: '%env(bool:EPISCIENCES_FORCE_HTTP)%'
+            $allowedHosts: '%env(default:episciences_allowed_hosts_default:EPISCIENCES_ALLOWED_HOSTS)%'
     App\Services\Semanticsscholar:
         arguments:
             $apiKeyS2: '%env(string:API_S2_KEY)%'
+    App\Services\SolrReferenceEnricher:
+        arguments:
+            $enabled: '%env(bool:default:solr_reference_enrichment_enabled_default:APP_SOLR_REFERENCE_ENRICHMENT_ENABLED)%'
+            $solrBaseUrl: '%env(string:default:solr_base_url_default:APP_SOLR_BASE_URL)%'
+            $collection: '%env(string:default:solr_collection_default:APP_SOLR_COLLECTION)%'
+            $batchSize: '%env(int:default:solr_batch_size_default:APP_SOLR_BATCH_SIZE)%'
 
     # CORS Event Listener pour les routes API (centralise la gestion CORS)
     App\EventListener\CorsEventListener:
@@ -65,6 +79,14 @@ services:
             $corsSite: '%cors_site%'
         tags:
             - { name: kernel.event_subscriber }
+
+    # Override the L3 CAS authenticator with our Symfony 7.4-compatible version.
+    # The L3 bundle registers cas.security.authentication.authenticator; we replace
+    # it here so security.yaml continues to reference the same service ID.
+    cas.security.authentication.authenticator:
+        class: App\Security\CasAuthenticator
+        arguments: ['%cas%', '@event_dispatcher']
+        public: false
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

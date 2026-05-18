@@ -2,17 +2,22 @@
 
 namespace App\Controller;
 
+use App\Entity\Document;
 use App\Form\DocumentType;
 use App\Services\Bibtex;
+use App\Services\Doi;
 use App\Services\Episciences;
 use App\Services\Grobid;
 use App\Services\References;
+use App\Services\SemanticScholarImporter;
 use JsonException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\ClickableInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,37 +34,44 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 class ExtractController extends AbstractController
 {
 
-    public function __construct(private Grobid             $grobid,
-                                private References         $references,
-                                private Episciences        $episciences,
-                                private Bibtex             $bibtex,
-                                private LoggerInterface    $logger,
-                                private ValidatorInterface $validator)
+    public function __construct(private readonly Grobid                   $grobid,
+                                private readonly References               $references,
+                                private readonly Episciences              $episciences,
+                                private readonly Bibtex                   $bibtex,
+                                private readonly Doi                      $doiService,
+                                private readonly LoggerInterface          $logger,
+                                private readonly TranslatorInterface      $translator,
+                                private readonly ValidatorInterface       $validator,
+                                private readonly SemanticScholarImporter  $semanticsScholarImporter)
     {
     }
 
     /**
      * @throws ClientExceptionInterface
      * @throws ContainerExceptionInterface
-     * @throws JsonException @throws \JsonException
+     * @throws JsonException
      * @throws NotFoundExceptionInterface
      * @throws RedirectionExceptionInterface
      * @throws ServerExceptionInterface
-     * @throws TransportExceptionInterface @throws \JsonException
+     * @throws TransportExceptionInterface
      */
     #[Route('/extract', name: 'app_extract')]
-    public function extract(Request $request, TranslatorInterface $translator): RedirectResponse|Response
+    #[IsGranted('ROLE_USER')]
+    public function extract(Request $request): RedirectResponse|Response
     {
+        $rawUrl = (string) $request->query->get('url', '');
+        if (!$this->episciences->isAllowedUrl($rawUrl)) {
+            throw $this->createAccessDeniedException('URL hostname not allowed');
+        }
 
-
-        $docId = $this->episciences->getDocIdFromUrl($request->query->get('url'));
-        $getPdf = $this->episciences->getPaperPDF($request->query->get('url'));
+        $docId = (int) $this->episciences->getDocIdFromUrl($rawUrl);
+        $getPdf = $this->episciences->getPaperPDF($rawUrl);
 
         $this->logger->info('Extracting for docid ', ['DocId' => $docId]);
         $this->logger->info('Extracting for pdf ', ['PDF' => $getPdf]);
 
         if ($request->query->get('exportbib') === "1") {
-            if ($this->references->getDocument($docId) === null) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
                 $this->references->createDocumentId($docId);
             }
             return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
@@ -73,35 +85,46 @@ class ExtractController extends AbstractController
         $session->set('openModalClose', 0);
         if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')) {
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
+            if (!$this->grobid->hasCachedReferences($docId)) {
+                return $this->renderProcessingPage($docId, $request);
+            }
             $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
             if ($insertRef === false) {
                 $this->addFlash(
                     'notice',
-                    $translator->trans('No references found in the PDF')
+                    $this->translator->trans('No references found in the PDF')
                 );
             }
             return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
 
         if ($this->references->documentAlreadyExtracted($docId)) {
-            if (empty($this->references->getReferences($docId, 'all'))) {
-                $this->addFlash(
-                    'notice',
-                    $translator->trans('No reference found in the PDF')
-                );
+            if ($this->references->getReferences($docId, 'all') === []) {
+                // Refs absent — attempt (re)insertion: uses cache if available, calls GROBID otherwise
+                $this->logger->info('Document exists with no refs — retrying extraction', ['DocId' => $docId]);
+                if (!$this->grobid->hasCachedReferences($docId)) {
+                    return $this->renderProcessingPage($docId, $request);
+                }
+                $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
+                if ($insertRef === false) {
+                    $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+                }
             }
             $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
             return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
 
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
+        if (!$this->grobid->hasCachedReferences($docId)) {
+            return $this->renderProcessingPage($docId, $request);
+        }
         $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
         if ($insertRef === false) {
             $this->addFlash(
                 'notice',
-                $translator->trans('No reference found in the PDF')
+                $this->translator->trans('No reference found in the PDF')
             );
-            if ($this->references->getDocument($docId) === null) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
                 $this->references->createDocumentId($docId);
             }
         }
@@ -119,84 +142,94 @@ class ExtractController extends AbstractController
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
-    public function viewReference(int                 $docId, Request $request,
-                                  TranslatorInterface $translator,
-                                  LoggerInterface     $logger,
-                                  ValidatorInterface  $validator): Response
+    public function viewReference(int                 $docId, Request $request): Response
     {
-        $logger->info('view ref page', ['docId' => $docId,
+        $this->logger->info('view ref page', ['docId' => $docId,
             'attribute cas' => $this->container->get('security.token_storage')->getToken()->getAttributes()]);
-        if ($this->isAuthorizeForApp($docId) === true) {
+        if ($this->isAuthorizeForApp($docId)) {
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
 
-            $errors = $validator->validate($form);
+            $errors = $this->validator->validate($form);
             if (count($errors) > 0) {
                 foreach ($errors as $violation) {
                     $this->addFlash(
                         'error',
-                        $translator->trans($violation->getMessage())
+                        $this->translator->trans($violation->getMessage())
                     );
                 }
             }
-            if ($form->isSubmitted() && $form->isValid()) {
-                $session->set('openModalClose', 0);
-                if ($form->get('submitNewRef')->isClicked()) {
-                    $newRef = $this->references->addNewReference($request->request->all($form->getName()),
-                        $this->container->get('security.token_storage')->getToken()->getAttributes());
-                    $this->logger->info('New reference added');
-                    if ($newRef) {
-                        $this->addFlash(
-                            'success',
-                            $translator->trans('New Reference Added')
-                        );
-                    } else {
-                        $this->addFlash(
-                            'error',
-                            $translator->trans('Title missing to add new reference')
-                        );
-                    }
-                } elseif ($form->get('save')->isClicked()) {
-                    $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
-                        $this->container->get('security.token_storage')->getToken()->getAttributes());
-                    $this->flashMessageForChoices($userChoice, $translator);
-                } elseif ($form->get('submitImportBib')->isClicked()) {
-                    $bibtexFile = $form->get('bibtexFile')->getData();
-                    if ($bibtexFile !== null) {
-                        $process = $this->bibtex->processBibtex($bibtexFile,
-                            $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
-                        if (!empty($process)) {
+            if ($form->isSubmitted()) {
+                if ($form->isValid()) {
+                    $session = $request->getSession();
+                    $session->set('openModalClose', 0);
+                    $submitNewRef = $form->get('submitNewRef');
+                    $submitSave = $form->get('save');
+                    $submitImportBib = $form->get('submitImportBib');
+                    if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
+                        $newRef = $this->references->addNewReference($request->request->all($form->getName()),
+                            $this->container->get('security.token_storage')->getToken()->getAttributes());
+                        $this->logger->info('New reference added');
+                        if ($newRef) {
+                            $this->addFlash(
+                                'success',
+                                $this->translator->trans('New Reference Added')
+                            );
+                        } else {
                             $this->addFlash(
                                 'error',
-                                $translator->trans($process['error'])
+                                $this->translator->trans('Title missing to add new reference')
                             );
                         }
-                    } else {
-                        $this->addFlash(
-                            'error',
-                            $translator->trans('Please add a BibTeX file')
-                        );
+                    } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
+                        $this->logger->info('Manual save triggered', ['locale' => $request->getLocale()]);
+                        $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
+                            $this->container->get('security.token_storage')->getToken()->getAttributes());
+                        $this->logger->info('Manual save result', $userChoice);
+                        $this->flashMessageForChoices($userChoice);
+                    } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
+                        $bibtexFile = $form->get('bibtexFile')->getData();
+                        if ($bibtexFile !== null) {
+                            $process = $this->bibtex->processBibtex($bibtexFile,
+                                $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
+                            if ($process !== []) {
+                                $this->addFlash(
+                                    'error',
+                                    $this->translator->trans($process['error'])
+                                );
+                            }
+                        } else {
+                            $this->addFlash(
+                                'error',
+                                $this->translator->trans('Please add a BibTeX file')
+                            );
+                        }
                     }
+                    $session->set('openModalClose', 0);
+                    if ($session->get('isAlreadyopenModal') === 0) {
+                        $session->set('openModalClose', 1);
+                        $session->set('isAlreadyopenModal', 1);
+                    }
+                    return $this->redirect($request->getUri());
                 }
-                $session->set('openModalClose', 0);
-                if ($session->get('isAlreadyopenModal') === 0) {
-                    $session->set('openModalClose', 1);
-                    $session->set('isAlreadyopenModal', 1);
-                }
-                return $this->redirect($request->getUri());
+                $this->logger->warning('Form is invalid', [
+                    'docId' => $docId,
+                    'locale' => $request->getLocale(),
+                    'errors' => (string) $form->getErrors(true, false)
+                ]);
+                $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
             }
             return $this->render('extract/index.html.twig', [
                 'form' => $form->createView(),
             ]);
-        } else {
-            $logger->warning('Access Denied for this user : ',
-                [
-                    'DOCID' => $docId,
-                    'USER CAS' => $this->container->get('security.token_storage')->getToken()->getAttributes()
-                ]);
-            throw $this->createAccessDeniedException();
         }
+        $this->logger->warning('Access Denied for this user : ',
+            [
+                'DOCID' => $docId,
+                'USER CAS' => $this->container->get('security.token_storage')->getToken()->getAttributes()
+            ]);
+        throw $this->createAccessDeniedException();
     }
 
     /**
@@ -209,49 +242,238 @@ class ExtractController extends AbstractController
      */
     public function isAuthorizeForApp(int $docId): bool
     {
-        return $this->episciences->getRightUser($docId,
+        return $this->episciences->getRightUser((string) $docId,
             $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 
     /**
-     * @param array $userChoice
-     * @param TranslatorInterface $translator
-     * @return void
+     * @param array<string, int> $userChoice
      */
-    public function flashMessageForChoices(array $userChoice, TranslatorInterface $translator): void
+    public function flashMessageForChoices(array $userChoice): void
     {
         if ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('The references and sorting have been saved')
+                $this->translator->trans('The references and sorting have been saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] > 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('The references have been saved')
+                $this->translator->trans('The references have been saved')
             );
         } elseif ($userChoice['orderPersisted'] > 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'success',
-                $translator->trans('The sorting has been saved')
+                $this->translator->trans('The sorting has been saved')
             );
         } elseif ($userChoice['orderPersisted'] === 0 && $userChoice['referencePersisted'] === 0) {
             $this->addFlash(
                 'notice',
-                $translator->trans('Nothing was changed')
+                $this->translator->trans('Nothing was changed')
             );
         }
     }
 
+    #[Route('/{_locale<en|fr>}/viewref/{docId}/autosave', name: 'app_autosave', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function autosave(int $docId, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
+            $this->logger->warning('Autosave: Invalid CSRF token');
+            return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token'], Response::HTTP_FORBIDDEN);
+        }
+        if (!$this->isAuthorizeForApp($docId)) {
+            $this->logger->warning('Autosave: Access Denied', ['docId' => $docId]);
+            return new JsonResponse(['success' => false, 'error' => 'Access Denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = $request->request->all();
+        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
+        $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
+        if (isset($data['orderRef'])) {
+            $this->references->autosaveOrder($data['orderRef']);
+            return new JsonResponse(['success' => true]);
+        }
+
+        if (isset($data['refId'])) {
+            $enrichedReference = $this->references->autosaveReference(
+                (int) $data['refId'],
+                $data['reference'] ?? '{}',
+                (int) ($data['accepted'] ?? 0),
+                ($data['isDirty'] ?? '0') === '1',
+                $userInfo
+            );
+            return new JsonResponse(['success' => true, 'reference' => $enrichedReference]);
+        }
+
+        return new JsonResponse(['success' => false, 'error' => 'No data to save']);
+    }
+
+    #[Route('/extract/run', name: 'app_extract_run')]
+    public function extractRun(Request $request): JsonResponse
+    {
+        $docId = (int) $request->query->get('docId');
+        $insertRef = $this->grobid->insertReferences(
+            $docId,
+            $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf'
+        );
+        if ($insertRef === false) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
+                $this->references->createDocumentId($docId);
+            }
+            $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+        }
+        return new JsonResponse(['success' => $insertRef]);
+    }
+
     /**
-     * @param int $docId
-     * @return BinaryFileResponse
+     * @throws ClientExceptionInterface
+     * @throws ContainerExceptionInterface
+     * @throws JsonException
+     * @throws NotFoundExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
+    #[Route('/api/extract', name: 'app_api_extract', methods: ['GET'])]
+    public function apiExtract(Request $request): JsonResponse
+    {
+        if (!$this->isValidApiToken($request)) {
+            return new JsonResponse(['success' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $url = (string) $request->query->get('url', '');
+        if ($url === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$this->episciences->isAllowedUrl($url)) {
+            return new JsonResponse(
+                ['success' => false, 'error' => 'URL hostname not allowed'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $docIdParam = $request->query->get('docid');
+        $docId = $docIdParam !== null
+            ? (int) $docIdParam
+            : (int) $this->episciences->getDocIdFromUrl($url);
+
+        if ($docId === 0) {
+            return new JsonResponse(
+                ['success' => false, 'error' => 'Could not determine a document ID. Provide a docid parameter or use an Episciences URL.'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $referenceCount = $this->grobid->countAllReferencesFromDB($docId);
+        if ($referenceCount > 0) {
+            return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => true, 'referenceCount' => $referenceCount]);
+        }
+
+        $getPdf = $this->episciences->downloadPdf($url, $docId);
+        if (is_array($getPdf)) {
+            $status = $getPdf['status'] === 404 ? Response::HTTP_NOT_FOUND : Response::HTTP_BAD_GATEWAY;
+            return new JsonResponse(['success' => false, 'error' => $getPdf['message']], $status);
+        }
+
+        $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
+        if ($insertRef === false) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
+                $this->references->createDocumentId($docId);
+            }
+            return new JsonResponse(['success' => false, 'docId' => $docId, 'error' => 'No references found in the PDF'], Response::HTTP_OK);
+        }
+
+        return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => false]);
+    }
+
+    private function isValidApiToken(Request $request): bool
+    {
+        $expected = (string) $this->getParameter('api_extract_token');
+        if ($expected === '' || $expected === 'changeme') {
+            if ($this->getParameter('kernel.environment') === 'prod') {
+                $this->logger->critical(
+                    'API_EXTRACT_TOKEN is not configured — /api/extract is unprotected in production'
+                );
+            }
+            if ($expected === '') {
+                return true;
+            }
+        }
+        return $request->headers->get('Authorization') === 'Bearer ' . $expected;
+    }
+
+    private function renderProcessingPage(int $docId, Request $request): Response
+    {
+        return $this->render('extract/processing.html.twig', [
+            'extractRunUrl' => $this->generateUrl('app_extract_run', ['docId' => $docId]),
+            'viewRefUrl'    => $this->generateUrl('app_view_ref', ['docId' => $docId, '_locale' => $request->getLocale()]),
+        ]);
+    }
+
+    #[Route('/{_locale<en|fr>}/viewref/{docId}/import-semantic-scholar', name: 'app_import_semantic_scholar', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
+    public function importFromSemanticScholar(int $docId, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('import-semantic-scholar', $request->request->get('_token'))) {
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+        }
+        if (!$this->isAuthorizeForApp($docId)) {
+            return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
+        }
+
+        $paperId = trim((string) $request->request->get('paperId', ''));
+        if ($paperId === '') {
+            return new JsonResponse(
+                ['success' => false, 'error' => $this->translator->trans('Please enter a paper ID.')],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $startOrder = count($this->references->getReferences($docId, 'all'));
+
+        try {
+            $count = $this->semanticsScholarImporter->importByPaperId($paperId, $docId, $startOrder);
+        } catch (\RuntimeException $e) {
+            return new JsonResponse(['success' => false, 'error' => $e->getMessage()]);
+        }
+
+        return new JsonResponse([
+            'success' => true,
+            'count'   => $count,
+            'message' => $this->translator->trans('%count% reference(s) imported from Semantic Scholar', ['%count%' => $count]),
+        ]);
+    }
+
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
     public function getpdf(int $docId): BinaryFileResponse
     {
         $this->logger->info('get PDF in cache => ', ['path' => $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf"]);
-        return (new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK))
+        return new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK)
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $docId . ".pdf");
+    }
+
+    #[Route('/doi/enrich', name: 'app_doi_enrich', methods: ['GET'])]
+    #[IsGranted('ROLE_USER')]
+    public function enrichFromDoi(Request $request): JsonResponse
+    {
+        $doi = trim((string) $request->query->get('doi', ''));
+        if ($doi === '') {
+            return new JsonResponse(['success' => false, 'error' => 'DOI is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $citation = $this->doiService->getFormattedCitation($doi);
+        $cslJson = $this->doiService->getCsl($doi);
+
+        if ($citation === '' && $cslJson === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Could not fetch data for this DOI'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse([
+            'success'  => true,
+            'citation' => $citation,
+            'csl'      => json_decode($cslJson, true)
+        ]);
     }
 }

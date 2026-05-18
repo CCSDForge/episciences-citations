@@ -1,8 +1,6 @@
 <?php
 namespace App\Services;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ParameterBag\ContainerBagInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -11,51 +9,97 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Episciences {
 
-    public function __construct(private EntityManagerInterface $entityManager,
-                                private HttpClientInterface $client,
-                                private ContainerBagInterface $params,
-                                private string $pdfFolder,
-                                private string $apiRight,
-                                private LoggerInterface $logger,
-                                private bool $forceHttp = false)
+    private const array DEFAULT_ALLOWED_HOSTS = ['episciences.org'];
+
+    public function __construct(private readonly HttpClientInterface $client,
+                                private readonly string $pdfFolder,
+                                private readonly string $apiRight,
+                                private readonly LoggerInterface $logger,
+                                private readonly bool $forceHttp = false,
+                                private readonly string $allowedHosts = '')
     {
     }
 
+    public function isAllowedUrl(string $url): bool
+    {
+        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return false;
+        }
+        $host = strtolower(rawurldecode(parse_url($url, PHP_URL_HOST) ?? ''));
+        if ($host === '') {
+            return false;
+        }
+        $allowed = $this->allowedHosts !== ''
+            ? array_map(trim(...), explode(',', $this->allowedHosts))
+            : self::DEFAULT_ALLOWED_HOSTS;
+        return array_any($allowed, fn($pattern): bool => $host === $pattern || str_ends_with($host, '.' . $pattern));
+    }
+
     /**
-     * @param string $url
-     * @return array|bool
+     * @return array{status: int, message: string}|bool
      */
     public function getPaperPDF(string $url): array|bool
     {
-        $this->createDirDataPdf();
         $docId = $this->getDocIdFromUrl($url);
+        if ($docId === '') {
+            return false;
+        }
+        return $this->downloadPdf($url, (int) $docId);
+    }
 
-        // Force HTTP instead of HTTPS for internal episciences domains when configured
+    /**
+     * Resolves an Episciences article URL to its direct PDF download URL.
+     *
+     * Known patterns:
+     *   /{journal}/articles/{id}[/] → /download   (e.g. transformations.episciences.org)
+     *   /{id}[/]                    → /pdf         (e.g. lmcs.episciences.org)
+     */
+    public function resolvePdfUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $base = rtrim($url, '/');
+
+        if (preg_match('#/articles/\d+/?$#', $path)) {
+            return $base . '/download';
+        }
+
+        if (preg_match('#^/\d+/?$#', $path)) {
+            return $base . '/pdf';
+        }
+
+        return $url;
+    }
+
+    /**
+     * @return array{status: int, message: string}|bool
+     */
+    public function downloadPdf(string $url, int $docId): array|bool
+    {
+        $this->createDirDataPdf();
+
+        $url = $this->resolvePdfUrl($url);
+
         if ($this->forceHttp && str_contains($url, 'episciences.org') && str_starts_with($url, 'https://')) {
             $url = str_replace('https://', 'http://', $url);
         }
 
-        if ($docId !== '' && !file_exists($this->pdfFolder.$docId.'.pdf')) {
-            try {
+        if (file_exists($this->pdfFolder . $docId . '.pdf')) {
+            return true;
+        }
+
+        try {
             $response = $this->client->request('GET', $url, [
-                'headers' => [
-                    "Accept" => "application/octet-stream"
-                ]
+                'headers' => ['Accept' => 'application/octet-stream'],
             ])->getContent();
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
-            $message = $this->manageHttpErrorMessagePDF($e->getCode(),$e->getMessage());
-            if ($e->getCode() === 404) {
-                $this->logger->warning('PDF NOT FOUND ON EPISCIENCES',['DOCID' => $docId]);
-                return ['status' => $e->getCode(),
-                    'message' => $this->manageHttpErrorMessagePDF($e->getCode(),"pdf Not Found")];
-            }
-            return ['status' => $e->getCode(), 'message' => $message];
+            $this->logger->warning('PDF download failed', ['url' => $url, 'docId' => $docId, 'code' => $e->getCode()]);
+            return ['status' => $e->getCode(), 'message' => $this->manageHttpErrorMessagePDF($e->getCode(), $e->getMessage())];
         }
-            return $this->putPdfInCache($docId, $response);
-        }
-        return true;
+
+        return $this->putPdfInCache((string) $docId, $response);
     }
-    public function putPdfInCache($name, $response): bool
+    public function putPdfInCache(string $name, string $response): bool
     {
         $fp = fopen($this->pdfFolder.$name.'.pdf', 'wb');
         if (fwrite($fp, $response) === false) {
@@ -66,28 +110,20 @@ class Episciences {
 
     }
 
-    /**
-     * @param int $status
-     * @param string $message
-     * @return string
-     */
     public function manageHttpErrorMessagePDF(int $status, string $message): string
     {
 
         if ($status === 404) {
-            $message = "PDF not found at the destined address";
+            return "PDF not found at the destined address";
         }
         return $message;
     }
 
-    /**
-     * @param string $url
-     * @return string
-     */
     public function getDocIdFromUrl(string $url): string
     {
-        // Extraire directement le premier segment numérique de l'URL (optimisation)
-        if (preg_match('#/(\d+)(?:/|$)#', $url, $matches)) {
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        $path = preg_replace('#/(pdf|download)/?$#i', '', $path) ?? $path;
+        if (preg_match('#/(\d+)/?$#', $path, $matches)) {
             return $matches[1];
         }
         return '';
@@ -98,19 +134,16 @@ class Episciences {
      * @throws RedirectionExceptionInterface
      * @throws ClientExceptionInterface
      */
-    public function getRightUser($docId, $uid): bool {
+    public function getRightUser(string $docId, string $uid): bool {
         try {
             $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
             // Convert string response ("true"/"false") to boolean
             return $response === 'true';
-        } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
+        } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface) {
             return false;
         }
     }
 
-    /**
-     * @return void
-     */
     public function createDirDataPdf(): void
     {
         if (!file_exists($this->pdfFolder) && !mkdir($concurrentDirectory = $this->pdfFolder) && !is_dir($concurrentDirectory)) {

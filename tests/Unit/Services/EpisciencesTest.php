@@ -2,8 +2,10 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Services\Episciences;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -15,10 +17,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class EpisciencesTest extends TestCase
 {
     private Episciences $service;
-    private EntityManagerInterface $entityManager;
-    private HttpClientInterface $httpClient;
-    private ContainerBagInterface $params;
-    private LoggerInterface $logger;
+    private MockObject $httpClient;
+    private MockObject $logger;
     private string $pdfFolder;
     private string $apiRight = 'http://mock-api';
     private bool $forceHttp = false;
@@ -33,16 +33,11 @@ class EpisciencesTest extends TestCase
                 unlink($file);
             }
         }
-
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->httpClient = $this->createMock(HttpClientInterface::class);
-        $this->params = $this->createMock(ContainerBagInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
 
         $this->service = new Episciences(
-            $this->entityManager,
             $this->httpClient,
-            $this->params,
             $this->pdfFolder,
             $this->apiRight,
             $this->logger,
@@ -63,15 +58,59 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_ArticlesPattern_AppendsDownload(): void
+    {
+        $cases = [
+            'https://transformations.episciences.org/articles/14776'  => 'https://transformations.episciences.org/articles/14776/download',
+            'https://transformations.episciences.org/articles/14776/' => 'https://transformations.episciences.org/articles/14776/download',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_BareIdPattern_AppendsPdf(): void
+    {
+        $cases = [
+            'https://lmcs.episciences.org/18068'  => 'https://lmcs.episciences.org/18068/pdf',
+            'https://lmcs.episciences.org/18068/' => 'https://lmcs.episciences.org/18068/pdf',
+        ];
+        foreach ($cases as $input => $expected) {
+            $this->assertEquals($expected, $this->service->resolvePdfUrl($input), "Failed for: $input");
+        }
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testResolvePdfUrl_UnknownPattern_ReturnsUrlUnchanged(): void
+    {
+        $url = 'https://arxiv.org/pdf/2506.15295v1';
+        $this->assertEquals($url, $this->service->resolvePdfUrl($url));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_ValidUrl_ExtractsId(): void
     {
         // Arrange - la regex cherche /(\d+)(?:/|$) donc le nombre doit être suivi de / ou fin de chaîne
         $testCases = [
-            'https://episciences.org/journal/123456' => '123456',
-            'https://episciences.org/journal/123456/' => '123456',
-            'http://test.org/article/789/view' => '789',
-            'https://episciences.org/999' => '999',
-            'https://episciences.org/999/' => '999',
+            // Standard Episciences URL formats
+            'https://episciences.org/articles/14776'            => '14776',
+            'https://episciences.org/14776'                     => '14776',
+            'https://episciences.org/article/view/17204'        => '17204',
+            // Trailing slash
+            'https://episciences.org/articles/14776/'           => '14776',
+            'https://episciences.org/journal/123456/'           => '123456',
+            // Query string and fragment are ignored (parse_url strips them)
+            'https://episciences.org/articles/14776?format=pdf' => '14776',
+            'https://episciences.org/14776#section'             => '14776',
+            // /pdf and /download suffixes are stripped before extraction
+            'http://dev.episciences.org/17458/pdf'              => '17458',
+            'http://dev.episciences.org/17458/download'         => '17458',
+            'https://episciences.org/articles/14776/download'   => '14776',
         ];
 
         foreach ($testCases as $url => $expectedId) {
@@ -84,6 +123,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetDocIdFromUrl_InvalidUrl_ReturnsEmpty(): void
     {
         // Arrange
@@ -104,6 +144,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testManageHttpErrorMessagePDF_404_ReturnsCustomMessage(): void
     {
         // Arrange
@@ -118,6 +159,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testManageHttpErrorMessagePDF_OtherStatus_ReturnsOriginalMessage(): void
     {
         // Arrange
@@ -132,29 +174,63 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_FileAlreadyExists_ReturnsTrue(): void
     {
-        // Arrange
-        $url = 'https://episciences.org/pdf/123456.pdf';
+        // URL must contain a segment matching /digits/ for getDocIdFromUrl to extract the ID
+        $url = 'https://episciences.org/pdf/123456/';
 
-        // Create folder and existing PDF file
         if (!is_dir($this->pdfFolder)) {
             mkdir($this->pdfFolder, 0777, true);
         }
         file_put_contents($this->pdfFolder . '123456.pdf', 'existing PDF content');
 
-        // HTTP client should NOT be called (file already exists)
         $this->httpClient->expects($this->never())
             ->method('request');
 
-        // Act
         $result = $this->service->getPaperPDF($url);
 
-        // Assert
         $this->assertTrue($result);
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_FileAlreadyExists_ReturnsTrue(): void
+    {
+        if (!is_dir($this->pdfFolder)) {
+            mkdir($this->pdfFolder, 0777, true);
+        }
+        file_put_contents($this->pdfFolder . '99999.pdf', 'cached PDF');
+
+        $this->httpClient->expects($this->never())
+            ->method('request');
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 99999);
+
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_WithExplicitDocId_DownloadsToExpectedPath(): void
+    {
+        $pdfContent = 'arxiv PDF content';
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getContent')->willReturn($pdfContent);
+
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', 'https://arxiv.org/pdf/2506.15295v1', $this->anything())
+            ->willReturn($response);
+
+        $result = $this->service->downloadPdf('https://arxiv.org/pdf/2506.15295v1', 77777);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($this->pdfFolder . '77777.pdf');
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_Success_DownloadsAndCachesPdf(): void
     {
         // Arrange
@@ -186,6 +262,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_HttpError404_ReturnsErrorArray(): void
     {
         // Arrange
@@ -206,7 +283,7 @@ class EpisciencesTest extends TestCase
         // Logger should be called for 404
         $this->logger->expects($this->once())
             ->method('warning')
-            ->with('PDF NOT FOUND ON EPISCIENCES', ['DOCID' => '999999']);
+            ->with('PDF download failed', $this->arrayHasKey('url'));
 
         // Act
         $result = $this->service->getPaperPDF($url);
@@ -218,13 +295,12 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_ForceHttp_ConvertsHttpsToHttp(): void
     {
         // Arrange - créer service avec forceHttp = true
         $serviceWithForceHttp = new Episciences(
-            $this->entityManager,
             $this->httpClient,
-            $this->params,
             $this->pdfFolder,
             $this->apiRight,
             $this->logger,
@@ -253,6 +329,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_Allowed_ReturnsTrue(): void
     {
         // Arrange
@@ -277,6 +354,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_NotAllowed_ReturnsFalse(): void
     {
         // Arrange
@@ -299,6 +377,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetRightUser_HttpError_ReturnsFalse(): void
     {
         // Arrange
@@ -325,6 +404,7 @@ class EpisciencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPutPdfInCache_Success_WritesPdfFile(): void
     {
         // Arrange
@@ -343,5 +423,85 @@ class EpisciencesTest extends TestCase
         $this->assertTrue($result);
         $this->assertFileExists($this->pdfFolder . $name . '.pdf');
         $this->assertEquals($pdfContent, file_get_contents($this->pdfFolder . $name . '.pdf'));
+    }
+
+    // -------------------------------------------------------------------------
+    // isAllowedUrl — SSRF allowlist
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EpisciencesSubdomain_ReturnsTrue(): void
+    {
+        $this->assertTrue($this->service->isAllowedUrl('https://lmcs.episciences.org/18068'));
+        $this->assertTrue($this->service->isAllowedUrl('https://transformations.episciences.org/articles/14776'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EpisciencesRootDomain_ReturnsTrue(): void
+    {
+        $this->assertTrue($this->service->isAllowedUrl('https://episciences.org/article/view/12345'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_MetadataEndpoint_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('http://169.254.169.254/latest/meta-data'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_InternalHost_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('http://internal-db:3306/123'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_EmptyString_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl(''));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_SpoofedHostname_ReturnsFalse(): void
+    {
+        // e.g. evil.episciences.org.attacker.com should NOT match episciences.org
+        $this->assertFalse($this->service->isAllowedUrl('http://evil.episciences.org.attacker.com/123'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_PercentEncodedIp_ReturnsFalse(): void
+    {
+        // 169%2E254%2E169%2E254 decodes to 169.254.169.254 — must be blocked
+        $this->assertFalse($this->service->isAllowedUrl('http://169%2E254%2E169%2E254/latest/meta-data'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_NonHttpScheme_ReturnsFalse(): void
+    {
+        $this->assertFalse($this->service->isAllowedUrl('ftp://lmcs.episciences.org/123'));
+        $this->assertFalse($this->service->isAllowedUrl('file:///etc/passwd'));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testIsAllowedUrl_CustomAllowedHosts_Override(): void
+    {
+        $custom = new Episciences(
+            $this->httpClient,
+            $this->pdfFolder,
+            $this->apiRight,
+            $this->logger,
+            false,
+            'example.org'
+        );
+        $this->assertTrue($custom->isAllowedUrl('https://sub.example.org/123'));
+        $this->assertFalse($custom->isAllowedUrl('https://lmcs.episciences.org/123'));
     }
 }

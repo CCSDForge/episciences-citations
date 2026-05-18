@@ -9,13 +9,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class User implements UserInterface
 {
 
-    private $id;
+    /** @phpstan-ignore property.unusedType */
+    private ?int $id = null;
 
-    private $username;
-    private $email;
-    private $uid;
-
-    private $roles = [];
+    private ?string $username = null;
+    private ?string $email = null;
+    private mixed $uid = null;
 
     public function getId(): ?int
     {
@@ -52,10 +51,11 @@ class User implements UserInterface
         return ($this->username === '__NO_USER__') ? ['ROLE_ANO'] :  ['ROLE_USER'] ;
     }
 
+    /**
+     * @param array<string> $roles
+     */
     public function setRoles(array $roles): self
     {
-    $this->roles = $roles;
-
     return $this;
     }
 
@@ -73,7 +73,8 @@ class User implements UserInterface
     /**
     * @see UserInterface
     */
-    public function eraseCredentials()
+    #[\Deprecated]
+    public function eraseCredentials(): void
     {
     // If you store any temporary, sensitive data on the user, clear it here
     // $this->plainPassword = null;
@@ -95,18 +96,12 @@ class User implements UserInterface
         $this->uid = $uid;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getUsername()
+    public function getUsername(): ?string
     {
         return $this->username;
     }
 
-    /**
-     * @param mixed $username
-     */
-    public function setUsername($username): void
+    public function setUsername(?string $username): void
     {
         $this->username = $username;
     }

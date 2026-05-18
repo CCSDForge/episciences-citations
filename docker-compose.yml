@@ -20,7 +20,10 @@ services:
       - epi-citations-php-fpm
       - epi-citations-db
     networks:
-      - epi-citations-network
+      epi-citations-network:
+      epi-network:
+        aliases:
+          - citations-dev.episciences.org
     command: >
       /bin/sh -c "chown -R www-data:www-data /var/www/data /var/www/cache /var/www/logs && httpd-foreground"
 
@@ -50,6 +53,9 @@ services:
       - APP_DEBUG=1
     expose:
       - "9000"  # Expose internal port 9000
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
     extra_hosts:
       - "dev.episciences.org:host-gateway"
       - "manager-dev.episciences.org:host-gateway"
@@ -59,6 +65,7 @@ services:
       - "api-dev.episciences.org:host-gateway"
     networks:
       - epi-citations-network
+      - epi-network
 
 
 
@@ -111,8 +118,9 @@ networks:
   epi-citations-network:
     name: epi-citations-network
     driver: bridge
+  epi-network:
+    external: true  # ← network created by episciences-gpl
 
 volumes:
   epi-citations-mysql-db:
-
 

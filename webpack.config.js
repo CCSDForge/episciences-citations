@@ -72,7 +72,11 @@ Encore
 
     // uncomment if you're having problems with a jQuery plugin
     //.autoProvidejQuery()
-    .enablePostCssLoader()
+    .enableSassLoader((options) => {
+        options.sassOptions = {
+            silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function'],
+        };
+    })
 ;
 
 

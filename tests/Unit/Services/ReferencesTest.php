@@ -2,6 +2,10 @@
 
 namespace App\Tests\Unit\Services;
 
+use Psr\Log\LoggerInterface;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Query;
+use PHPUnit\Framework\MockObject\MockObject;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -11,19 +15,24 @@ use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Grobid;
 use App\Services\References;
+use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class ReferencesTest extends TestCase
 {
     private References $service;
-    private EntityManagerInterface $entityManager;
-    private Grobid $grobid;
-    private Bibtex $bibtex;
-    private PaperReferencesRepository $refRepository;
-    private UserInformationsRepository $userRepository;
-    private DocumentRepository $documentRepository;
+    private MockObject $entityManager;
+    private MockObject $grobid;
+    private MockObject $bibtex;
+    private MockObject $solrReferenceEnricher;
+    private MockObject $refRepository;
+    private MockObject $userRepository;
+    private MockObject $documentRepository;
+    private MockObject $logger;
 
     protected function setUp(): void
     {
@@ -31,6 +40,10 @@ class ReferencesTest extends TestCase
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->grobid = $this->createMock(Grobid::class);
         $this->bibtex = $this->createMock(Bibtex::class);
+        $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $this->solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
+        $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
+        $this->logger = $this->createMock(LoggerInterface::class);
 
         // Mock repositories
         $this->refRepository = $this->createMock(PaperReferencesRepository::class);
@@ -41,11 +54,14 @@ class ReferencesTest extends TestCase
         $this->service = new References(
             $this->entityManager,
             $this->grobid,
-            $this->bibtex
+            $this->bibtex,
+            $this->solrReferenceEnricher,
+            $this->logger
         );
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testValidateChoicesReferencesByUser_Success(): void
     {
         // Arrange
@@ -104,6 +120,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testValidateChoicesReferencesByUser_WithDeletions(): void
     {
         // Arrange
@@ -149,25 +166,31 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferences_AllType_ReturnsFormatted(): void
     {
-        // Arrange
+        // Arrange — flat arrays, no JSON string wrapping
         $docId = 123456;
 
         $ref1 = new PaperReferences();
         $ref1->setId(1);
-        $ref1->setReference([json_encode([
+        $ref1->setReference([
             'raw_reference' => 'Test ref 1',
-            'csl' => ['type' => 'article', 'title' => 'Test']
-        ])]);
+            'csl' => ['type' => 'article', 'title' => 'Test'],
+            'detectors' => ['clayFeet', 'paperMill'],
+            'status' => ['watch'],
+            'pubpeerurl' => ['https://pubpeer.example/10.1234/test'],
+        ]);
         $ref1->setAccepted(1);
         $ref1->setReferenceOrder(0);
 
         $ref2 = new PaperReferences();
         $ref2->setId(2);
-        $ref2->setReference([json_encode(['raw_reference' => 'Test ref 2'])]);
+        $ref2->setReference(['raw_reference' => 'Test ref 2']);
         $ref2->setAccepted(0);
         $ref2->setReferenceOrder(1);
+
+        $formattedRef = ['raw_reference' => 'Formatted reference text'];
 
         // Mock Grobid service
         $this->grobid->expects($this->once())
@@ -175,10 +198,10 @@ class ReferencesTest extends TestCase
             ->with($docId)
             ->willReturn([$ref1, $ref2]);
 
-        // Mock Bibtex formatting
+        // getCslRefText now takes an array and returns an array
         $this->bibtex->expects($this->exactly(2))
             ->method('getCslRefText')
-            ->willReturn('Formatted reference text');
+            ->willReturn($formattedRef);
 
         // Act
         $result = $this->service->getReferences($docId, 'all');
@@ -188,14 +211,18 @@ class ReferencesTest extends TestCase
         $this->assertCount(2, $result);
         $this->assertArrayHasKey(1, $result);
         $this->assertArrayHasKey(2, $result);
-        $this->assertEquals('Formatted reference text', $result[1]['ref']);
+        $this->assertSame($formattedRef['raw_reference'], $result[1]['ref']['raw_reference']);
+        $this->assertSame(['clayFeet', 'paperMill'], $result[1]['ref']['detectors']);
+        $this->assertSame(['watch'], $result[1]['ref']['status']);
+        $this->assertSame(['https://pubpeer.example/10.1234/test'], $result[1]['ref']['pubpeerurl']);
         $this->assertEquals(1, $result[1]['isAccepted']);
         $this->assertEquals(0, $result[1]['referenceOrder']);
-        $this->assertArrayHasKey('csl', $result[1]); // CSL present
-        $this->assertArrayNotHasKey('csl', $result[2]); // No CSL
+        $this->assertArrayHasKey('csl', $result[1]);    // CSL present in ref1
+        $this->assertArrayNotHasKey('csl', $result[2]); // No CSL in ref2
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testAddNewReference_WithDoi_Success(): void
     {
         // Arrange
@@ -210,16 +237,20 @@ class ReferencesTest extends TestCase
             'id' => 123456,
             'addReference' => 'New test reference',
             'addReferenceDoi' => 'https://doi.org/10.1234/test-new',
-            'paperReferences' => [
-                ['reference_order' => 0],
-                ['reference_order' => 1]
-            ]
         ];
 
+        $qb = $this->createMock(QueryBuilder::class);
+        $query = $this->createMock(Query::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+        $query->method('getSingleScalarResult')->willReturn(1);
+
         // Mock repositories
-        $this->entityManager->expects($this->exactly(2))
+        $this->entityManager->expects($this->exactly(3))
             ->method('getRepository')
-            ->willReturnCallback(function($class) use ($user, $doc) {
+            ->willReturnCallback(function($class) use ($user, $doc, $qb) {
                 if ($class === UserInformations::class) {
                     $repo = $this->userRepository;
                     $repo->method('find')->willReturn($user);
@@ -228,6 +259,11 @@ class ReferencesTest extends TestCase
                 if ($class === Document::class) {
                     $repo = $this->documentRepository;
                     $repo->method('find')->willReturn($doc);
+                    return $repo;
+                }
+                if ($class === PaperReferences::class) {
+                    $repo = $this->refRepository;
+                    $repo->method('createQueryBuilder')->willReturn($qb);
                     return $repo;
                 }
             });
@@ -243,6 +279,7 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testPersistOrderRef_UpdatesOrdering(): void
     {
         // Arrange
@@ -262,7 +299,7 @@ class ReferencesTest extends TestCase
         $this->entityManager->expects($this->exactly(3))
             ->method('getRepository')
             ->with(PaperReferences::class)
-            ->willReturnCallback(function() use ($ref1, $ref2, $ref3) {
+            ->willReturnCallback(function() use ($ref1, $ref2, $ref3): PaperReferencesRepository {
                 $repo = $this->refRepository;
                 $repo->method('find')->willReturnOnConsecutiveCalls($ref1, $ref2, $ref3);
                 return $repo;
@@ -278,5 +315,66 @@ class ReferencesTest extends TestCase
         $this->assertEquals(0, $ref1->getReferenceOrder()); // ref5 → order 0
         $this->assertEquals(1, $ref2->getReferenceOrder()); // ref2 → order 1
         $this->assertEquals(2, $ref3->getReferenceOrder()); // ref8 → order 2
+    }
+
+    #[Test]
+    public function testAutosaveReference_WithMissingUserInfoKeys_HandlesGracefully(): void
+    {
+        // Arrange
+        $refId = 1;
+        $ref = new PaperReferences();
+        $this->refRepository->method('find')->willReturn($ref);
+        
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+                [UserInformations::class, $this->userRepository],
+            ]);
+
+        // Expect user to be persisted if new
+        $this->entityManager->expects($this->exactly(2))->method('persist');
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $userInfo = ['UID' => 1001]; // Missing FIRSTNAME, LASTNAME
+
+        // Act
+        $result = $this->service->autosaveReference($refId, '{}', 1, false, $userInfo);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertNotNull($ref->getUid());
+        $this->assertEquals(1001, $ref->getUid()->getId());
+        $this->assertEquals('', $ref->getUid()->getSurname());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_WithEmptyForm(): void
+    {
+        // Arrange
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $form = [
+            // 'paperReferences' is missing
+            'orderRef' => ''
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function($class) use ($user): MockObject {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            return $this->createMock(PaperReferencesRepository::class);
+        });
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertEquals(0, $result['referencePersisted']);
     }
 }

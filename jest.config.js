@@ -8,7 +8,7 @@ module.exports = {
     '!assets/app.js',
     '!assets/bootstrap.js',
     '!assets/__tests__/**',
-    '!assets/js/extract.js', // TODO: Add tests for this legacy file (426 lines)
+    // 'assets/js/extract.js', // Tests added
   ],
   coverageThreshold: {
     global: {

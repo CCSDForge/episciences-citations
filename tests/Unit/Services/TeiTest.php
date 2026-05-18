@@ -2,32 +2,41 @@
 
 namespace App\Tests\Unit\Services;
 
+use PHPUnit\Framework\MockObject\MockObject;
+use App\Repository\PaperReferencesRepository;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
+use App\Services\SolrReferenceEnricher;
 use App\Services\Tei;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class TeiTest extends TestCase
 {
     private Tei $service;
-    private EntityManagerInterface $entityManager;
-    private DocumentRepository $documentRepository;
+    private MockObject $entityManager;
+    private MockObject $documentRepository;
+    private MockObject $solrReferenceEnricher;
 
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->documentRepository = $this->createMock(DocumentRepository::class);
+        $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
+        $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
 
         $this->service = new Tei(
             $this->entityManager,
-            $this->documentRepository
+            $this->documentRepository,
+            $this->solrReferenceEnricher
         );
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferencesInTei_ValidTei_ExtractsReferences(): void
     {
         // Arrange - Use the TEI sample file
@@ -40,13 +49,15 @@ class TeiTest extends TestCase
         $this->assertIsArray($result);
         $this->assertGreaterThan(0, count($result), 'Should extract at least one reference');
 
-        // Verify structure of the first reference
-        $firstRef = json_decode($result[0], true);
+        // Each element is now a flat associative array (not a JSON string)
+        $firstRef = $result[0];
+        $this->assertIsArray($firstRef);
         $this->assertArrayHasKey('raw_reference', $firstRef);
         $this->assertNotEmpty($firstRef['raw_reference']);
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetReferencesInTei_InvalidXml_ReturnsEmpty(): void
     {
         // Arrange - Invalid XML
@@ -61,13 +72,14 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferencesInDB_NewDocument_CreatesDocumentAndReferences(): void
     {
-        // Arrange
+        // Arrange — references are now flat arrays, not JSON strings
         $docId = 123456;
         $references = [
-            json_encode(['raw_reference' => 'Test reference 1', 'doi' => '10.1234/test1']),
-            json_encode(['raw_reference' => 'Test reference 2'])
+            ['raw_reference' => 'Test reference 1', 'doi' => '10.1234/test1'],
+            ['raw_reference' => 'Test reference 2'],
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
@@ -78,7 +90,7 @@ class TeiTest extends TestCase
             ->willReturn(null);
 
         // Mock repository for removeAllRefGrobidSource
-        $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $refRepo = $this->createMock(PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([]);
 
         $this->entityManager->expects($this->once())
@@ -102,12 +114,13 @@ class TeiTest extends TestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferencesInDB_ExistingDocument_PreservesAcceptedReferences(): void
     {
-        // Arrange
+        // Arrange — references are now flat arrays
         $docId = 123456;
         $newReferences = [
-            json_encode(['raw_reference' => 'New reference 1'])
+            ['raw_reference' => 'New reference 1'],
         ];
         $source = PaperReferences::SOURCE_METADATA_GROBID;
 
@@ -117,7 +130,7 @@ class TeiTest extends TestCase
 
         $acceptedRef = new PaperReferences();
         $acceptedRef->setId(1);
-        $acceptedRef->setReference([json_encode(['raw_reference' => 'Accepted reference'])]);
+        $acceptedRef->setReference(['raw_reference' => 'Accepted reference']);
         $acceptedRef->setAccepted(1);
         $acceptedRef->setReferenceOrder(0);
         $acceptedRef->setDocument($existingDoc);
@@ -131,7 +144,7 @@ class TeiTest extends TestCase
             ->willReturn($existingDoc);
 
         // Mock repository for removeAllRefGrobidSource
-        $refRepo = $this->createMock(\App\Repository\PaperReferencesRepository::class);
+        $refRepo = $this->createMock(PaperReferencesRepository::class);
         $refRepo->method('findBy')->willReturn([$acceptedRef]);
 
         $this->entityManager->expects($this->once())

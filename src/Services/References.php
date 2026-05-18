@@ -4,18 +4,27 @@ use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
+    private const array SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
-    public function __construct(private EntityManagerInterface $entityManager,private Grobid $grobid, private Bibtex $bibtex)
+
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly Grobid $grobid,
+        private readonly Bibtex $bibtex,
+        private readonly SolrReferenceEnricher $solrReferenceEnricher,
+        private readonly LoggerInterface $logger
+    )
     {
     }
 
     /**
-     * @param array $form
-     * @param array $userInfo
-     * @return int[]
+     * @param array<string, mixed> $form
+     * @param array<string, mixed> $userInfo
+     * @return array{orderPersisted: int, referencePersisted: int}
      */
     public function validateChoicesReferencesByUser(array $form, array $userInfo) : array
     {
@@ -23,38 +32,60 @@ class References {
         $orderChanged = 0;
 
         // Récupérer ou créer l'utilisateur UNE SEULE FOIS avant la boucle (optimisation)
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-        if (is_null($user)) {
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
+        if (is_null($user) && isset($userInfo['UID'])) {
             $user = new UserInformations();
-            $user->setId($userInfo['UID']);
-            $user->setSurname($userInfo['FIRSTNAME']);
-            $user->setName($userInfo['LASTNAME']);
+            $user->setId((int) $userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME'] ?? '');
+            $user->setName($userInfo['LASTNAME'] ?? '');
             $this->entityManager->persist($user);
         }
 
-        foreach ($form['paperReferences'] as $paperReference) {
+        if (is_null($user)) {
+             return ['orderPersisted' => 0, 'referencePersisted' => 0];
+        }
+
+        $referencesToEnrich = [];
+        $paperReferences = $form['paperReferences'] ?? [];
+        foreach ($paperReferences as $paperReference) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
             if (!isset($paperReference['checkboxIdTodelete'])) {
                 if (!is_null($ref) && isset($paperReference['accepted'])) {
+                    if (isset($paperReference['reference'])) {
+                        $ref->setReference($this->normalizeReferenceInput($paperReference['reference']));
+                    }
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
                     }
-                    $ref->setAccepted($paperReference['accepted']);
-                    $ref->setUpdatedAt(new \DateTimeImmutable());
-                    $ref->setUid($user);
-                    $user->addPaperReferences($ref);
-                    $this->entityManager->persist($ref);
-                    $refChanged++;
+                    if (isset($paperReference['accepted']) && $paperReference['accepted'] !== '') {
+                        $newAccepted = (int) $paperReference['accepted'];
+                        if ($ref->getAccepted() !== $newAccepted) {
+                            $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
+                            $ref->setAccepted($newAccepted);
+                            $refChanged++;
+                        }
+                    } elseif (is_null($ref->getAccepted())) {
+                        $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
+                        $ref->setAccepted(0);
+                        $refChanged++;
+                    }
+
+                    if (isset($paperReference['accepted'])) {
+                        $ref->setUpdatedAt(new \DateTimeImmutable());
+                        $ref->setUid($user);
+                        $user->addPaperReferences($ref);
+                        $this->entityManager->persist($ref);
+                        $referencesToEnrich[] = $ref;
+                    }
                 }
-            } else {
-                if (!is_null($ref)) {
-                    $this->entityManager->remove($ref);
-                    $refChanged++;
-                }
+            } elseif (!is_null($ref)) {
+                $this->entityManager->remove($ref);
+                $refChanged++;
             }
 
         }
-        $orderChanged = $this->persistOrderRef($form['orderRef'], $orderChanged);
+        $this->enrichPaperReferences($referencesToEnrich);
+        $orderChanged = $this->persistOrderRef($form['orderRef'] ?? '', $orderChanged);
 
         // UN SEUL flush() pour toutes les opérations (optimisation performance - gain 80-90%)
         $this->entityManager->flush();
@@ -63,19 +94,16 @@ class References {
     }
 
     /**
-     * @param int $docId
-     * @param string $type
-     * @return array
+     * @param 'all'|'accepted' $type
+     * @return array<int, array<string, mixed>>
      * @throws CiteProcException
-     * @throws \JsonException
      */
-    public function getReferences(int $docId,string $type = "all"|"accepted"): array
+    public function getReferences(int $docId, string $type = 'all'): array
     {
         // Récupérer les références selon le type (utilise match pour PHP 8+)
         $references = match($type) {
             'all' => $this->grobid->getAllGrobidReferencesFromDB($docId),
             'accepted' => $this->grobid->getAcceptedReferencesFromDB($docId),
-            default => throw new \InvalidArgumentException("Invalid type: {$type}")
         };
 
         $rawReferences = [];
@@ -83,23 +111,23 @@ class References {
         /** @var PaperReferences $reference */
         foreach ($references as $reference) {
             $refId = $reference->getId();
-            $referenceArray = $reference->getReference();
+            $refData = $reference->getReference();
 
-            if (empty($referenceArray)) {
+            if (empty($refData)) {
                 continue;
             }
 
-            $firstReference = $referenceArray[0];
+            $formattedReference = $this->bibtex->getCslRefText($refData);
+            foreach (self::SOLR_REFERENCE_FIELDS as $field) {
+                if (array_key_exists($field, $refData)) {
+                    $formattedReference[$field] = $refData[$field];
+                }
+            }
 
-            // Decoder UNE SEULE FOIS (optimisation - gain 30-40%)
-            $jsonReference = json_decode($firstReference, true, 512, JSON_THROW_ON_ERROR);
+            $rawReferences[$refId]['ref'] = $formattedReference;
 
-            // Traiter via bibtex pour le texte formaté
-            $rawReferences[$refId]['ref'] = $this->bibtex->getCslRefText($firstReference);
-
-            // Ajouter CSL seulement si présent
-            if (array_key_exists('csl', $jsonReference)) {
-                $rawReferences[$refId]['csl'] = $firstReference;
+            if (array_key_exists('csl', $refData)) {
+                $rawReferences[$refId]['csl'] = $refData;
             }
 
             $rawReferences[$refId]['isAccepted'] = $reference->getAccepted();
@@ -109,31 +137,31 @@ class References {
         return $rawReferences;
     }
 
-    /**
-     * @param $docId
-     * @return Document|null
-     */
-    public function getDocument($docId): ?Document
+    public function getDocument(int $docId): ?Document
     {
         return $this->entityManager->getRepository(Document::class)->find($docId);
     }
 
     /**
-     * @throws \JsonException
+     * @param array<string, mixed> $form
+     * @param array<string, mixed> $userInfo
      */
     public function addNewReference(array $form, array $userInfo): bool
     {
-        if ($form['addReference'] !== ""){
+        $addReference = $form['addReference'] ?? "";
+        if ($addReference !== ""){
             $ref = new PaperReferences();
-            $refInfo = ['raw_reference'=>$form['addReference']];
-            if ($form['addReferenceDoi'] !== "") {
-                $regexDoiOrg = "/^https?:\/\/(?:dx\.|www\.)?doi\.org\/(10\.[0-9]{4,}(?:\.[0-9]+)*(?:\/|%2F)(?:(?![\"&\'])\S)+)/";
-                if (preg_match($regexDoiOrg, $form['addReferenceDoi'],$matches)) {
-                    $form['addReferenceDoi'] = $matches[1];
+            $refInfo = ['raw_reference'=>$addReference];
+            $addReferenceDoi = $form['addReferenceDoi'] ?? "";
+            if ($addReferenceDoi !== "") {
+                $regexDoiOrg = "/^https?:\\/\\/(?:dx\\.|www\\.)?doi\\.org\\/(10\\.\\d{4,}(?:\\.\\d+)*(?:\\/|%2F)(?:(?![\"&\\'])\\S)+)/";
+                if (preg_match($regexDoiOrg, (string) $addReferenceDoi,$matches)) {
+                    $addReferenceDoi = $matches[1];
                 }
-                $refInfo['doi'] = $form['addReferenceDoi'];
+                $refInfo['doi'] = $addReferenceDoi;
             }
-            $ref->setReference([json_encode($refInfo,JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)]);
+            $refInfo = $this->solrReferenceEnricher->enrichReference($refInfo);
+            $ref->setReference($refInfo);
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
             if (is_null($user)) {
@@ -145,8 +173,9 @@ class References {
             $ref->setUid($user);
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
-            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($form['id']));
-            $counter = isset($form['paperReferences']) ? $this->getLastOrder($form['paperReferences']) + 1 : 0 ;
+            $docId = (int) ($form['id'] ?? 0);
+            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($docId));
+            $counter = $this->getLastOrder($docId) + 1;
             $ref->setReferenceOrder($counter);
             $this->entityManager->persist($ref);
             $this->entityManager->flush();
@@ -155,12 +184,7 @@ class References {
         return false;
     }
 
-    /**
-     * @param $orderRef
-     * @param int $orderChanged
-     * @return int
-     */
-    public function persistOrderRef($orderRef, int $orderChanged): int
+    public function persistOrderRef(string $orderRef, int $orderChanged): int
     {
         $orderRefArray = explode(";", $orderRef);
         foreach ($orderRefArray as $order => $pkRef) {
@@ -175,10 +199,10 @@ class References {
         return $orderChanged;
     }
 
-    public function documentAlreadyExtracted($docId): bool {
-        return $this->getDocument($docId) !== null;
+    public function documentAlreadyExtracted(int $docId): bool {
+        return $this->getDocument($docId) instanceof Document;
     }
-    public function createDocumentId($docId){
+    public function createDocumentId(int $docId): Document{
         $doc = new Document();
         $doc->setId($docId);
         $this->entityManager->persist($doc);
@@ -186,9 +210,104 @@ class References {
         return $doc;
     }
 
-    public function getLastOrder(array $paperReferences){
-        $paperReferences = array_column($paperReferences, 'reference_order');
-        sort($paperReferences);
-        return $paperReferences[array_key_last($paperReferences)];
+    public function getLastOrder(int $docId): int
+    {
+        $result = $this->entityManager->getRepository(PaperReferences::class)
+            ->createQueryBuilder('p')
+            ->select('MAX(p.referenceOrder)')
+            ->where('p.document = :docId')
+            ->setParameter('docId', $docId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result !== null ? (int) $result : -1;
+    }
+
+    public function autosaveOrder(string $orderRef): void
+    {
+        $this->persistOrderRef($orderRef, 0);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param array<string, mixed> $userInfo
+     * @return array<string, mixed>
+     */
+    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): array
+    {
+        $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
+        if ($ref === null) {
+            return [];
+        }
+
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
+        if ($user === null && isset($userInfo['UID'])) {
+            $user = new UserInformations();
+            $user->setId((int) $userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME'] ?? '');
+            $user->setName($userInfo['LASTNAME'] ?? '');
+            $this->entityManager->persist($user);
+        }
+
+        if ($user === null) {
+             // Fallback or handle error if UID is missing
+             return [];
+        }
+
+        $refData = json_decode($referenceJson, true) ?? [];
+        $refData = $this->solrReferenceEnricher->enrichReference($refData);
+        $ref->setReference($refData);
+        
+        if ($ref->getAccepted() !== $accepted) {
+            $this->logger->info('Autosave: Updating accepted state', ['id' => $refId, 'old' => $ref->getAccepted(), 'new' => $accepted]);
+            $ref->setAccepted($accepted);
+        }
+
+        if ($isDirty) {
+            $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+        }
+        $ref->setUpdatedAt(new \DateTimeImmutable());
+        $ref->setUid($user);
+        $user->addPaperReferences($ref);
+        $this->entityManager->persist($ref);
+        $this->entityManager->flush();
+
+        return $refData;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeReferenceInput(mixed $reference): array
+    {
+        if (is_array($reference)) {
+            return $reference;
+        }
+
+        if (is_string($reference)) {
+            $decoded = json_decode($reference, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<int, PaperReferences> $paperReferences
+     */
+    private function enrichPaperReferences(array $paperReferences): void
+    {
+        if ($paperReferences === []) {
+            return;
+        }
+
+        $references = array_map(
+            static fn (PaperReferences $paperReference): array => $paperReference->getReference(),
+            $paperReferences
+        );
+
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $index => $reference) {
+            $paperReferences[$index]->setReference($reference);
+        }
     }
 }

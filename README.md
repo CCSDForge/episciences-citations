@@ -2,8 +2,8 @@
 
 ![GPL](https://img.shields.io/github/license/CCSDForge/episciences-citations)
 ![Language](https://img.shields.io/github/languages/top/CCSDForge/episciences-citations)
-![Symfony](https://img.shields.io/badge/Symfony-6.4-black)
-![PHP](https://img.shields.io/badge/PHP-8.2--8.4-777BB4)
+![Symfony](https://img.shields.io/badge/Symfony-7.4-black)
+![PHP](https://img.shields.io/badge/PHP-8.4-777BB4)
 
 [![Tests](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/tests.yml)
 [![Lint](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/CCSDForge/episciences-citations/actions/workflows/lint.yml)
@@ -38,21 +38,25 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 - **Multi-language Support**: Interface available in English and French
 - **Export Capabilities**: Export citations in various formats
 - **User Authentication**: Secure CAS-based authentication system
-- **Modern UI**: Responsive interface built with Tailwind CSS
+- **Modern UI**: Responsive interface built with Bootstrap 5
 
 ## Tech Stack
 
 **Backend:**
-- PHP 8.2+
-- Symfony 6.4
-- Doctrine ORM
+- PHP 8.4
+- Symfony 7.4
+- Doctrine ORM 3.0
 - MySQL/MariaDB
 
+**Analysis & Modernization:**
+- PHPStan 2.1 (Static Analysis)
+- Rector 2.4 (Automated Upgrades)
+
 **Frontend:**
-- Tailwind CSS 3.2.7
+- Bootstrap 5.3.8
 - Stimulus (Hotwired)
 - Webpack Encore
-- FontAwesome 6.4.0
+- FontAwesome 7.1.0
 
 **External Services:**
 - GROBID (for PDF citation extraction)
@@ -61,7 +65,7 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 ## Requirements
 
-- PHP 8.2 or higher
+- PHP 8.4
 - Composer
 - Node.js 16+ and npm/yarn
 - MySQL 5.7+ or MariaDB 10.3+
@@ -85,23 +89,25 @@ Developed by the [Center for Direct Scientific Communication (CCSD)](https://www
 
 3. **Start Docker containers**
    ```bash
-   docker-compose up -d
+   make up
    ```
 
 4. **Install dependencies**
    ```bash
-   docker exec epi-citations-php-fpm composer install
-   docker exec epi-citations-php-fpm npm install
+   make composer-install
+   make npm-install
    ```
 
 5. **Run database migrations**
    ```bash
-   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate --no-interaction
+   make db-test-migrate # for test environment
+   # or manually for dev
+   docker exec epi-citations-php-fpm php bin/console doctrine:migrations:migrate
    ```
 
 6. **Build frontend assets**
    ```bash
-   docker exec epi-citations-php-fpm npm run build
+   make npm-build
    ```
 
 7. **Access the application**
@@ -174,6 +180,7 @@ DATABASE_URL="mysql://user:password@127.0.0.1:3306/episciences_citations?serverV
 # External Services
 GROBID_URL=http://grobid-server:8070
 SEMANTIC_SCHOLAR_API_URL=https://api.semanticscholar.org/
+API_S2_KEY=your-semantic-scholar-api-key-here
 
 # CAS Authentication
 CAS_SERVER_URL=your-cas-server-url
@@ -199,6 +206,14 @@ For production deployment, configure your web server to point to the `public/` d
 
 ## Development
 
+### Makefile
+
+The project uses a `Makefile` to simplify common tasks. It is recommended to use these commands to ensure consistency between development environments.
+
+```bash
+make help # Display all available commands
+```
+
 ### Available Commands
 
 ```bash
@@ -215,13 +230,15 @@ php bin/console doctrine:schema:validate # Validate database schema
 # Code quality
 composer install --dev                   # Install dev dependencies
 vendor/bin/phpunit                       # Run tests
+make rector-dry                          # Preview PHP migration changes
+make rector                              # Apply PHP migration changes
 ```
 
 ### Coding Standards
 
 - **PHP**: Follow Symfony coding standards (PSR-12)
 - **JavaScript**: ES6+ syntax with Stimulus controllers
-- **CSS**: Tailwind utility-first approach with custom components
+- **CSS**: Bootstrap utility classes with custom SCSS components
 
 ## Project Structure
 
@@ -230,7 +247,7 @@ episciences-citations/
 ├── assets/                 # Frontend assets
 │   ├── controllers/       # Stimulus controllers
 │   ├── js/               # JavaScript files
-│   └── styles/           # CSS/Tailwind files
+│   └── styles/           # CSS/Bootstrap/Sass files
 ├── config/               # Symfony configuration
 ├── docker/              # Docker configuration files
 ├── migrations/          # Database migrations
@@ -250,13 +267,206 @@ episciences-citations/
 
 ## API Documentation
 
-The application provides both a web interface and API endpoints:
+The application provides both a web interface and API endpoints.
 
-- **Web Interface**: `/` - Main application interface
-- **View References**: `/en/viewref/{docId}` or `/fr/viewref/{docId}`
-- **Public API**: Various endpoints for citation retrieval and management
+### Web Interface
 
-For detailed API documentation, refer to the controller annotations in `src/Controller/`.
+| Route | Description |
+|-------|-------------|
+| `/` | Main application interface |
+| `/{en\|fr}/viewref/{docid}` | View and manage references for a document |
+
+### Public API Endpoints
+
+#### `GET /api/extract`
+
+Downloads the PDF from Episciences and extracts its bibliographic references via GROBID. This is a synchronous endpoint — the request blocks until extraction completes (typically a few seconds). If references have already been extracted for this document, returns immediately without re-running GROBID.
+
+**Authentication**
+
+The endpoint is protected by a Bearer token when `API_EXTRACT_TOKEN` is configured (see `.env.dist`). Pass the token in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer <your-token>" \
+  'https://citations-dev.episciences.org/api/extract?url=...'
+```
+
+If `API_EXTRACT_TOKEN` is empty or unset, authentication is disabled and the endpoint is publicly accessible.
+
+**Query parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `url` | Yes | URL of the PDF to download (any publicly accessible URL) |
+| `docid` | Conditional | Episciences document ID to associate the references with. Required when the URL does not contain a numeric ID (e.g. arXiv, HAL, external repository). |
+
+**Examples**
+
+```bash
+# Episciences URL — docid extracted automatically
+curl -H "Authorization: Bearer mytoken" \
+  'https://citations-dev.episciences.org/api/extract?url=https://episciences.org/article/view/17204'
+
+# External PDF URL — docid must be provided explicitly
+curl -H "Authorization: Bearer mytoken" \
+  'https://citations-dev.episciences.org/api/extract?url=https://arxiv.org/pdf/2506.15295v1&docid=17204'
+
+# Document already processed — returns immediately, GROBID not invoked again
+# → {"success":true,"docid":17204,"alreadyExtracted":true,"referenceCount":42}
+```
+
+**Responses**
+
+| Status | Body | Description |
+|--------|------|-------------|
+| `200 OK` | `{"success": true, "docid": 17204, "alreadyExtracted": false}` | Extraction succeeded |
+| `200 OK` | `{"success": true, "docid": 17204, "alreadyExtracted": true, "referenceCount": 42}` | Already extracted — no GROBID call made |
+| `200 OK` | `{"success": false, "docid": 17204, "error": "No references found in the PDF"}` | PDF parsed but no references detected |
+| `400 Bad Request` | `{"success": false, "error": "Missing required parameter: url"}` | `url` parameter absent |
+| `400 Bad Request` | `{"success": false, "error": "Could not extract a document ID from the provided URL"}` | URL contains no numeric ID |
+| `401 Unauthorized` | `{"success": false, "error": "Unauthorized"}` | Token missing or incorrect |
+| `404 Not Found` | `{"success": false, "error": "..."}` | PDF not found on Episciences |
+| `502 Bad Gateway` | `{"success": false, "error": "..."}` | Episciences API error |
+
+#### `GET /visualize-citations`
+
+Returns bibliographic references for a document in formatted JSON. This endpoint is used by the Episciences platform widget.
+
+**Query parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `url` | Yes | Episciences document URL or PDF URL. The document ID is extracted from this URL. |
+| `all` | No | When set to `1`, returns all references. Otherwise, only accepted references are returned. |
+
+**Example**
+
+```bash
+curl 'https://citations-dev.episciences.org/visualize-citations?url=http%3A%2F%2Fdev.episciences.org%2F17458%2Fpdf&all=1'
+```
+
+**Successful response format**
+
+The response is a JSON object keyed by internal reference ID. Each value contains the formatted reference data and display metadata.
+
+```json
+{
+  "12345": {
+    "ref": {
+      "raw_reference": "Doe, J. (2024). Example article. Example Journal.",
+      "doi": "10.1234/example",
+      "detectors": ["clayFeet"],
+      "status": ["watch"],
+      "pubpeerurl": ["https://pubpeer.com/publications/10.1234/example"]
+    },
+    "csl": {
+      "raw_reference": "Doe, J. (2024). Example article. Example Journal.",
+      "doi": "10.1234/example",
+      "csl": {
+        "type": "article-journal",
+        "title": "Example article"
+      },
+      "detectors": ["clayFeet"],
+      "status": ["watch"],
+      "pubpeerurl": ["https://pubpeer.com/publications/10.1234/example"]
+    },
+    "isAccepted": 1,
+    "referenceOrder": 0
+  }
+}
+```
+
+**Reference object fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ref` | object | Formatted reference data. It always contains the displayable `raw_reference` when available. |
+| `ref.raw_reference` | string | Human-readable reference text. For CSL references, it is rendered from the CSL payload. |
+| `ref.doi` | string | DOI of the reference, when known. |
+| `ref.detectors` | string[] | Optional Solr enrichment field. Contains detector names returned for the DOI. |
+| `ref.status` | string[] | Optional Solr enrichment field. Possible values are `Problematic` and `Genuine`. |
+| `ref.pubpeerurl` | string[] | Optional Solr enrichment field. Contains PubPeer URLs returned for the DOI. Values may be absent when no valid Solr match exists. |
+| `csl` | object | Present only when the stored reference contains CSL metadata. This object contains the original stored reference payload, including the nested `csl` data. |
+| `isAccepted` | integer | `1` when the reference is accepted, `0` otherwise. |
+| `referenceOrder` | integer | Display order of the reference in the document. |
+
+Solr enrichment fields are optional and are only present when the reference was enriched by DOI. When Solr has no match for a DOI, these keys are omitted from the reference object.
+
+Known `detectors` values currently returned by the Solr facet are:
+
+```text
+clayFeet
+annulled
+tortured
+expression-of-concern
+suspect
+citejacked
+deindexed
+Seek&Blastn
+journal-cases
+scigen
+problematic-cell-lines
+mathgen
+sbir
+```
+
+**Other responses**
+
+| Status | Body | Description |
+|--------|------|-------------|
+| `200 OK` | `{"status": 200, "message": "No reference found"}` | The document exists but no matching references were found for the requested mode. |
+| `400 Bad Request` | `{"status": 400, "message": "An URL is missing"}` | `url` parameter absent. |
+| `400 Bad Request` | `{"status": 400, "message": "A docid is missing"}` | The document ID could not be extracted from the URL. |
+| `403 Forbidden` | `{"status": 403, "message": "Forbidden"}` | Request blocked by CORS origin validation. |
+
+For other endpoints, refer to the controller annotations in `src/Controller/`.
+
+## Importing References via Semantic Scholar
+
+The application supports importing and enriching references for a batch of documents using the [Semantic Scholar API](https://www.semanticscholar.org/product/api).
+
+### 1. Configuration
+
+Obtain a Semantic Scholar API key and add it to your `.env.local` file:
+
+```env
+API_S2_KEY=your_api_key_here
+```
+
+### 2. Prepare the Input File
+
+Create a CSV file containing the list of documents to process. The CSV must include a header row with at least two columns:
+- `docid`: The Episciences internal document ID.
+- `doi`: The DOI of the paper for which you want to retrieve references.
+
+Example `import.csv`:
+```csv
+docid,doi
+17204,10.1038/s41586-021-03430-5
+17458,10.1126/science.abc1234
+```
+
+### 3. Run the Import Command
+
+Execute the following console command to process the CSV:
+
+```bash
+# Inside Docker
+docker exec epi-citations-php-fpm php bin/console app:get-bibref path/to/import.csv --api S2
+
+# Manual setup
+php bin/console app:get-bibref path/to/import.csv --api S2
+```
+
+### 4. Optional: BibTeX Export
+
+To export the retrieved references to BibTeX files (one per document), use the `--output` option:
+
+```bash
+php bin/console app:get-bibref path/to/import.csv --api S2 --output ./var/export/bib/
+```
+
+The command will generate files named `{docid}.bib` in the specified directory.
 
 ## Testing
 

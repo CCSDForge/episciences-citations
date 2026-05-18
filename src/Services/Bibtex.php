@@ -3,6 +3,7 @@
 namespace App\Services;
 
 
+use Seboettg\CiteProc\Exception\CiteProcException;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
@@ -15,7 +16,6 @@ use RenanBr\BibTexParser\Parser;
 use RenanBr\BibTexParser\Processor\NamesProcessor;
 use RenanBr\BibTexParser\Processor\TagNameCaseProcessor;
 use RenanBr\BibTexParser\Processor\TrimProcessor;
-use RenanBr\BibTexParser\Processor\LatexToUnicodeProcessor;
 use Seboettg\CiteProc\CiteProc;
 use Seboettg\CiteProc\StyleSheet;
 
@@ -23,23 +23,27 @@ class Bibtex
 {
     public const REPLACE_CSL_EXCEPTION_STRING = [" (1–)"," (1–,"];
     private static LoggerInterface $loggerSingleton;
-    public function __construct(private Doi $doi,private EntityManagerInterface $entityManager, private LoggerInterface $logger)
+    public function __construct(
+        private readonly Doi $doi,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly LoggerInterface $logger,
+        private readonly SolrReferenceEnricher $solrReferenceEnricher
+    )
     {
         $this->initStatic();
     }
 
     /**
-     * @param $bibtexFile
-     * @return string[]
+     * @param mixed $bibtexFile file path (string/UploadedFile) or raw BibTeX string
+     * @return list<array<string, mixed>>|array{error: string}
      */
-    public static function convertBibtexToArray($bibtexFile, $isFile = true): array
+    public static function convertBibtexToArray(mixed $bibtexFile, bool $isFile = true): array
     {
         // Create and configure a Listener
         $listener = new Listener();
         $listener->addProcessor(new TagNameCaseProcessor(CASE_LOWER));
         $listener->addProcessor(new TrimProcessor());
         $listener->addProcessor(new NamesProcessor());
-        $listener->addProcessor(new LatexToUnicodeProcessor());
         $parser = new Parser();
         $parser->addListener($listener);
         try {
@@ -66,7 +70,7 @@ class Bibtex
         }
         return $entries;
     }
-    public function initStatic()
+    public function initStatic(): void
     {
         self::$loggerSingleton = $this->logger;
     }
@@ -74,23 +78,27 @@ class Bibtex
     {
         return self::$loggerSingleton;
     }
-    public static function generateCSL($entry): array
+    /**
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
+    public static function generateCSL(array $entry): array
     {
         $csl = [
-            'type' => lcfirst($entry['type']),
+            'type' => lcfirst((string) ($entry['type'] ?? 'misc')),
             'author' => [],
-            'title' => $entry['title'],
+            'title' => $entry['title'] ?? '',
             'issued' => [
                 'date-parts' => [
-                    [$entry['year']]
+                    [$entry['year'] ?? '']
                 ]
             ]
         ];
-        foreach ($entry['author'] as $author) {
-            $csl['author'][] = array(
-                'family' => $author['last'],
-                'given' => $author['first']
-            );
+        foreach ($entry['author'] ?? [] as $author) {
+            $csl['author'][] = [
+                'family' => $author['last'] ?? '',
+                'given' => $author['first'] ?? ''
+            ];
         }
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
@@ -102,7 +110,7 @@ class Bibtex
             if (isset($entry['volume'])){
                 $csl['volume'] = $entry['volume'];
             }
-            if (isset($csl['issue'])){
+            if (isset($entry['number'])){
                 $csl['issue'] = $entry['number'];
             }
             if (isset($entry['pages'])){
@@ -120,19 +128,17 @@ class Bibtex
     }
 
     /**
-     * @param $bibtexFile
-     * @param $userInfo
-     * @param $docId
-     * @return array|string[]
+     * @param array<string, mixed> $userInfo
+     * @return array{error: string}|array{}
      * @throws \JsonException
      */
-    public function processBibtex($bibtexFile,$userInfo,$docId)
+    public function processBibtex(mixed $bibtexFile, array $userInfo, int $docId): array
     {
         $allBibFromDocId = $this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
         $countAllRef = count($this->entityManager->getRepository(PaperReferences::class)
             ->findBy(['document' => $docId]));
-        if (!empty($allBibFromDocId)){
+        if ($allBibFromDocId !== []){
             foreach ($allBibFromDocId as $bib){
                 $this->entityManager->remove($bib);
             }
@@ -143,59 +149,71 @@ class Bibtex
             return ['error' => $bibtex['error']];
         }
 
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+        if (is_null($user)) {
+            $user = new UserInformations();
+            $user->setId($userInfo['UID']);
+            $user->setSurname($userInfo['FIRSTNAME']);
+            $user->setName($userInfo['LASTNAME']);
+        }
+        $document = $this->entityManager->getRepository(Document::class)->find($docId);
+        $references = [];
         foreach ($bibtex as $bibtexInfo) {
+            $doi = $bibtexInfo['doi'] ?? null;
+            if ($doi === null && isset($bibtexInfo['url'])) {
+                // Try to extract DOI from URL if present
+                $doiRegex = '/10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+/';
+                if (preg_match($doiRegex, (string) $bibtexInfo['url'], $matches)) {
+                    $doi = $matches[0];
+                }
+            }
+
             if (array_key_exists('crossref_doi', $bibtexInfo)) {
                 $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
-                $reference = (['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                    'doi' => $bibtexInfo['crossref_doi']]);
+                $references[] = [
+                    'csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
+                    'doi' => $bibtexInfo['crossref_doi']
+                ];
             } else {
-                $csl = self::generateCSL($bibtexInfo);
-                $reference = (['csl' => $csl]);
+                $refData = ['csl' => self::generateCSL($bibtexInfo)];
+                if ($doi !== null) {
+                    $refData['doi'] = $doi;
+                }
+                $references[] = $refData;
             }
+        }
+        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
             $ref = new PaperReferences();
-            $ref->setReference([json_encode($reference)]);
+            $ref->setReference($reference);
             $ref->setSource(PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT);
-            $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-            if (is_null($user)) {
-                $user = new UserInformations();
-                $user->setId($userInfo['UID']);
-                $user->setSurname($userInfo['FIRSTNAME']);
-                $user->setName($userInfo['LASTNAME']);
-            }
             $ref->setUid($user);
             $ref->setAccepted(1);
             $ref->setUpdatedAt(new \DateTimeImmutable());
-            $ref->setDocument($this->entityManager->getRepository(Document::class)->find($docId));
+            $ref->setDocument($document);
             $ref->setReferenceOrder($countAllRef++);
             $this->entityManager->persist($ref);
-            $this->entityManager->flush();
         }
+        $this->entityManager->flush();
         return [];
     }
 
     /**
-     * @param $jsonCsl
-     * @return false|mixed|string
+     * @param array<string, mixed> $refData
+     * @return array<string, mixed>
+     * @throws CiteProcException
      * @throws \JsonException
-     * @throws \Seboettg\CiteProc\Exception\CiteProcException
      */
-    public function getCslRefText($jsonCsl) {
-        $jsonReference = json_decode($jsonCsl, true, 512, JSON_THROW_ON_ERROR);
-        // Check if 'csl' key is set in $jsonReference
-        if (array_key_exists('csl',$jsonReference)) {
-            // Extract CSL data and render bibliography
-            $jsonArray = [$jsonReference['csl']];
-            $jsonArray = json_encode($jsonArray, JSON_THROW_ON_ERROR);
+    public function getCslRefText(array $refData): array
+    {
+        if (array_key_exists('csl', $refData)) {
+            $jsonArray = json_encode([$refData['csl']], JSON_THROW_ON_ERROR);
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");
-            $bibliography = $citeProc->render(json_decode($jsonArray), "bibliography");
-            // Process raw reference and assign to 'raw_reference' key
-            $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-            $jsonReference['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING
-                ,'',$jsonReference['raw_reference']);
-            unset($jsonReference['csl']);
-            return json_encode($jsonReference);
+            $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR), "bibliography");
+            $refData['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+            $refData['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $refData['raw_reference']);
+            unset($refData['csl']);
         }
-        return $jsonCsl;
+        return $refData;
     }
 }

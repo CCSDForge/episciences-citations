@@ -5,7 +5,7 @@
     {{ parent() }}
 {% endblock %}
 {% block body %}
-    <div class="flex items-center justify-center h-screen">
-        <div class="font-extrabold">{{ exception.message }}</div>
+    <div class="d-flex align-items-center justify-content-center vh-100">
+        <div class="fw-bolder">{{ exception.message }}</div>
     </div>
 {% endblock %}

@@ -20,7 +20,8 @@ class UserInformations
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $surname = null;
 
-    #[ORM\OneToMany(mappedBy: 'uid', targetEntity: PaperReferences::class,cascade: ['persist'])]
+    /** @var Collection<int, PaperReferences> */
+    #[ORM\OneToMany(targetEntity: PaperReferences::class, mappedBy: 'uid', cascade: ['persist'])]
     private Collection $paperReferences;
 
     public function __construct()
@@ -66,17 +67,13 @@ class UserInformations
      * @return Collection<int, PaperReferences>
      */
     /**
-     * @return Collection
+     * @return Collection<int, PaperReferences>
      */
     public function getPaperReferences(): Collection
     {
         return $this->paperReferences;
     }
 
-    /**
-     * @param PaperReferences $paperReference
-     * @return UserInformations
-     */
     public function addPaperReferences(PaperReferences $paperReference): self
     {
         if (!$this->paperReferences->contains($paperReference)){

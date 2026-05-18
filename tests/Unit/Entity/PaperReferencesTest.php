@@ -115,12 +115,10 @@ class PaperReferencesTest extends TestCase
     #[Test]
     public function testSetReference_ValidArray_SetsValue(): void
     {
-        // Arrange
+        // Arrange — flat associative array, Doctrine handles JSON serialization
         $reference = [
-            json_encode([
-                'raw_reference' => 'Smith, J. (2020). Test Article. Journal, 10(2), 123-145.',
-                'doi' => '10.1234/test'
-            ])
+            'raw_reference' => 'Smith, J. (2020). Test Article. Journal, 10(2), 123-145.',
+            'doi' => '10.1234/test',
         ];
 
         // Act
