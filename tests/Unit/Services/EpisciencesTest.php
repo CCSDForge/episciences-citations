@@ -231,6 +231,27 @@ class EpisciencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testDownloadPdf_ZenodoApiContentUrl_UsesPdfAcceptHeader(): void
+    {
+        $zenodoUrl = 'https://zenodo.org/api/records/17855510/files/paper.pdf/content';
+        $pdfContent = 'zenodo PDF content';
+
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getContent')->willReturn($pdfContent);
+
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', $zenodoUrl, ['headers' => ['Accept' => '*/*']])
+            ->willReturn($response);
+
+        $result = $this->service->downloadPdf($zenodoUrl, 17855510);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($this->pdfFolder . '17855510.pdf');
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetPaperPDF_Success_DownloadsAndCachesPdf(): void
     {
         // Arrange

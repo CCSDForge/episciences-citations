@@ -88,9 +88,13 @@ class Episciences {
             return true;
         }
 
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+        // Zenodo rejects specific MIME types like 'application/octet-stream'; */* is required
+        $accept = str_ends_with($host, 'zenodo.org') ? '*/*' : 'application/octet-stream';
+
         try {
             $response = $this->client->request('GET', $url, [
-                'headers' => ['Accept' => 'application/octet-stream'],
+                'headers' => ['Accept' => $accept],
             ])->getContent();
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface $e) {
             $this->logger->warning('PDF download failed', ['url' => $url, 'docId' => $docId, 'code' => $e->getCode()]);
