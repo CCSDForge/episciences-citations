@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## v1.2.2.1 - 2026-05-31
+
+### Added
+- **README badges**: Added CodeQL status badge and enhanced Symfony & PHP badges with official logos and links in the README.
+
+### Changed
+- **CI Workflows**: Added explicit permissions block to all GitHub Actions workflows (`tests.yml`, `lint.yml`, `codeql-analysis.yml`) to resolve security alerts.
+
+### Fixed
+- **Dependencies**: Addressed Yarn audit security vulnerabilities (updating `serialize-javascript` and `uuid` resolutions) and updated `composer.lock`.
 
 ## v1.2.2
 
