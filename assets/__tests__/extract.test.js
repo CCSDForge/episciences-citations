@@ -12,7 +12,7 @@ jest.mock('bootstrap', () => ({
 }));
 
 describe('extract.js', () => {
-    let doiInput, textArea, confirmAddingBtn;
+    let doiInput, textArea;
 
     beforeEach(() => {
         document.body.innerHTML = `
@@ -62,7 +62,6 @@ describe('extract.js', () => {
         
         doiInput = document.getElementById('document_addReferenceDoi');
         textArea = document.getElementById('document_addReference');
-        confirmAddingBtn = document.getElementById('confirm-adding');
 
         // Reset modules to re-run DOMContentLoaded listener
         jest.resetModules();

@@ -44,6 +44,14 @@ export default [
       "no-console": ["warn"] //
     },
   },
+  {
+    files: ["assets/__tests__/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
   // 3. Ignorer les fichiers ("ignorePatterns": [...])
   {
     ignores: ["node_modules/", "public/build/", "var/"] //

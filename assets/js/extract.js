@@ -5,7 +5,7 @@ console.log('DOI Enrichment: extract.js loaded');
 
 const extractDoi = (input) => {
     if (!input) return null;
-    const doiRegex = /(10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+)/;
+    const doiRegex = /(10\.\d{4,}(?:\.\d+)*\/(?:(?!["&'\s])\S)+)/;
     const match = input.match(doiRegex);
     return match ? match[1] : null;
 };
@@ -146,12 +146,12 @@ function manageDoiEnrichment() {
                     }
                 }
             } catch (error) {
-            console.error('DOI Enrichment: Fetch or parsing error:', error);
-            if (errorMsg) {
-                errorMsg.textContent = 'Could not reach the server or invalid response';
-                errorMsg.classList.remove('d-none');
-            }
-        } finally {
+                console.error('DOI Enrichment: Fetch or parsing error:', error);
+                if (errorMsg) {
+                    errorMsg.textContent = 'Could not reach the server or invalid response';
+                    errorMsg.classList.remove('d-none');
+                }
+            } finally {
                 loadingIndicator?.classList.add('d-none');
                 referenceLoadingOverlay?.classList.add('d-none');
                 if (confirmAddingBtn) confirmAddingBtn.disabled = false;
