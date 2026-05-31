@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## v1.2.2.2 - 2026-05-31
+
+### Added
+- **Prettier Integration**: Added and configured Prettier code formatter, integrated it with ESLint for automated JavaScript code formatting.
+
+### Fixed
+- **Testing**: Resolved API token mismatch in `ExtractControllerTest` by retrieving `api_extract_token` dynamically from the Symfony container.
+- **CI Workflows**: Bumped Node.js to version 20 in the ESLint workflow to fix a build error caused by `serialize-javascript@7.0.5` requirements.
+- **Code Quality**: Fixed remaining ESLint and PHPStan linting issues across the codebase.
+
 ## v1.2.2.1 - 2026-05-31
 
 ### Added
