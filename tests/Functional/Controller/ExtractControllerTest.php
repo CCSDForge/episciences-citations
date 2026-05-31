@@ -14,8 +14,6 @@ use Symfony\Component\Security\Core\User\InMemoryUser;
 
 class ExtractControllerTest extends WebTestCase
 {
-    private const string TEST_TOKEN = 'test-extract-token';
-
     private function authenticateClient(KernelBrowser $client, string $username = 'test_user', array $roles = ['ROLE_USER']): void
     {
         $session = $client->getContainer()->get('session.factory')->createSession();
@@ -33,7 +31,8 @@ class ExtractControllerTest extends WebTestCase
 
     private function authHeaders(): array
     {
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . self::TEST_TOKEN];
+        $token = static::getContainer()->getParameter('api_extract_token');
+        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
     }
 
     // -------------------------------------------------------------------------
