@@ -59,7 +59,7 @@ describe('extract.js', () => {
                 </div>
             </form>
         `;
-        
+
         doiInput = document.getElementById('document_addReferenceDoi');
         textArea = document.getElementById('document_addReference');
 
@@ -67,13 +67,14 @@ describe('extract.js', () => {
         jest.resetModules();
         require('../js/extract.js');
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        
+
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: true,
                 status: 200,
-                json: () => Promise.resolve({ success: true, citation: 'Test Citation', reference: { detectors: ['bug'] } }),
-            })
+                json: () =>
+                    Promise.resolve({ success: true, citation: 'Test Citation', reference: { detectors: ['bug'] } }),
+            }),
         );
     });
 
@@ -115,7 +116,7 @@ describe('extract.js', () => {
 
         expect(document.getElementById('textReference-1').textContent).toBe('New Text');
         expect(document.getElementById('linkDoiRef-1').textContent).toBe('10.1000/new');
-        
+
         // Wait for autosave fetch
         await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.any(Object)));
     });
@@ -126,14 +127,15 @@ describe('extract.js', () => {
             Promise.resolve({
                 ok: true,
                 status: 200,
-                json: () => Promise.resolve({ 
-                    success: true, 
-                    reference: { 
-                        detectors: ['clayFeet'] 
-                    },
-                    refId: '1'
-                }),
-            })
+                json: () =>
+                    Promise.resolve({
+                        success: true,
+                        reference: {
+                            detectors: ['clayFeet'],
+                        },
+                        refId: '1',
+                    }),
+            }),
         );
 
         // Manually call autosave via an event that triggers it

@@ -18,21 +18,22 @@ const setContent = (element, content) => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOI Enrichment: DOMContentLoaded triggered');
     let sortEl = null;
-    if (document.getElementById('sortref')){
+    if (document.getElementById('sortref')) {
         let initialOrder = '';
-        sortEl = Sortable.create(document.getElementById('sortref'),{
+        sortEl = Sortable.create(document.getElementById('sortref'), {
             easing: 'cubic-bezier(0.11, 0, 0.5, 0)',
             animation: 150,
             ghostClass: 'highlighted',
             filter: '.filtered',
             touchStartThreshold: 5,
-            onStart(){
+            onStart() {
                 initialOrder = Array.from(document.querySelectorAll('.container-reference'))
-                    .map(el => el.dataset.idref).join(';');
+                    .map((el) => el.dataset.idref)
+                    .join(';');
             },
-            onEnd(){
+            onEnd() {
                 let arrayOrder = [];
-                for (let el of document.querySelectorAll('.container-reference')){
+                for (let el of document.querySelectorAll('.container-reference')) {
                     arrayOrder.push(el.dataset.idref);
                 }
                 let strOrder = arrayOrder.join(';');
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (hiddenRefNode) hiddenRefNode.value = strOrder;
                     autosave({ orderRef: strOrder });
                 }
-            }
+            },
         });
         disabledSortWhenChangeRef(sortEl);
     }
@@ -169,7 +170,6 @@ function manageDoiEnrichment() {
             await handleEnrichment(enrichBtn);
         }
     });
-
 }
 
 async function handleEnrichment(btn) {
@@ -266,8 +266,12 @@ function disabledSortWhenChangeRef(sortEl) {
         btnModify.addEventListener('click', (event) => {
             sortEl.option('disabled', true);
             let idRef = event.currentTarget.dataset.idref;
-            document.getElementById('cancelModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
-            document.getElementById('acceptModifyBtn-'+idRef).addEventListener('click', () => sortEl.option('disabled', false));
+            document
+                .getElementById('cancelModifyBtn-' + idRef)
+                .addEventListener('click', () => sortEl.option('disabled', false));
+            document
+                .getElementById('acceptModifyBtn-' + idRef)
+                .addEventListener('click', () => sortEl.option('disabled', false));
         });
     }
 }
@@ -275,7 +279,7 @@ function disabledSortWhenChangeRef(sortEl) {
 function changeValueOfReference() {
     // 1. Initial listener for Edit buttons (the pen icon)
     const btnModifys = document.querySelectorAll('[id^=modifyBtn-]');
-    btnModifys.forEach(btn => {
+    btnModifys.forEach((btn) => {
         btn.addEventListener('click', (event) => {
             const idRef = event.currentTarget.dataset.idref;
             enterEditMode(idRef);
@@ -284,7 +288,7 @@ function changeValueOfReference() {
 
     // 2. Initial listener for Cancel buttons
     const cancelBtns = document.querySelectorAll('[id^=cancelModifyBtn-]');
-    cancelBtns.forEach(btn => {
+    cancelBtns.forEach((btn) => {
         btn.addEventListener('click', (event) => {
             const idRef = event.currentTarget.id.replace('cancelModifyBtn-', '');
             exitEditMode(idRef);
@@ -294,7 +298,7 @@ function changeValueOfReference() {
 
     // 3. Initial listener for Confirm (Accept) buttons
     const acceptBtns = document.querySelectorAll('[id^=acceptModifyBtn-]');
-    acceptBtns.forEach(btn => {
+    acceptBtns.forEach((btn) => {
         btn.addEventListener('click', (event) => {
             const idRef = event.currentTarget.id.replace('acceptModifyBtn-', '');
             confirmEdit(idRef);
@@ -303,7 +307,7 @@ function changeValueOfReference() {
 
     // 4. Initial listener for Textarea input
     const textareas = document.querySelectorAll('[id^=textareaRef-]');
-    textareas.forEach(area => {
+    textareas.forEach((area) => {
         area.addEventListener('input', (event) => {
             const idRef = event.currentTarget.id.replace('textareaRef-', '');
             document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
@@ -434,7 +438,7 @@ function enableClickToEdit() {
 function openModalAddBtn(addRefModal) {
     if (!addRefModal) return;
     let addBtn = document.getElementById('btn-modal-addref');
-    if (addBtn){
+    if (addBtn) {
         addBtn.addEventListener('click', () => {
             addRefModal.show();
         });
@@ -445,7 +449,7 @@ function acceptAllReference() {
     const btn = document.getElementById('accept-all');
     if (!btn) return;
     btn.addEventListener('click', () => {
-        document.querySelectorAll('[id^=toggle-input-]').forEach(toggle => {
+        document.querySelectorAll('[id^=toggle-input-]').forEach((toggle) => {
             if (!toggle.checked) {
                 toggle.checked = true;
                 const acceptedInput = document.getElementById('accepted-' + toggle.value);
@@ -462,7 +466,7 @@ function declineAllReference() {
     const btn = document.getElementById('decline-all');
     if (!btn) return;
     btn.addEventListener('click', () => {
-        document.querySelectorAll('[id^=toggle-input-]').forEach(toggle => {
+        document.querySelectorAll('[id^=toggle-input-]').forEach((toggle) => {
             if (toggle.checked) {
                 toggle.checked = false;
                 const acceptedInput = document.getElementById('accepted-' + toggle.value);
@@ -514,7 +518,7 @@ function topAnchor() {
 function rextract() {
     const extractAll = document.getElementById('extract-all');
     if (extractAll) {
-        extractAll.onclick = function(event) {
+        extractAll.onclick = function (event) {
             event.preventDefault();
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) loadingScreen.classList.remove('d-none');
@@ -530,10 +534,14 @@ function checkIsDirty() {
     let formSubmitting = false;
     const form = document.getElementById('form-extraction');
     if (form) {
-        form.addEventListener('change', () => { isDirty.value = '1'; });
-        form.addEventListener('submit', () => { formSubmitting = true; });
+        form.addEventListener('change', () => {
+            isDirty.value = '1';
+        });
+        form.addEventListener('submit', () => {
+            formSubmitting = true;
+        });
     }
-    window.addEventListener('beforeunload', function(event) {
+    window.addEventListener('beforeunload', function (event) {
         if (isDirty.value === '1' && formSubmitting === false) {
             event.returnValue = null;
         }
@@ -546,8 +554,8 @@ function manageBibtex(importBibModal) {
 }
 
 function removeReference() {
-    let deleteBtn    = document.getElementById('select-delete-ref');
-    let cancelBtn    = document.getElementById('cancel-delete-ref');
+    let deleteBtn = document.getElementById('select-delete-ref');
+    let cancelBtn = document.getElementById('cancel-delete-ref');
     let toggleAllBtn = document.getElementById('toggle-select-all-ref');
     if (!deleteBtn || !cancelBtn) return;
 
@@ -570,14 +578,18 @@ function removeReference() {
             toggleAllBtn.classList.add('d-none');
             resetToggleAllBtn(toggleAllBtn);
         }
-        document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = false; });
+        document.querySelectorAll('.ref-delete-check').forEach((node) => {
+            node.checked = false;
+        });
     });
 
     if (toggleAllBtn) {
         toggleAllBtn.addEventListener('click', () => {
             const allSelected = toggleAllBtn.dataset.allSelected !== 'true';
             toggleAllBtn.dataset.allSelected = allSelected ? 'true' : 'false';
-            document.querySelectorAll('.ref-delete-check').forEach(node => { node.checked = allSelected; });
+            document.querySelectorAll('.ref-delete-check').forEach((node) => {
+                node.checked = allSelected;
+            });
             setToggleAllBtnState(toggleAllBtn, allSelected);
         });
     }
@@ -601,7 +613,7 @@ function autosave(data) {
         body,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
-        .then(async r => {
+        .then(async (r) => {
             const json = await r.json();
             if (r.ok && json.success) {
                 showAutosaveToast();
@@ -613,7 +625,7 @@ function autosave(data) {
                 showAutosaveToast(true, json.error || 'Failed to save changes');
             }
         })
-        .catch(err => {
+        .catch((err) => {
             console.error('Autosave network error:', err);
             showAutosaveToast(true, 'Network error while saving');
         });
@@ -631,10 +643,10 @@ function updateReferenceUI(idRef, referenceData) {
         const detectorList = Array.isArray(detectors) ? detectors : [detectors];
 
         // Remove old detector badges (they have bg-danger and ⚠️)
-        badgeContainer.querySelectorAll('.badge.bg-danger').forEach(badge => badge.remove());
+        badgeContainer.querySelectorAll('.badge.bg-danger').forEach((badge) => badge.remove());
 
         // Add new detector badges
-        detectorList.forEach(detector => {
+        detectorList.forEach((detector) => {
             if (detector) {
                 const span = document.createElement('span');
                 span.className = 'badge bg-danger';
@@ -711,12 +723,12 @@ function showAutosaveToast(isError = false, errorMessage = null) {
 
 function manageSemanticScholarImport(modal) {
     const triggerBtn = document.getElementById('btn-import-semantic-scholar');
-    const importBtn  = document.getElementById('s2-import-btn');
+    const importBtn = document.getElementById('s2-import-btn');
     if (!triggerBtn || !importBtn || !modal) return;
 
-    const modalEl   = document.getElementById('modal-import-semantic-scholar');
-    const inputEl   = document.getElementById('s2-paper-id-input');
-    const errorDiv  = document.getElementById('s2-error-msg');
+    const modalEl = document.getElementById('modal-import-semantic-scholar');
+    const inputEl = document.getElementById('s2-paper-id-input');
+    const errorDiv = document.getElementById('s2-error-msg');
     const errorText = document.getElementById('s2-error-text');
 
     modalEl.addEventListener('show.bs.modal', () => {
@@ -753,7 +765,7 @@ function manageSemanticScholarImport(modal) {
 
         try {
             const body = new URLSearchParams({ paperId, _token: importBtn.dataset.csrf });
-            const res  = await fetch(importBtn.dataset.url, {
+            const res = await fetch(importBtn.dataset.url, {
                 method: 'POST',
                 body,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },

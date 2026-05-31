@@ -4,6 +4,7 @@ import globals from 'globals';
 import babelParser from '@babel/eslint-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
 // Définition de __dirname pour les modules ES (ESM)
 const __filename = fileURLToPath(import.meta.url);
@@ -55,5 +56,7 @@ export default [
   // 3. Ignorer les fichiers ("ignorePatterns": [...])
   {
     ignores: ["node_modules/", "public/build/", "var/"] //
-  }
+  },
+  // 4. Désactiver les règles ESLint en conflit avec Prettier
+  eslintConfigPrettier
 ];

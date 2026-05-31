@@ -1,0 +1,12 @@
+node_modules/
+vendor/
+public/build/
+var/
+logs/
+tmp/
+coverage/
+.idea/
+.phpunit.cache/
+package-lock.json
+composer.lock
+symfony.lock
