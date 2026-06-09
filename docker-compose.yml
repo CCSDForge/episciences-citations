@@ -70,7 +70,7 @@ services:
 
 
   epi-citations-db:
-    image: "mysql:8.0"
+    image: "mysql:9.7"
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
