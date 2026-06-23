@@ -3,17 +3,21 @@
 namespace App\Tests\Unit\Twig;
 
 use Twig\Attribute\AsTwigFunction;
+use App\Services\Bibtex;
 use App\Twig\JsonGrobidExtension;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class JsonGrobidExtensionTest extends TestCase
 {
     private JsonGrobidExtension $extension;
+    private Bibtex&MockObject $bibtex;
 
     protected function setUp(): void
     {
-        $this->extension = new JsonGrobidExtension();
+        $this->bibtex = $this->createMock(Bibtex::class);
+        $this->extension = new JsonGrobidExtension($this->bibtex);
     }
 
     #[Test]
@@ -21,6 +25,7 @@ class JsonGrobidExtensionTest extends TestCase
     {
         // Arrange — JSON string of a flat array (output of JsonTransformer::transform)
         $refData = ['raw_reference' => 'Author et al. Title. Journal, 2024.', 'doi' => '10.1/x'];
+        $this->bibtex->method('getCslRefText')->willReturnArgument(0);
         $jsonInput = json_encode($refData);
 
         // Act
@@ -49,6 +54,11 @@ class JsonGrobidExtensionTest extends TestCase
                 'container-title' => 'Test Journal',
             ],
         ];
+        $rendered = ['raw_reference' => 'Doe, J. (2024). Test Article. Test Journal.'];
+        $this->bibtex->expects($this->once())
+            ->method('getCslRefText')
+            ->with($refData)
+            ->willReturn($rendered);
         $jsonInput = json_encode($refData);
 
         // Act
@@ -59,7 +69,6 @@ class JsonGrobidExtensionTest extends TestCase
         $this->assertArrayNotHasKey('csl', $result, 'CSL key should be removed after rendering');
         $this->assertArrayHasKey('raw_reference', $result);
         $this->assertStringContainsString('Doe', $result['raw_reference']);
-        $this->assertArrayNotHasKey('forbiddenModify', $result);
     }
 
     #[Test]

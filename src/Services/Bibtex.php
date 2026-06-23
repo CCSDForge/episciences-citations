@@ -206,6 +206,9 @@ class Bibtex
     public function getCslRefText(array $refData): array
     {
         if (array_key_exists('csl', $refData)) {
+            if (!isset($refData['csl']['type'])) {
+                $refData['csl']['type'] = isset($refData['csl']['container-title']) ? 'article-journal' : 'article';
+            }
             $jsonArray = json_encode([$refData['csl']], JSON_THROW_ON_ERROR);
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");

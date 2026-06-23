@@ -5,14 +5,14 @@ namespace App\Twig;
 use Twig\Attribute\AsTwigFunction;
 use App\Services\Bibtex;
 use JsonException;
-use Twig\Extension\AbstractExtension;
-use Twig\TwigFunction;
 use Seboettg\CiteProc\Exception\CiteProcException;
-use Seboettg\CiteProc\StyleSheet;
-use Seboettg\CiteProc\CiteProc;
 
 class JsonGrobidExtension
 {
+    public function __construct(private readonly Bibtex $bibtex)
+    {
+    }
+
     /**
      * @param array<int, array<string, mixed>> $authors
      * @return array<int, array<string, mixed>>
@@ -129,19 +129,7 @@ class JsonGrobidExtension
                     }
                 }
 
-                if (isset($jsonReference['csl'])) {
-                    $jsonArray = json_encode([$jsonReference['csl']], JSON_THROW_ON_ERROR);
-                    $style = StyleSheet::loadStyleSheet("apa");
-                    $citeProc = new CiteProc($style, "en-US");
-                    $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR));
-                    $jsonReference['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-                    $jsonReference['raw_reference'] = str_replace(
-                        Bibtex::REPLACE_CSL_EXCEPTION_STRING,
-                        '',
-                        $jsonReference['raw_reference']
-                    );
-                    unset($jsonReference['csl']);
-                }
+                $jsonReference = $this->bibtex->getCslRefText($jsonReference);
             } catch (JsonException|CiteProcException) {
                 return [];
             }
