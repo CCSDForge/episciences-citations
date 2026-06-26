@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOI Enrichment: Calling manageDoiEnrichment()');
     manageDoiEnrichment();
     removeReference();
+    manageAutofixAll();
 });
 
 function manageDoiEnrichment() {
@@ -173,7 +174,7 @@ function manageDoiEnrichment() {
     });
 }
 
-async function handleEnrichment(btn) {
+async function handleEnrichment(btn, silent = false) {
     const idRef = btn.dataset.idref;
     const doi = btn.dataset.doi;
     const textRef = document.getElementById('textReference-' + idRef);
@@ -193,7 +194,7 @@ async function handleEnrichment(btn) {
         const response = await fetch(`/doi/enrich?doi=${encodeURIComponent(doi)}`);
 
         if (response.status === 404) {
-            showImportToast('danger', 'The DOI was not found');
+            if (!silent) showImportToast('danger', 'The DOI was not found');
             return;
         }
 
@@ -226,14 +227,15 @@ async function handleEnrichment(btn) {
                 autosaveReference(idRef, '1');
             }
 
-            showImportToast('success', 'Reference auto-fixed successfully');
+            if (!silent) showImportToast('success', 'Reference auto-fixed successfully');
+            return true;
         } else {
             console.warn('DOI Enrichment: Enrichment failed for ref', idRef, data.error);
-            showImportToast('danger', data.error || 'Enrichment failed');
+            if (!silent) showImportToast('danger', data.error || 'Enrichment failed');
         }
     } catch (error) {
         console.error('DOI Enrichment: Fetch or parsing error for ref', idRef, error);
-        showImportToast('danger', 'A network error occurred or the server returned an invalid response');
+        if (!silent) showImportToast('danger', 'A network error occurred or the server returned an invalid response');
     } finally {
         console.log('DOI Enrichment: Task finished for ref', idRef);
         btn.disabled = false;
@@ -847,5 +849,48 @@ function updateBadges() {
     document.querySelectorAll('#sortref .container-reference').forEach((el, index) => {
         const badge = el.querySelector('.ref-position-badge');
         if (badge) badge.textContent = index + 1;
+    });
+}
+
+function manageAutofixAll() {
+    const triggerBtn = document.getElementById('btn-autofix-all');
+    if (!triggerBtn) return;
+
+    const modalEl = document.getElementById('modal-autofix-all');
+    if (!modalEl) return;
+
+    const autofixModal = new Modal(modalEl);
+    const confirmBtn = document.getElementById('autofix-all-confirm-btn');
+    const confirmText = document.getElementById('autofix-all-confirm-text');
+
+    triggerBtn.addEventListener('click', () => {
+        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
+        if (enrichBtns.length === 0) {
+            showImportToast('danger', window.translations?.['No references with DOI found'] ?? 'No references with a DOI were found');
+            return;
+        }
+        const bodyTemplate = window.translations?.['autofix-all-confirm-body'] ?? 'This will automatically correct {count} reference(s) with a DOI. Do you want to continue?';
+        confirmText.textContent = bodyTemplate.replace('{count}', enrichBtns.length);
+        autofixModal.show();
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+        autofixModal.hide();
+
+        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
+        let done = 0;
+        for (const btn of enrichBtns) {
+            const success = await handleEnrichment(btn, true);
+            if (success) done++;
+        }
+
+        const completeTemplate = window.translations?.['autofix-complete'] ?? '{done} reference(s) auto-fixed';
+        showImportToast('success', completeTemplate.replace('{done}', done));
+
+        const form = document.getElementById('form-extraction');
+        if (form) {
+            document.getElementById('loading-screen')?.classList.remove('d-none');
+            form.submit();
+        }
     });
 }

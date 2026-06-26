@@ -24,10 +24,11 @@ To view your changes, go to your Episciences document page. You can continue edi
 Extract references from PDF: Extraire les références depuis le PDF
 Reference: Référence
 The previous BibTeX references will be overwritten.: Les références BibTeX précédentes seront écrasées.
-GROBID: PDF
-USER: Ajouté par l'utilisateur
+GROBID: Extraction PDF
+USER: Utilisateur
 SEMANTICS: Semantic Scholar
 BIBTEX: BibTeX
+Source: Source
 No references were extracted or found: Aucune référence n'a été trouvée ou extraite
 Please upload a valid BibTeX document: Veuillez téléverser un fichier BibTeX valide
 Cancel Delete: Annuler la suppression
@@ -90,6 +91,11 @@ Could not reach the server or invalid response: Impossible de contacter le serve
 Reference enriched successfully: Référence corrigée automatiquement avec succès
 Enrichment failed: La correction automatique a échoué
 A network error occurred or the server returned an invalid response: Une erreur réseau est survenue ou le serveur a renvoyé une réponse invalide
+Auto-fix all: Auto-corriger tout
+Auto-fix all references with DOI: Auto-corriger toutes les références avec DOI
+autofix-all-confirm-body: "Cette action va corriger automatiquement {count} référence(s) ayant un DOI. Voulez-vous continuer ?"
+autofix-complete: "{done} référence(s) corrigée(s) automatiquement"
+No references with DOI found: Aucune référence avec un DOI n'a été trouvée
 Saved: Enregistré
 Activate/Deactivate: Activer/Désactiver
 Close: Fermer

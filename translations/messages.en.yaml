@@ -20,10 +20,11 @@ To view your changes, go to your Episciences document page. You can continue edi
 Extract references from PDF: Extract references from PDF
 Reference: Reference
 The previous BibTeX references will be overwritten.: The previous BibTeX references will be overwritten.
-GROBID: PDF
-USER: Added by user
+GROBID: PDF extraction
+USER: User
 SEMANTICS: Semantic Scholar
 BIBTEX: BibTeX
+Source: Source
 No references were extracted or found: No references were found or extracted
 Please upload a valid BibTeX document: Please upload a valid BibTeX document
 Cancel Delete: Cancel deletion
@@ -86,6 +87,11 @@ Could not reach the server or invalid response: Could not reach the server or in
 Reference enriched successfully: Reference auto-fixed successfully
 Enrichment failed: Auto-fixing failed
 A network error occurred or the server returned an invalid response: A network error occurred or the server returned an invalid response
+Auto-fix all: Auto-fix all
+Auto-fix all references with DOI: Auto-fix all references with DOI
+autofix-all-confirm-body: 'This will automatically correct {count} reference(s) that have a DOI. Do you want to continue?'
+autofix-complete: '{done} reference(s) auto-fixed'
+No references with DOI found: No references with a DOI were found
 Saved: Saved
 Activate/Deactivate: Activate/Deactivate
 Close: Close

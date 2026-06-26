@@ -48,6 +48,8 @@ describe('extract.js', () => {
     });
 
     beforeEach(() => {
+        HTMLFormElement.prototype.submit = jest.fn();
+
         document.body.innerHTML = `
             <form id="form-extraction" data-csrf-token="test-token" data-autosave-url="/autosave" data-autosave-label="Saved">
                 <input id="document_addReferenceDoi" value="">
@@ -56,9 +58,10 @@ describe('extract.js', () => {
                 <div id="reference-loading-overlay" class="d-none"></div>
                 <button id="confirm-adding" type="button"></button>
                 <div id="doi-error-msg" class="d-none"></div>
-                
+
                 <div id="sortref">
                     <div class="container-reference" data-idref="1">
+                        <span class="ref-position-badge">1</span>
                         <div id="container-reference-informations-1">
                             <div id="textReference-1">Original Text</div>
                             <a id="linkDoiRef-1" href="https://doi.org/10.1000/old">10.1000/old</a>
@@ -81,36 +84,49 @@ describe('extract.js', () => {
                              <span class="badge source-color-1">Source</span>
                         </div>
                     </div>
+                    <div class="container-reference" data-idref="2">
+                        <span class="ref-position-badge">2</span>
+                        <div id="textReference-2">Other Text</div>
+                        <input id="reference-2" value='{}'>
+                        <input id="accepted-2" value="1">
+                        <input data-dirty-ref="2" value="0">
+                    </div>
                 </div>
                 <input id="document_save" type="button">
                 <div id="loading-screen" class="d-none"></div>
                 <button id="extract-all" type="button" data-url-from-epi="test-url"></button>
                 <input id="is-dirty" value="0">
-                
+
                 <div class="enrich-doi-btn" data-idref="1" data-doi="10.1002/test">
                     <span class="spinner-border d-none"></span>
                     <i class="fas fa-magic"></i>
                 </div>
-                
+
                 <button id="accept-all" type="button"></button>
                 <button id="decline-all" type="button"></button>
+                <button id="btn-autofix-all" type="button"></button>
                 <button id="btn-modal-addref" type="button"></button>
                 <div id="modal-addref"></div>
                 <div id="modal-importbib"></div>
-                
+
+                <div id="modal-autofix-all">
+                    <p id="autofix-all-confirm-text"></p>
+                    <button id="autofix-all-confirm-btn" type="button"></button>
+                </div>
+
                 <button id="btn-import-semantic-scholar" type="button"></button>
                 <button id="s2-import-btn" type="button" data-label-import="Import" data-label-importing="Importing..." data-csrf="token" data-url="/import"></button>
                 <input id="s2-paper-id-input" value="">
                 <div id="s2-error-msg" class="d-none"></div>
                 <div id="s2-error-text"></div>
                 <div id="modal-import-semantic-scholar"></div>
-                
+
                 <button id="select-delete-ref" type="button"></button>
                 <button id="cancel-delete-ref" type="button" class="d-none"></button>
                 <button id="toggle-select-all-ref" type="button" class="d-none" data-select-label="Select all" data-deselect-label="Deselect all"><i></i><span></span></button>
                 <div id="alert-remove" class="d-none"></div>
                 <input type="checkbox" class="ref-delete-check">
-                
+
                 <div id="closing-info-toast"></div>
             </form>
         `;
@@ -358,6 +374,45 @@ describe('extract.js', () => {
 
         expect(errorText.textContent).toBe('Please enter a paper ID.');
         expect(errorDiv).not.toHaveClass('d-none');
+    });
+
+    test('should show toast (no modal) when btn-autofix-all clicked and no DOI refs exist', () => {
+        const { Toast } = require('bootstrap');
+        document.querySelectorAll('.enrich-doi-btn').forEach((el) => el.remove());
+        window.translations = { 'No references with DOI found': 'No DOI refs found' };
+
+        fireEvent.click(document.getElementById('btn-autofix-all'));
+
+        expect(Toast).toHaveBeenCalled();
+    });
+
+    test('should populate modal confirm text with DOI ref count', () => {
+        const { Modal } = require('bootstrap');
+        window.translations = { 'autofix-all-confirm-body': 'Will fix {count} ref(s)' };
+
+        fireEvent.click(document.getElementById('btn-autofix-all'));
+
+        expect(document.getElementById('autofix-all-confirm-text').textContent).toBe('Will fix 1 ref(s)');
+        expect(Modal.mock.results.some((r) => r.value.show.mock.calls.length > 0)).toBe(true);
+    });
+
+    test('should enrich all DOI refs silently and submit form on confirm', async () => {
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({ success: true, citation: 'Bulk Fixed' }),
+            }),
+        );
+        window.translations = { 'autofix-complete': '{done} ref(s) fixed' };
+        const form = document.getElementById('form-extraction');
+
+        fireEvent.click(document.getElementById('autofix-all-confirm-btn'));
+
+        await waitFor(() => {
+            expect(document.getElementById('textReference-1').textContent).toBe('Bulk Fixed');
+        });
+        expect(form.submit).toHaveBeenCalled();
     });
 
     test('should handle network error in semantic scholar import', async () => {
