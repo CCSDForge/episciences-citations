@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (hiddenRefNode) hiddenRefNode.value = strOrder;
                     autosave({ orderRef: strOrder });
                 }
+                updateBadges();
             },
         });
         disabledSortWhenChangeRef(sortEl);
@@ -840,4 +841,11 @@ function showImportToast(type, message) {
 
 function acceptRefModificationsDone(idRef) {
     document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
+}
+
+function updateBadges() {
+    document.querySelectorAll('#sortref .container-reference').forEach((el, index) => {
+        const badge = el.querySelector('.ref-position-badge');
+        if (badge) badge.textContent = index + 1;
+    });
 }

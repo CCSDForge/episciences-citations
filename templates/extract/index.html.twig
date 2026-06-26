@@ -184,10 +184,11 @@
                         {% endif %}
                     {% endif %}
 
-                    <div class="card mb-2 shadow-sm container-reference{% if isDeclined %} declinedRef filtered{% else %} acceptedRef{% endif %}{% if hasDetectors %} border-danger-important{% endif %}"
+                    <div class="card mb-2 shadow-sm container-reference position-relative{% if isDeclined %} declinedRef filtered{% else %} acceptedRef{% endif %}{% if hasDetectors %} border-danger-important{% endif %}"
                          data-idref="{{ paperReferences.id.vars.value }}"
                          data-has-detectors="{% if hasDetectors %}1{% else %}0{% endif %}">
-                        <div class="card-body p-3">
+                        <span class="badge rounded-pill bg-light text-dark position-absolute top-0 start-0 m-1 ref-position-badge" aria-label="{{ 'Citation number'|trans }}">{{ loop.index }}</span>
+                        <div class="card-body p-3 ps-5">
 
                             {{ form_widget(paperReferences.reference, {'id': 'reference-'~paperReferences.id.vars.value, 'attr': {'class': 'd-none'}}) }}
 
