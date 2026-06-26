@@ -16,7 +16,9 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\Callback;
 use Symfony\Component\Validator\Constraints\File;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 
 /** @extends AbstractType<Document> */
@@ -41,7 +43,17 @@ class DocumentType extends AbstractType
             'attr' => ['class' => 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
             'mapped' => false,
             'required' => false,
-            'label' => 'DOI, URL, ...',
+            'label' => 'DOI, URL, SWHID',
+            'constraints' => [
+                new Callback(static function (?string $value, ExecutionContextInterface $context): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if (!self::isValidDoiUrlOrSwhid($value)) {
+                        $context->buildViolation('Invalid DOI, URL or SWHID format')->addViolation();
+                    }
+                }),
+            ],
         ]);
         $builder->add('btnModalNewReference',ButtonType::class,
             [ 'label' => 'Add reference','row_attr' => ['class'=>'w-1/2']]);
@@ -74,5 +86,22 @@ class DocumentType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Document::class,
         ]);
+    }
+
+    public static function isValidDoiUrlOrSwhid(string $value): bool
+    {
+        // DOI: 10.digits[.digits]*/suffix (also matches https://doi.org/10.xxx/yyy)
+        if (preg_match('/10\.\d{4,}(?:\.\d+)*\/.+/i', $value)) {
+            return true;
+        }
+        // URL
+        if (preg_match('/^https?:\/\/\S+/i', $value)) {
+            return true;
+        }
+        // SWHID: swh:1:(snp|rel|rev|dir|cnt):<40 hex chars>[;qualifier=value...]
+        if (preg_match('/^swh:1:(snp|rel|rev|dir|cnt):[0-9a-f]{40}(;(origin|visit|anchor|path|lines|bytes)=[^;]+)*$/', $value)) {
+            return true;
+        }
+        return false;
     }
 }

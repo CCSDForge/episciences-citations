@@ -20,7 +20,8 @@
             'sbir': '{{ 'sbir'|trans }}',
             'autofix-all-confirm-body': '{{ 'autofix-all-confirm-body'|trans }}',
             'autofix-complete': '{{ 'autofix-complete'|trans }}',
-            'No references with DOI found': '{{ 'No references with DOI found'|trans }}'
+            'No references with DOI found': '{{ 'No references with DOI found'|trans }}',
+            'Invalid DOI, URL or SWHID format': '{{ 'Invalid DOI, URL or SWHID format'|trans }}'
         };
     </script>
     {{ encore_entry_script_tags('extract') }}
@@ -266,8 +267,10 @@
                             <div class="d-none w-100 mt-2" id="modifyReferenceDoi-{{ paperReferences.id.vars.value }}">
                                 <input type="text" id="textDoiRef-{{ paperReferences.id.vars.value }}"
                                        class="form-control form-control-sm"
-                                       placeholder="{{ 'DOI, URL'|trans }}"
+                                       placeholder="{{ 'DOI, URL, SWHID'|trans }}"
                                        value="{{ doiDecodedRef }}">
+                                <div id="doi-error-inline-{{ paperReferences.id.vars.value }}"
+                                     class="text-danger small mt-1 d-none" aria-live="assertive"></div>
                             </div>
                             <div class="d-none mt-2 d-flex gap-2" id="editActionBtns-{{ paperReferences.id.vars.value }}">
                                 <button type="button" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}"

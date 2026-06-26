@@ -12,7 +12,7 @@
                     <label class="col-sm-4 col-form-label fw-semibold" for="{{ form.addReferenceDoi.vars.id }}">{{ form_label(form.addReferenceDoi) }}</label>
                     <div class="col-sm-8">
                         <div class="input-group">
-                            {{ form_widget(form.addReferenceDoi, {'attr': {'class': 'form-control', 'placeholder': 'DOI, URL'}}) }}
+                            {{ form_widget(form.addReferenceDoi, {'attr': {'class': 'form-control', 'placeholder': 'DOI, URL, SWHID'|trans}}) }}
                             <div id="doi-loading-indicator" class="input-group-text d-none" aria-live="polite">
                                 <span class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">{{ 'Loading citation...'|trans }}</span>

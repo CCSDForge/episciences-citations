@@ -376,6 +376,153 @@ describe('extract.js', () => {
         expect(errorDiv).not.toHaveClass('d-none');
     });
 
+    describe('isValidDoi', () => {
+        test.each([
+            ['bare DOI',            '10.1000/xyz'],
+            ['DOI with sub-prefix', '10.1000.10/xyz'],
+            ['DOI long suffix',     '10.18653/v1/N18-3011'],
+            ['DOI inside URL',      'https://doi.org/10.1000/xyz'],
+        ])('accepts %s', (_label, value) => {
+            const { isValidDoi } = require('../js/extract.js');
+            expect(isValidDoi(value)).toBe(true);
+        });
+
+        test.each([
+            ['missing slash',    '10.1000xyz'],
+            ['wrong prefix',     '11.1000/xyz'],
+            ['short registrant', '10.10/xyz'],
+            ['URL only',         'https://example.com'],
+        ])('rejects %s', (_label, value) => {
+            const { isValidDoi } = require('../js/extract.js');
+            expect(isValidDoi(value)).toBe(false);
+        });
+    });
+
+    describe('isValidUrl', () => {
+        test.each([
+            ['https URL', 'https://example.com/path?q=1'],
+            ['http URL',  'http://example.com'],
+        ])('accepts %s', (_label, value) => {
+            const { isValidUrl } = require('../js/extract.js');
+            expect(isValidUrl(value)).toBe(true);
+        });
+
+        test.each([
+            ['ftp URL',       'ftp://example.com'],
+            ['bare DOI',      '10.1000/xyz'],
+            ['random string', 'not a url'],
+        ])('rejects %s', (_label, value) => {
+            const { isValidUrl } = require('../js/extract.js');
+            expect(isValidUrl(value)).toBe(false);
+        });
+    });
+
+    describe('isValidSwhid', () => {
+        const id40 = 'a'.repeat(40);
+
+        test.each([
+            ['cnt',              `swh:1:cnt:${id40}`],
+            ['snp',              `swh:1:snp:${id40}`],
+            ['rel',              `swh:1:rel:${id40}`],
+            ['rev',              `swh:1:rev:${id40}`],
+            ['dir',              `swh:1:dir:${id40}`],
+            ['origin qualifier', `swh:1:cnt:${id40};origin=https://github.com/foo`],
+            ['lines qualifier',  `swh:1:cnt:${id40};lines=10-20`],
+            ['bytes qualifier',  `swh:1:cnt:${id40};bytes=0-100`],
+            ['multi qualifiers', `swh:1:cnt:${id40};origin=https://x.com;lines=1`],
+        ])('accepts %s', (_label, value) => {
+            const { isValidSwhid } = require('../js/extract.js');
+            expect(isValidSwhid(value)).toBe(true);
+        });
+
+        test.each([
+            ['wrong type',     `swh:1:foo:${id40}`],
+            ['short id (39)',  `swh:1:cnt:${'a'.repeat(39)}`],
+            ['long id (41)',   `swh:1:cnt:${'a'.repeat(41)}`],
+            ['wrong version',  `swh:2:cnt:${id40}`],
+            ['bad qualifier',  `swh:1:cnt:${id40};unknown=x`],
+            ['uppercase type', `SWH:1:CNT:${id40}`],
+            ['bare DOI',       '10.1000/xyz'],
+        ])('rejects %s', (_label, value) => {
+            const { isValidSwhid } = require('../js/extract.js');
+            expect(isValidSwhid(value)).toBe(false);
+        });
+    });
+
+    describe('validateIdentifier integration (via modal DOI input blur)', () => {
+        beforeEach(() => {
+            window.translations = { 'Invalid DOI, URL or SWHID format': 'Bad format' };
+        });
+
+        test.each([
+            ['valid DOI',   '10.1000/xyz'],
+            ['valid URL',   'https://example.com'],
+            ['valid SWHID', `swh:1:cnt:${'a'.repeat(40)}`],
+            ['empty',       ''],
+        ])('no error shown for %s', (_label, value) => {
+            const input = document.getElementById('document_addReferenceDoi');
+            input.value = value;
+            fireEvent.blur(input);
+            expect(document.getElementById('doi-error-msg')).toHaveClass('d-none');
+        });
+
+        test('shows error and disables confirm for invalid input', () => {
+            const input = document.getElementById('document_addReferenceDoi');
+            const confirmBtn = document.getElementById('confirm-adding');
+            input.value = 'not valid at all';
+            fireEvent.blur(input);
+            const errorMsg = document.getElementById('doi-error-msg');
+            expect(errorMsg).not.toHaveClass('d-none');
+            expect(errorMsg.textContent).toBe('Bad format');
+            expect(confirmBtn.disabled).toBe(true);
+        });
+    });
+
+    describe('inline DOI validation on blur', () => {
+        const setupInlineError = () => {
+            const container = document.getElementById('modifyReferenceDoi-1');
+            let errorDiv = document.getElementById('doi-error-inline-1');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'doi-error-inline-1';
+                errorDiv.className = 'd-none';
+                container.appendChild(errorDiv);
+            }
+            return errorDiv;
+        };
+
+        test('shows error and marks input invalid for bad value', () => {
+            window.translations = { 'Invalid DOI, URL or SWHID format': 'Bad format inline' };
+            const errorDiv = setupInlineError();
+            const doiInput = document.getElementById('textDoiRef-1');
+            doiInput.value = 'not valid';
+            fireEvent.blur(doiInput);
+            expect(doiInput).toHaveClass('is-invalid');
+            expect(errorDiv).not.toHaveClass('d-none');
+            expect(errorDiv.textContent).toBe('Bad format inline');
+        });
+
+        test('clears error for valid value', () => {
+            window.translations = { 'Invalid DOI, URL or SWHID format': 'Bad format inline' };
+            const errorDiv = setupInlineError();
+            const doiInput = document.getElementById('textDoiRef-1');
+            doiInput.value = '10.1000/valid';
+            fireEvent.blur(doiInput);
+            expect(doiInput).not.toHaveClass('is-invalid');
+            expect(errorDiv).toHaveClass('d-none');
+        });
+
+        test('clears error for empty value', () => {
+            window.translations = { 'Invalid DOI, URL or SWHID format': 'Bad format inline' };
+            const errorDiv = setupInlineError();
+            const doiInput = document.getElementById('textDoiRef-1');
+            doiInput.value = '';
+            fireEvent.blur(doiInput);
+            expect(doiInput).not.toHaveClass('is-invalid');
+            expect(errorDiv).toHaveClass('d-none');
+        });
+    });
+
     test('should show toast (no modal) when btn-autofix-all clicked and no DOI refs exist', () => {
         const { Toast } = require('bootstrap');
         document.querySelectorAll('.enrich-doi-btn').forEach((el) => el.remove());

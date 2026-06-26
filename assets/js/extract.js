@@ -10,6 +10,18 @@ const extractDoi = (input) => {
     return match ? match[1] : null;
 };
 
+export const isValidDoi = (value) =>
+    /(10\.\d{4,}(?:\.\d+)*\/(?:(?!["&'\s])\S)+)/.test(value);
+
+export const isValidUrl = (value) =>
+    /^https?:\/\/\S+/.test(value);
+
+export const isValidSwhid = (value) =>
+    /^swh:1:(snp|rel|rev|dir|cnt):[0-9a-f]{40}(;(origin|visit|anchor|path|lines|bytes)=[^;]+)*$/.test(value);
+
+const validateIdentifier = (value) =>
+    !value || isValidDoi(value) || isValidUrl(value) || isValidSwhid(value);
+
 const setContent = (element, content) => {
     if (!element) return;
     element.value = content;
@@ -101,9 +113,29 @@ function manageDoiEnrichment() {
     const errorMsg = document.getElementById('doi-error-msg');
 
     if (addRefDoiInput) {
+        const invalidMsg = () =>
+            window.translations?.['Invalid DOI, URL or SWHID format'] ??
+            'Invalid format. Expected a DOI, a URL or a SWHID';
+
         const handleDoiChange = async () => {
             const val = addRefDoiInput.value.trim();
-            if (!val) return;
+            if (!val) {
+                errorMsg?.classList.add('d-none');
+                if (confirmAddingBtn) confirmAddingBtn.disabled = false;
+                return;
+            }
+
+            if (!validateIdentifier(val)) {
+                if (errorMsg) {
+                    errorMsg.textContent = invalidMsg();
+                    errorMsg.classList.remove('d-none');
+                }
+                if (confirmAddingBtn) confirmAddingBtn.disabled = true;
+                return;
+            }
+
+            errorMsg?.classList.add('d-none');
+            if (confirmAddingBtn) confirmAddingBtn.disabled = false;
 
             // Check if reference textarea is empty before fetching
             let currentContent = addRefTextArea ? addRefTextArea.value.trim() : '';
@@ -316,6 +348,35 @@ function changeValueOfReference() {
             document.querySelector(`input[data-dirty-ref="${idRef}"]`).value = 1;
         });
     });
+
+    // 5. Inline DOI validation on blur
+    const doiInputs = document.querySelectorAll('[id^=textDoiRef-]');
+    doiInputs.forEach((input) => {
+        input.addEventListener('blur', () => {
+            const idRef = input.id.replace('textDoiRef-', '');
+            validateInlineDoiField(idRef);
+        });
+    });
+}
+
+function validateInlineDoiField(idRef) {
+    const input = document.getElementById('textDoiRef-' + idRef);
+    const errorEl = document.getElementById('doi-error-inline-' + idRef);
+    if (!input || !errorEl) return true;
+
+    const val = input.value.trim();
+    if (!val || validateIdentifier(val)) {
+        input.classList.remove('is-invalid');
+        errorEl.classList.add('d-none');
+        return true;
+    }
+
+    input.classList.add('is-invalid');
+    errorEl.textContent =
+        window.translations?.['Invalid DOI, URL or SWHID format'] ??
+        'Invalid format. Expected a DOI, a URL or a SWHID';
+    errorEl.classList.remove('d-none');
+    return false;
 }
 
 function enterEditMode(idRef) {
@@ -355,6 +416,8 @@ function exitEditMode(idRef) {
 }
 
 function confirmEdit(idRef) {
+    if (!validateInlineDoiField(idRef)) return;
+
     const btnModify = document.getElementById('modifyBtn-' + idRef);
     const modifyReferenceText = document.getElementById('modifyTextArea-' + idRef);
     const modifyReferenceDoi = document.getElementById('modifyReferenceDoi-' + idRef);
