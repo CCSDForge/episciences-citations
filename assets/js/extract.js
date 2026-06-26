@@ -10,6 +10,9 @@ const extractDoi = (input) => {
     return match ? match[1] : null;
 };
 
+export const stripDoiPrefix = (value) =>
+    value.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
+
 export const isValidDoi = (value) =>
     /(10\.\d{4,}(?:\.\d+)*\/(?:(?!["&'\s])\S)+)/.test(value);
 
@@ -118,7 +121,11 @@ function manageDoiEnrichment() {
             'Invalid format. Expected a DOI, a URL or a SWHID';
 
         const handleDoiChange = async () => {
-            const val = addRefDoiInput.value.trim();
+            const stripped = stripDoiPrefix(addRefDoiInput.value.trim());
+            if (stripped !== addRefDoiInput.value.trim()) {
+                addRefDoiInput.value = stripped;
+            }
+            const val = stripped;
             if (!val) {
                 errorMsg?.classList.add('d-none');
                 if (confirmAddingBtn) confirmAddingBtn.disabled = false;
@@ -353,6 +360,10 @@ function changeValueOfReference() {
     const doiInputs = document.querySelectorAll('[id^=textDoiRef-]');
     doiInputs.forEach((input) => {
         input.addEventListener('blur', () => {
+            const stripped = stripDoiPrefix(input.value.trim());
+            if (stripped !== input.value.trim()) {
+                input.value = stripped;
+            }
             const idRef = input.id.replace('textDoiRef-', '');
             validateInlineDoiField(idRef);
         });

@@ -376,6 +376,20 @@ describe('extract.js', () => {
         expect(errorDiv).not.toHaveClass('d-none');
     });
 
+    describe('stripDoiPrefix', () => {
+        test.each([
+            ['https://doi.org/ prefix',    'https://doi.org/10.1000/xyz',    '10.1000/xyz'],
+            ['http://doi.org/ prefix',     'http://doi.org/10.1000/xyz',     '10.1000/xyz'],
+            ['https://dx.doi.org/ prefix', 'https://dx.doi.org/10.1000/xyz', '10.1000/xyz'],
+            ['bare DOI unchanged',         '10.1000/xyz',                    '10.1000/xyz'],
+            ['regular URL unchanged',      'https://example.com/path',       'https://example.com/path'],
+            ['empty string unchanged',     '',                               ''],
+        ])('strips %s', (_label, input, expected) => {
+            const { stripDoiPrefix } = require('../js/extract.js');
+            expect(stripDoiPrefix(input)).toBe(expected);
+        });
+    });
+
     describe('isValidDoi', () => {
         test.each([
             ['bare DOI',            '10.1000/xyz'],
@@ -475,6 +489,14 @@ describe('extract.js', () => {
             expect(errorMsg).not.toHaveClass('d-none');
             expect(errorMsg.textContent).toBe('Bad format');
             expect(confirmBtn.disabled).toBe(true);
+        });
+
+        test('strips doi.org prefix on blur and accepts the cleaned value', () => {
+            const input = document.getElementById('document_addReferenceDoi');
+            input.value = 'https://doi.org/10.1000/xyz';
+            fireEvent.blur(input);
+            expect(input.value).toBe('10.1000/xyz');
+            expect(document.getElementById('doi-error-msg')).toHaveClass('d-none');
         });
     });
 
