@@ -6,9 +6,9 @@ CNTR_NAME_PHP := epi-citations-php-fpm
 CNTR_APP_DIR := /var/www/htdocs
 CNTR_APP_USER := www-data
 
-MYSQL_CONNECT_CITATIONS:= mysql -u root -proot -h 127.0.0.1 -P 33063 citations
+MYSQL_CONNECT_CITATIONS:= mysql -u root -proot -h 127.0.0.1 -P 33063 epi-citations
 
-.PHONY: build up down clean help generate-ssl-certs test test-php test-js test-unit test-integration test-functional lint lint-php lint-js coverage install-deps npm-install npm-build db-test-create db-test-migrate db-test-fixtures db-test-reset ci
+.PHONY: build up down clean help test test-php test-js test-unit test-integration test-functional lint lint-php lint-js coverage install-deps npm-install npm-build db-test-create db-test-migrate db-test-fixtures db-test-reset ci
 
 help: ## Display this help
 	@echo "Available targets:"
@@ -20,16 +20,15 @@ build: ## Build the docker containers
 up: ## Start all the docker containers
 	$(DOCKER_COMPOSE) up -d
 	@echo "====================================================================="
-	@echo "Make sure you have [127.0.0.1 localhost citations-dev.episciences.org] in /etc/hosts"
-	@echo "Citation Manager (HTTPS) : https://citations-dev.episciences.org/"
-	@echo "Citation Manager (HTTP)  : http://citations-dev.episciences.org:8081/ (redirects to HTTPS)"
-	@echo "PhpMyAdmin               : http://localhost:8002/"
+	@echo "Make sure you have [127.0.0.1 citations-dev.episciences.org] in /etc/hosts"
+	@echo "Citation Manager (HTTPS) : https://citations-dev.episciences.org/ (via Traefik)"
+	@echo "Citation Manager (HTTP)  : http://localhost:8081/"
+	@echo "PhpMyAdmin               : https://pma.episciences.org (via infra)"
 	@echo "====================================================================="
-	@echo "Note: HTTPS uses self-signed certificate. Browser will show security warning."
-	@echo "      To regenerate SSL certificates, run: make generate-ssl-certs"
+	@echo "Note: HTTPS uses Traefik auto-signed certificate (browser warning expected)."
+	@echo "      Make sure episciences-infrastructure is running: cd ../episciences-infrastructure && make up"
 	@echo "====================================================================="
-	@echo "SQL Place Custom SQL dump files in ~/tmp/"
-	@echo "SQL: Import '~/tmp/citations.sql' with 'make load-db-citations'"
+	@echo "DB: Import '~/tmp/citations.sql' with 'make load-db-citations'"
 
 down: ## Stop the docker containers and remove orphans
 	$(DOCKER_COMPOSE) down --remove-orphans
@@ -38,8 +37,8 @@ clean: down ## Clean up unused docker resources
 	#docker stop $(docker ps -a -q)
 	docker system prune -f
 
-load-db-citations: ## Load an SQL dump from ~/tmp/citations.sql
-	$(MYSQL_CONNECT_CITATIONS) < ~/tmp/episciences.sql
+load-db-citations: ## Load an SQL dump from ~/tmp/citations.sql (DB managed by episciences-infrastructure)
+	$(MYSQL_CONNECT_CITATIONS) < ~/tmp/citations.sql
 
 composer-install: git-safe-dir ## Install composer dependencies
 	$(DOCKER_COMPOSE) exec -w $(CNTR_APP_DIR) $(CNTR_NAME_PHP) composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -84,10 +83,6 @@ fix-cache-permissions: ## Fix cache directory permissions
 	$(DOCKER_COMPOSE) exec $(CNTR_NAME_PHP) chown -R $(CNTR_APP_USER):$(CNTR_APP_USER) $(CNTR_APP_DIR)/var/cache
 	$(DOCKER_COMPOSE) exec $(CNTR_NAME_PHP) chmod -R 777 $(CNTR_APP_DIR)/var/cache
 
-generate-ssl-certs: ## Generate self-signed SSL certificates for HTTPS
-	@echo "Generating SSL certificates..."
-	./docker/apache/generate-ssl-certs.sh
-	@echo "SSL certificates generated. Restart containers with 'make restart-httpd' to apply."
 
 # ============================================================================
 # TESTING COMMANDS

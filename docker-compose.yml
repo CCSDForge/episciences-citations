@@ -8,22 +8,26 @@ services:
     restart: always
     volumes:
       - ./docker/apache/vhost.conf:/usr/local/apache2/conf/extra/episciences-citations.conf
-      - ./docker/apache/ssl:/usr/local/apache2/conf/ssl
       - .:/var/www/htdocs
       - ./data:/var/www/data
       - ./cache:/var/www/cache
       - ./logs:/var/www/logs
     ports:
       - "8081:80"
-      - "443:443"
     depends_on:
       - epi-citations-php-fpm
-      - epi-citations-db
     networks:
       epi-citations-network:
       epi-network:
         aliases:
           - citations-dev.episciences.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.epi-citations-httpd.loadbalancer.server.port=80"
+      - "traefik.http.routers.epi-citations.rule=Host(`citations-dev.episciences.org`)"
+      - "traefik.http.routers.epi-citations.entrypoints=websecure"
+      - "traefik.http.routers.epi-citations.tls=true"
+      - "traefik.http.routers.epi-citations.service=epi-citations-httpd"
     command: >
       /bin/sh -c "chown -R www-data:www-data /var/www/data /var/www/cache /var/www/logs && httpd-foreground"
 
@@ -52,7 +56,7 @@ services:
       - APP_ENV=dev
       - APP_DEBUG=1
     expose:
-      - "9000"  # Expose internal port 9000
+      - "9000"
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -67,60 +71,9 @@ services:
       - epi-citations-network
       - epi-network
 
-
-
-  epi-citations-db:
-    image: "mysql:8.0"
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    container_name: 'epi-citations-db'
-    expose:
-      - "3306"
-    ports:
-      - "33063:3306"
-    volumes:
-      - epi-citations-mysql-db:/var/lib/mysql
-      - type: bind
-        source: ./docker/mysql/citations.sql
-        target: /docker-entrypoint-initdb.d/init.sql
-    env_file:
-      - docker/mysql/mysql.env
-    networks:
-      - epi-citations-network
-
-
-  epi-citations-pma:
-    container_name: 'epi-citations-pma'
-    image: "phpmyadmin:latest"
-    environment:
-      - "PMA_PMADB=pma"
-      - "PMA_CONTROLUSER=root"
-      - "PMA_CONTROLPASS=root"
-      - "PMA_QUERYHISTORYDB=true"
-      - "PMA_USER=root"
-      - "PMA_PASSWORD=root"
-      - "PMA_ARBITRARY=1"
-      - "PMA_HOSTS=epi-citations-db,db-auth"
-      - "PMA_VERBOSES=citations,auth"
-      - "UPLOAD_LIMIT=2G"
-      - "MEMORY_LIMIT=1G"
-    ports:
-      - "8002:80"
-    depends_on:
-      - epi-citations-db
-    links:
-      - epi-citations-db
-    networks:
-      - epi-citations-network
-
 networks:
   epi-citations-network:
     name: epi-citations-network
     driver: bridge
   epi-network:
-    external: true  # ← network created by episciences-gpl
-
-volumes:
-  epi-citations-mysql-db:
-
+    external: true
