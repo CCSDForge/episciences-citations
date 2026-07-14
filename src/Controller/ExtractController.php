@@ -147,6 +147,10 @@ class ExtractController extends AbstractController
         $this->logger->info('view ref page', ['docId' => $docId,
             'attribute cas' => $this->container->get('security.token_storage')->getToken()->getAttributes()]);
         if ($this->isAuthorizeForApp($docId)) {
+            if (!$this->references->getDocument($docId) instanceof Document) {
+                $this->logger->info('Document not yet extracted, creating stub', ['docId' => $docId]);
+                $this->references->createDocumentId($docId);
+            }
             $session = $request->getSession();
             $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
             $form->handleRequest($request);
