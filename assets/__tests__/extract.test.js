@@ -72,6 +72,9 @@ describe('extract.js', () => {
                         <div id="modifyReferenceDoi-1" class="d-none">
                             <input id="textDoiRef-1" value="10.1000/new">
                         </div>
+                        <div id="modifyReferenceOa-1" class="d-none">
+                            <input id="textOaLinkRef-1" value="">
+                        </div>
                         <div id="editActionBtns-1" class="d-none">
                             <button type="button" id="acceptModifyBtn-1">Confirm</button>
                             <button type="button" id="cancelModifyBtn-1">Cancel</button>
@@ -190,6 +193,43 @@ describe('extract.js', () => {
 
         // Wait for autosave fetch
         await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.any(Object)));
+    });
+
+    test('should merge a manually entered open access link and mark it as user-provided', async () => {
+        const editBtn = document.getElementById('modifyBtn-1');
+        fireEvent.click(editBtn);
+
+        const oaInput = document.getElementById('textOaLinkRef-1');
+        oaInput.value = 'https://oa.example.org/paper';
+        fireEvent.input(oaInput);
+
+        const confirmBtn = document.getElementById('acceptModifyBtn-1');
+        fireEvent.click(confirmBtn);
+
+        const stored = JSON.parse(document.getElementById('reference-1').value);
+        expect(stored['open-access']).toEqual({
+            url: 'https://oa.example.org/paper',
+            source_title: '',
+            origin: 'user',
+            checked_at: null,
+        });
+        expect(document.getElementById('linkOaRef-1')).not.toBeNull();
+        expect(document.getElementById('linkOaRef-1').href).toBe('https://oa.example.org/paper');
+    });
+
+    test('should not touch open-access data when the field was left untouched', () => {
+        document.getElementById('reference-1').value = JSON.stringify({
+            'open-access': { url: 'https://auto.example.org/x', source_title: 'Auto Repo', origin: 'openalex', checked_at: '2026-01-01T00:00:00+00:00' },
+        });
+
+        const editBtn = document.getElementById('modifyBtn-1');
+        fireEvent.click(editBtn);
+
+        const confirmBtn = document.getElementById('acceptModifyBtn-1');
+        fireEvent.click(confirmBtn);
+
+        const stored = JSON.parse(document.getElementById('reference-1').value);
+        expect(stored['open-access'].origin).toBe('openalex');
     });
 
     test('should handle detector badges update in UI', async () => {

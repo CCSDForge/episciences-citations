@@ -76,6 +76,8 @@ Supported ID formats: Formats d'identifiants supportés
 Please enter a paper ID.: Veuillez saisir un identifiant de document.
 '%count% reference(s) imported from Semantic Scholar': '%count% référence(s) importée(s) depuis Semantic Scholar'
 DOI, URL, SWHID: DOI, URL, SWHID
+Open access link: Lien open access
+Open access: Open access
 DOI not found in Semantic Scholar: DOI non trouvé dans Semantic Scholar
 No references found for this paper ID: Aucune référence trouvée pour cet identifiant
 Import: Importer

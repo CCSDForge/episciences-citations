@@ -3,12 +3,14 @@ namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
     private const array SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const array OPEN_ACCESS_REFERENCE_FIELDS = ['open-access'];
 
 
     public function __construct(
@@ -16,6 +18,7 @@ class References {
         private readonly Grobid $grobid,
         private readonly Bibtex $bibtex,
         private readonly SolrReferenceEnricher $solrReferenceEnricher,
+        private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher,
         private readonly LoggerInterface $logger
     )
     {
@@ -123,6 +126,11 @@ class References {
                     $formattedReference[$field] = $refData[$field];
                 }
             }
+            foreach (self::OPEN_ACCESS_REFERENCE_FIELDS as $field) {
+                if (array_key_exists($field, $refData)) {
+                    $formattedReference[$field] = $refData[$field];
+                }
+            }
 
             $rawReferences[$refId]['ref'] = $formattedReference;
 
@@ -160,7 +168,17 @@ class References {
                 }
                 $refInfo['doi'] = $addReferenceDoi;
             }
+            $addReferenceOpenAccessUrl = trim((string) ($form['addReferenceOpenAccessUrl'] ?? ''));
+            if ($addReferenceOpenAccessUrl !== '') {
+                $refInfo['open-access'] = [
+                    'url' => $addReferenceOpenAccessUrl,
+                    'source_title' => '',
+                    'origin' => 'user',
+                    'checked_at' => null,
+                ];
+            }
             $refInfo = $this->solrReferenceEnricher->enrichReference($refInfo);
+            $refInfo = $this->openAccessReferenceEnricher->enrichReference($refInfo);
             $ref->setReference($refInfo);
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -256,6 +274,7 @@ class References {
 
         $refData = json_decode($referenceJson, true) ?? [];
         $refData = $this->solrReferenceEnricher->enrichReference($refData);
+        $refData = $this->openAccessReferenceEnricher->enrichReference($refData);
         $ref->setReference($refData);
         
         if ($ref->getAccepted() !== $accepted) {
@@ -306,7 +325,10 @@ class References {
             $paperReferences
         );
 
-        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $index => $reference) {
+        $references = $this->solrReferenceEnricher->enrichReferences($references);
+        $references = $this->openAccessReferenceEnricher->enrichReferences($references);
+
+        foreach ($references as $index => $reference) {
             $paperReferences[$index]->setReference($reference);
         }
     }

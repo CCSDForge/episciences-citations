@@ -72,6 +72,8 @@ Supported ID formats: Supported ID formats
 Please enter a paper ID.: Please enter a paper ID.
 '%count% reference(s) imported from Semantic Scholar': '%count% reference(s) imported from Semantic Scholar'
 DOI, URL, SWHID: DOI, URL, SWHID
+Open access link: Open access link
+Open access: Open access
 DOI not found in Semantic Scholar: DOI not found in Semantic Scholar
 No references found for this paper ID: No references found for this paper ID
 Import: Import

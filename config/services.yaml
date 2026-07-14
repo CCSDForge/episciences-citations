@@ -13,6 +13,11 @@ parameters:
     solr_base_url_default: 'http://localhost:8983/solr'
     solr_collection_default: 'ref_pps'
     solr_batch_size_default: 100
+    openalex_enabled_default: false
+    openalex_api_url_default: 'https://api.openalex.org/works/'
+    openalex_mailto_default: ''
+    openalex_api_key_default: ''
+    openalex_daily_bulk_quota_default: 10000
     app.cache_folder: '%kernel.project_dir%/var/tmp'
     cas_login_target: '%env(string:CAS_LOGIN_TARGET)%'
     cas_logout_target: '%env(string:CAS_LOGOUT_TARGET)%'
@@ -72,6 +77,37 @@ services:
             $solrBaseUrl: '%env(string:default:solr_base_url_default:APP_SOLR_BASE_URL)%'
             $collection: '%env(string:default:solr_collection_default:APP_SOLR_COLLECTION)%'
             $batchSize: '%env(int:default:solr_batch_size_default:APP_SOLR_BATCH_SIZE)%'
+
+    # Cache pour les résultats de résolution open access par DOI (générique, tous fournisseurs)
+    open_access.references.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            $namespace: 'openAccessReferences'
+            $defaultLifetime: 2678400 # 31 jours
+            $directory: '%app.cache_folder%'
+
+    # Cache pour le comptage quotidien des appels bulk OpenAlex (spécifique à ce fournisseur)
+    openalex.quota.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            $namespace: 'openalexBulkQuota'
+            $defaultLifetime: 90000 # ~25h
+            $directory: '%app.cache_folder%'
+
+    App\Services\OpenAccess\OpenAlexResolver:
+        arguments:
+            $quotaCache: '@openalex.quota.cache'
+            $apiUrl: '%env(string:default:openalex_api_url_default:APP_OPENALEX_API_URL)%'
+            $mailto: '%env(string:default:openalex_mailto_default:APP_OPENALEX_MAILTO)%'
+            $apiKey: '%env(string:default:openalex_api_key_default:APP_OPENALEX_API_KEY)%'
+            $dailyBulkQuota: '%env(int:default:openalex_daily_bulk_quota_default:APP_OPENALEX_DAILY_BULK_QUOTA)%'
+
+    App\Services\OpenAccess\OpenAccessResolverInterface: '@App\Services\OpenAccess\OpenAlexResolver'
+
+    App\Services\OpenAccess\OpenAccessReferenceEnricher:
+        arguments:
+            $enabled: '%env(bool:default:openalex_enabled_default:APP_OPENALEX_ENABLED)%'
+            $openAccessCache: '@open_access.references.cache'
 
     # CORS Event Listener pour les routes API (centralise la gestion CORS)
     App\EventListener\CorsEventListener:

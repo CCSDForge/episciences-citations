@@ -14,6 +14,7 @@ use App\Repository\PaperReferencesRepository;
 use App\Repository\UserInformationsRepository;
 use App\Services\Bibtex;
 use App\Services\Grobid;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use App\Services\References;
 use App\Services\SolrReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,6 +30,7 @@ class ReferencesTest extends TestCase
     private MockObject $grobid;
     private MockObject $bibtex;
     private MockObject $solrReferenceEnricher;
+    private MockObject $openAccessReferenceEnricher;
     private MockObject $refRepository;
     private MockObject $userRepository;
     private MockObject $documentRepository;
@@ -43,6 +45,9 @@ class ReferencesTest extends TestCase
         $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
         $this->solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
         $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
+        $this->openAccessReferenceEnricher = $this->createMock(OpenAccessReferenceEnricher::class);
+        $this->openAccessReferenceEnricher->method('enrichReference')->willReturnArgument(0);
+        $this->openAccessReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
         $this->logger = $this->createMock(LoggerInterface::class);
 
         // Mock repositories
@@ -56,6 +61,7 @@ class ReferencesTest extends TestCase
             $this->grobid,
             $this->bibtex,
             $this->solrReferenceEnricher,
+            $this->openAccessReferenceEnricher,
             $this->logger
         );
     }

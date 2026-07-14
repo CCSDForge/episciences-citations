@@ -257,6 +257,17 @@
                                     </a>
                                     {% set doiDecodedRef = jsonDecodedRef['doi'] %}
                                 {% endif %}
+                                {% set openAccessUrl = '' %}
+                                {% if jsonDecodedRef['open-access']['url'] is defined and jsonDecodedRef['open-access']['url'] is not empty %}
+                                    {% set openAccessUrl = jsonDecodedRef['open-access']['url'] %}
+                                    <br>
+                                    <a href="{{ openAccessUrl }}"
+                                       class="link-success small text-decoration-underline"
+                                       rel="noopener" target="_blank"
+                                       id="linkOaRef-{{ paperReferences.id.vars.value }}">
+                                        <i class="fas fa-lock-open me-1" aria-hidden="true"></i>{{ 'Open access'|trans }}
+                                    </a>
+                                {% endif %}
                             </div>
 
                             {# Edit mode fields (hidden by default) #}
@@ -271,6 +282,12 @@
                                        value="{{ doiDecodedRef }}">
                                 <div id="doi-error-inline-{{ paperReferences.id.vars.value }}"
                                      class="text-danger small mt-1 d-none" aria-live="assertive"></div>
+                            </div>
+                            <div class="d-none w-100 mt-2" id="modifyReferenceOa-{{ paperReferences.id.vars.value }}">
+                                <input type="text" id="textOaLinkRef-{{ paperReferences.id.vars.value }}"
+                                       class="form-control form-control-sm"
+                                       placeholder="{{ 'Open access link'|trans }}"
+                                       value="{{ openAccessUrl }}">
                             </div>
                             <div class="d-none mt-2 d-flex gap-2" id="editActionBtns-{{ paperReferences.id.vars.value }}">
                                 <button type="button" id="acceptModifyBtn-{{ paperReferences.id.vars.value }}"
