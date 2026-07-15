@@ -25,6 +25,29 @@ export const isValidSwhid = (value) =>
 const validateIdentifier = (value) =>
     !value || isValidDoi(value) || isValidUrl(value) || isValidSwhid(value);
 
+// Displays the URL itself rather than a static "Open access" label, with the
+// label kept as a hover tooltip via the title attribute.
+const renderOaLink = (idRef, url, insertAfterEl) => {
+    let linkOaTag = document.getElementById('linkOaRef-' + idRef);
+    if (linkOaTag === null) {
+        linkOaTag = document.createElement('a');
+        linkOaTag.id = 'linkOaRef-' + idRef;
+        linkOaTag.className = 'link-success small text-decoration-underline';
+        linkOaTag.target = '_blank';
+        linkOaTag.rel = 'noopener';
+        linkOaTag.title = window.translations?.['Open access'] ?? 'Open access';
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-lock-open me-1';
+        icon.setAttribute('aria-hidden', 'true');
+        linkOaTag.appendChild(icon);
+        linkOaTag.appendChild(document.createTextNode(url));
+        insertAfterEl.after(document.createElement('br'), linkOaTag);
+    } else {
+        linkOaTag.lastChild.textContent = url;
+    }
+    linkOaTag.href = url;
+};
+
 const setContent = (element, content) => {
     if (!element) return;
     element.value = content;
@@ -491,25 +514,12 @@ function confirmEdit(idRef) {
 
     const oaInput = document.getElementById('textOaLinkRef-' + idRef);
     const oaTouched = oaInput && oaInput.dataset.touched === '1';
-    let linkOaTag = document.getElementById('linkOaRef-' + idRef);
+    const linkOaTag = document.getElementById('linkOaRef-' + idRef);
     const sanitizedOaUrl = oaInput ? oaInput.value.trim() : '';
 
     if (oaTouched) {
         if (isValidUrl(sanitizedOaUrl)) {
-            if (linkOaTag === null) {
-                linkOaTag = document.createElement('a');
-                linkOaTag.id = 'linkOaRef-' + idRef;
-                linkOaTag.className = 'link-success small text-decoration-underline';
-                linkOaTag.target = '_blank';
-                linkOaTag.rel = 'noopener';
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-lock-open me-1';
-                icon.setAttribute('aria-hidden', 'true');
-                linkOaTag.appendChild(icon);
-                linkOaTag.appendChild(document.createTextNode(window.translations?.['Open access'] ?? 'Open access'));
-                showedText.after(document.createElement('br'), linkOaTag);
-            }
-            linkOaTag.href = sanitizedOaUrl;
+            renderOaLink(idRef, sanitizedOaUrl, showedText);
         } else if (linkOaTag !== null) {
             linkOaTag.remove();
         }
@@ -789,23 +799,9 @@ function updateReferenceUI(idRef, referenceData) {
     // Update open access link display and edit input with freshly resolved data
     // (the server already validates the scheme; re-checking here is defense in depth)
     const oaUrl = isValidUrl(referenceData['open-access']?.url ?? '') ? referenceData['open-access'].url : '';
-    let linkOaTag = document.getElementById('linkOaRef-' + idRef);
+    const linkOaTag = document.getElementById('linkOaRef-' + idRef);
     if (oaUrl !== '') {
-        if (linkOaTag === null) {
-            const showedText = document.getElementById('textReference-' + idRef);
-            linkOaTag = document.createElement('a');
-            linkOaTag.id = 'linkOaRef-' + idRef;
-            linkOaTag.className = 'link-success small text-decoration-underline';
-            linkOaTag.target = '_blank';
-            linkOaTag.rel = 'noopener';
-            const icon = document.createElement('i');
-            icon.className = 'fas fa-lock-open me-1';
-            icon.setAttribute('aria-hidden', 'true');
-            linkOaTag.appendChild(icon);
-            linkOaTag.appendChild(document.createTextNode(window.translations?.['Open access'] ?? 'Open access'));
-            showedText.after(document.createElement('br'), linkOaTag);
-        }
-        linkOaTag.href = oaUrl;
+        renderOaLink(idRef, oaUrl, document.getElementById('textReference-' + idRef));
     } else if (linkOaTag !== null) {
         linkOaTag.remove();
     }

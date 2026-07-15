@@ -215,6 +215,8 @@ describe('extract.js', () => {
         });
         expect(document.getElementById('linkOaRef-1')).not.toBeNull();
         expect(document.getElementById('linkOaRef-1').href).toBe('https://oa.example.org/paper');
+        expect(document.getElementById('linkOaRef-1').textContent).toBe('https://oa.example.org/paper');
+        expect(document.getElementById('linkOaRef-1').title).toBe('Open access');
     });
 
     test('should reject a javascript: open access url even when the scheme is split by a tab', () => {
