@@ -14,6 +14,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:solr:enrich-references', description: 'Enrich existing references with Solr metadata by DOI')]
 class SolrEnrichReferencesCommand extends Command
 {
+    use ReferenceIdFilterTrait;
+
     private const array SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
     public function __construct(
@@ -122,52 +124,6 @@ class SolrEnrichReferencesCommand extends Command
         ));
 
         return Command::SUCCESS;
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    private function getReferenceIds(InputInterface $input): array
-    {
-        $queryBuilder = $this->entityManager->createQueryBuilder()
-            ->select('p.id')
-            ->from(PaperReferences::class, 'p')
-            ->orderBy('p.id', 'ASC');
-
-        if ($input->getOption('docid') !== null) {
-            $queryBuilder
-                ->andWhere('p.document = :docId')
-                ->setParameter('docId', (int) $input->getOption('docid'));
-        }
-
-        if ($input->getOption('source') !== null) {
-            $queryBuilder
-                ->andWhere('p.source = :source')
-                ->setParameter('source', $input->getOption('source'));
-        }
-
-        return array_map(
-            static fn (array $row): int => (int) $row['id'],
-            $queryBuilder->getQuery()->getArrayResult()
-        );
-    }
-
-    private function isValidSource(string $source): bool
-    {
-        return in_array($source, [
-            PaperReferences::SOURCE_METADATA_GROBID,
-            PaperReferences::SOURCE_METADATA_EPI_USER,
-            PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT,
-            PaperReferences::SOURCE_SEMANTICS_SCHOLAR,
-        ], true);
-    }
-
-    /**
-     * @param array<string, mixed> $reference
-     */
-    private function hasDoi(array $reference): bool
-    {
-        return isset($reference['doi']) && is_string($reference['doi']) && trim($reference['doi']) !== '';
     }
 
     /**

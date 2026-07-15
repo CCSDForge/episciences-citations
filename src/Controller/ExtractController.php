@@ -16,6 +16,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\ClickableInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -33,6 +34,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ExtractController extends AbstractController
 {
+    private const string NO_REFERENCE_FOUND_MESSAGE = 'No reference found in the PDF';
 
     public function __construct(private readonly Grobid                   $grobid,
                                 private readonly References               $references,
@@ -85,29 +87,17 @@ class ExtractController extends AbstractController
         $session->set('openModalClose', 0);
         if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')) {
             $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
-            if (!$this->grobid->hasCachedReferences($docId)) {
-                return $this->renderProcessingPage($docId, $request);
-            }
-            $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
-            if ($insertRef === false) {
-                $this->addFlash(
-                    'notice',
-                    $this->translator->trans('No references found in the PDF')
-                );
-            }
-            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+            return $this->extractReferencesOrShowProcessing($docId, $request, false)
+                ?? $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
         }
 
         if ($this->references->documentAlreadyExtracted($docId)) {
             if ($this->references->getReferences($docId, 'all') === []) {
                 // Refs absent — attempt (re)insertion: uses cache if available, calls GROBID otherwise
                 $this->logger->info('Document exists with no refs — retrying extraction', ['DocId' => $docId]);
-                if (!$this->grobid->hasCachedReferences($docId)) {
-                    return $this->renderProcessingPage($docId, $request);
-                }
-                $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
-                if ($insertRef === false) {
-                    $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+                $processing = $this->extractReferencesOrShowProcessing($docId, $request, false);
+                if ($processing !== null) {
+                    return $processing;
                 }
             }
             $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
@@ -115,20 +105,30 @@ class ExtractController extends AbstractController
         }
 
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
+        return $this->extractReferencesOrShowProcessing($docId, $request, true)
+            ?? $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+    }
+
+    /**
+     * Ensures references are inserted for $docId, showing the processing page while GROBID has no cached result yet.
+     *
+     * @throws JsonException
+     */
+    private function extractReferencesOrShowProcessing(int $docId, Request $request, bool $createStubOnFailure): ?Response
+    {
         if (!$this->grobid->hasCachedReferences($docId)) {
             return $this->renderProcessingPage($docId, $request);
         }
-        $insertRef = $this->grobid->insertReferences($docId, $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf");
+
+        $insertRef = $this->grobid->insertReferences($docId, $this->getParameter('deposit_pdf') . '/' . $docId . '.pdf');
         if ($insertRef === false) {
-            $this->addFlash(
-                'notice',
-                $this->translator->trans('No reference found in the PDF')
-            );
-            if (!$this->references->getDocument($docId) instanceof Document) {
+            $this->addFlash('notice', $this->translator->trans(self::NO_REFERENCE_FOUND_MESSAGE));
+            if ($createStubOnFailure && !$this->references->getDocument($docId) instanceof Document) {
                 $this->references->createDocumentId($docId);
             }
         }
-        return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+
+        return null;
     }
 
     /**
@@ -142,98 +142,125 @@ class ExtractController extends AbstractController
      */
     #[Route('/{_locale<en|fr>}/viewref/{docId}', name: 'app_view_ref')]
     #[IsGranted('ROLE_USER')]
-    public function viewReference(int                 $docId, Request $request): Response
+    public function viewReference(int $docId, Request $request): Response
     {
-        $this->logger->info('view ref page', ['docId' => $docId,
-            'attribute cas' => $this->container->get('security.token_storage')->getToken()->getAttributes()]);
-        if ($this->isAuthorizeForApp($docId)) {
-            if (!$this->references->getDocument($docId) instanceof Document) {
-                $this->logger->info('Document not yet extracted, creating stub', ['docId' => $docId]);
-                $this->references->createDocumentId($docId);
-            }
-            $session = $request->getSession();
-            $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
-            $form->handleRequest($request);
+        $this->logger->info('view ref page', ['docId' => $docId, 'attribute cas' => $this->getUserAttributes()]);
 
-            $errors = $this->validator->validate($form);
-            if (count($errors) > 0) {
-                foreach ($errors as $violation) {
-                    $this->addFlash(
-                        'error',
-                        $this->translator->trans($violation->getMessage())
-                    );
-                }
-            }
-            if ($form->isSubmitted()) {
-                if ($form->isValid()) {
-                    $session = $request->getSession();
-                    $session->set('openModalClose', 0);
-                    $submitNewRef = $form->get('submitNewRef');
-                    $submitSave = $form->get('save');
-                    $submitImportBib = $form->get('submitImportBib');
-                    if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
-                        $newRef = $this->references->addNewReference($request->request->all($form->getName()),
-                            $this->container->get('security.token_storage')->getToken()->getAttributes());
-                        $this->logger->info('New reference added');
-                        if ($newRef) {
-                            $this->addFlash(
-                                'success',
-                                $this->translator->trans('New Reference Added')
-                            );
-                        } else {
-                            $this->addFlash(
-                                'error',
-                                $this->translator->trans('Title missing to add new reference')
-                            );
-                        }
-                    } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
-                        $this->logger->info('Manual save triggered', ['locale' => $request->getLocale()]);
-                        $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()),
-                            $this->container->get('security.token_storage')->getToken()->getAttributes());
-                        $this->logger->info('Manual save result', $userChoice);
-                        $this->flashMessageForChoices($userChoice);
-                    } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
-                        $bibtexFile = $form->get('bibtexFile')->getData();
-                        if ($bibtexFile !== null) {
-                            $process = $this->bibtex->processBibtex($bibtexFile,
-                                $this->container->get('security.token_storage')->getToken()->getAttributes(), $docId);
-                            if ($process !== []) {
-                                $this->addFlash(
-                                    'error',
-                                    $this->translator->trans($process['error'])
-                                );
-                            }
-                        } else {
-                            $this->addFlash(
-                                'error',
-                                $this->translator->trans('Please add a BibTeX file')
-                            );
-                        }
-                    }
-                    $session->set('openModalClose', 0);
-                    if ($session->get('isAlreadyopenModal') === 0) {
-                        $session->set('openModalClose', 1);
-                        $session->set('isAlreadyopenModal', 1);
-                    }
-                    return $this->redirect($request->getUri());
-                }
-                $this->logger->warning('Form is invalid', [
-                    'docId' => $docId,
-                    'locale' => $request->getLocale(),
-                    'errors' => (string) $form->getErrors(true, false)
-                ]);
-                $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
-            }
-            return $this->render('extract/index.html.twig', [
-                'form' => $form->createView(),
-            ]);
+        if (!$this->isAuthorizeForApp($docId)) {
+            $this->logger->warning('Access Denied for this user : ',
+                ['DOCID' => $docId, 'USER CAS' => $this->getUserAttributes()]);
+            throw $this->createAccessDeniedException();
         }
-        $this->logger->warning('Access Denied for this user : ',
-            [
-                'DOCID' => $docId,
-                'USER CAS' => $this->container->get('security.token_storage')->getToken()->getAttributes()
+
+        if (!$this->references->getDocument($docId) instanceof Document) {
+            $this->logger->info('Document not yet extracted, creating stub', ['docId' => $docId]);
+            $this->references->createDocumentId($docId);
+        }
+
+        $form = $this->createForm(DocumentType::class, $this->references->getDocument($docId));
+        $form->handleRequest($request);
+
+        foreach ($this->validator->validate($form) as $violation) {
+            $this->addFlash('error', $this->translator->trans($violation->getMessage()));
+        }
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            return $this->handleValidFormSubmission($form, $docId, $request);
+        }
+
+        if ($form->isSubmitted()) {
+            $this->logger->warning('Form is invalid', [
+                'docId' => $docId,
+                'locale' => $request->getLocale(),
+                'errors' => (string) $form->getErrors(true, false)
             ]);
-        throw $this->createAccessDeniedException();
+            $this->addFlash('error', $this->translator->trans('Invalid data submitted'));
+        }
+
+        return $this->render('extract/index.html.twig', ['form' => $form->createView()]);
+    }
+
+    /**
+     * @param FormInterface<Document> $form
+     */
+    private function handleValidFormSubmission(FormInterface $form, int $docId, Request $request): RedirectResponse
+    {
+        $session = $request->getSession();
+        $session->set('openModalClose', 0);
+
+        $userInfo = $this->getUserAttributes();
+        $submitNewRef = $form->get('submitNewRef');
+        $submitSave = $form->get('save');
+        $submitImportBib = $form->get('submitImportBib');
+
+        if ($submitNewRef instanceof ClickableInterface && $submitNewRef->isClicked()) {
+            $this->handleNewReferenceSubmit($form, $request, $userInfo);
+        } elseif ($submitSave instanceof ClickableInterface && $submitSave->isClicked()) {
+            $this->handleSaveSubmit($form, $request, $userInfo);
+        } elseif ($submitImportBib instanceof ClickableInterface && $submitImportBib->isClicked()) {
+            $this->handleImportBibSubmit($form, $docId, $userInfo);
+        }
+
+        $session->set('openModalClose', 0);
+        if ($session->get('isAlreadyopenModal') === 0) {
+            $session->set('openModalClose', 1);
+            $session->set('isAlreadyopenModal', 1);
+        }
+
+        return $this->redirect($request->getUri());
+    }
+
+    /**
+     * @param FormInterface<Document> $form
+     * @param array<string, mixed> $userInfo
+     */
+    private function handleNewReferenceSubmit(FormInterface $form, Request $request, array $userInfo): void
+    {
+        $newRef = $this->references->addNewReference($request->request->all($form->getName()), $userInfo);
+        $this->logger->info('New reference added');
+        if ($newRef) {
+            $this->addFlash('success', $this->translator->trans('New Reference Added'));
+        } else {
+            $this->addFlash('error', $this->translator->trans('Title missing to add new reference'));
+        }
+    }
+
+    /**
+     * @param FormInterface<Document> $form
+     * @param array<string, mixed> $userInfo
+     */
+    private function handleSaveSubmit(FormInterface $form, Request $request, array $userInfo): void
+    {
+        $this->logger->info('Manual save triggered', ['locale' => $request->getLocale()]);
+        $userChoice = $this->references->validateChoicesReferencesByUser($request->request->all($form->getName()), $userInfo);
+        $this->logger->info('Manual save result', $userChoice);
+        $this->flashMessageForChoices($userChoice);
+    }
+
+    /**
+     * @param FormInterface<Document> $form
+     * @param array<string, mixed> $userInfo
+     */
+    private function handleImportBibSubmit(FormInterface $form, int $docId, array $userInfo): void
+    {
+        $bibtexFile = $form->get('bibtexFile')->getData();
+        if ($bibtexFile === null) {
+            $this->addFlash('error', $this->translator->trans('Please add a BibTeX file'));
+            return;
+        }
+
+        $process = $this->bibtex->processBibtex($bibtexFile, $userInfo, $docId);
+        if ($process !== []) {
+            $this->addFlash('error', $this->translator->trans($process['error']));
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getUserAttributes(): array
+    {
+        return $this->container->get('security.token_storage')->getToken()->getAttributes();
     }
 
     /**
@@ -325,7 +352,7 @@ class ExtractController extends AbstractController
             if (!$this->references->getDocument($docId) instanceof Document) {
                 $this->references->createDocumentId($docId);
             }
-            $this->addFlash('notice', $this->translator->trans('No reference found in the PDF'));
+            $this->addFlash('notice', $this->translator->trans(self::NO_REFERENCE_FOUND_MESSAGE));
         }
         return new JsonResponse(['success' => $insertRef]);
     }

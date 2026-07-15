@@ -17,6 +17,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:openaccess:enrich-references', description: 'Check/refresh open-access location for existing references by DOI')]
 class OpenAccessEnrichReferencesCommand extends Command
 {
+    use ReferenceIdFilterTrait;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher,
@@ -49,7 +51,111 @@ class OpenAccessEnrichReferencesCommand extends Command
         $onlyMissing = (bool) $input->getOption('only-missing');
 
         $referenceIds = $this->getReferenceIds($input);
-        $stats = [
+        $stats = $this->initialStats();
+
+        foreach (array_chunk($referenceIds, $batchSize) as $idBatch) {
+            $this->processBatch($idBatch, $onlyMissing, $force, $dryRun, $output, $stats);
+        }
+
+        $this->writeSummary($output, $stats, $batchSize, $dryRun);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @param array<int, int> $idBatch
+     * @param array<string, int> $stats
+     */
+    private function processBatch(array $idBatch, bool $onlyMissing, bool $force, bool $dryRun, OutputInterface $output, array &$stats): void
+    {
+        $paperReferences = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id' => $idBatch]);
+        [$processable, $originalReferences] = $this->filterProcessable($paperReferences, $onlyMissing, $stats);
+
+        if ($processable === []) {
+            return;
+        }
+
+        $enrichedReferences = $this->openAccessReferenceEnricher->enrichReferences($originalReferences, $force);
+        $this->applyEnrichmentResults($processable, $originalReferences, $enrichedReferences, $dryRun, $output, $stats);
+
+        if (!$dryRun) {
+            $this->entityManager->flush();
+            $this->entityManager->clear();
+        }
+    }
+
+    /**
+     * @param PaperReferences[] $paperReferences
+     * @param array<string, int> $stats
+     * @return array{0: PaperReferences[], 1: array<int, array<string, mixed>>}
+     */
+    private function filterProcessable(array $paperReferences, bool $onlyMissing, array &$stats): array
+    {
+        $processable = [];
+        $originalReferences = [];
+
+        foreach ($paperReferences as $paperReference) {
+            $stats['scanned']++;
+            $reference = $paperReference->getReference();
+
+            if (!$this->hasDoi($reference)) {
+                continue;
+            }
+            if ($this->isManuallyProvided($reference)) {
+                $stats['skippedManual']++;
+                continue;
+            }
+            if ($onlyMissing && $this->hasOpenAccessMetadata($reference)) {
+                continue;
+            }
+
+            $processable[] = $paperReference;
+            $originalReferences[] = $reference;
+        }
+
+        return [$processable, $originalReferences];
+    }
+
+    /**
+     * @param PaperReferences[] $processable
+     * @param array<int, array<string, mixed>> $originalReferences
+     * @param array<int, array<string, mixed>> $enrichedReferences
+     * @param array<string, int> $stats
+     */
+    private function applyEnrichmentResults(array $processable, array $originalReferences, array $enrichedReferences, bool $dryRun, OutputInterface $output, array &$stats): void
+    {
+        foreach ($processable as $index => $paperReference) {
+            $stats['processed']++;
+            $before = $originalReferences[$index];
+            $after = $enrichedReferences[$index] ?? $before;
+            $this->classifyChange($before, $after, $stats);
+
+            if ($after === $before) {
+                continue;
+            }
+
+            if ($output->isVerbose()) {
+                $output->writeln(sprintf(
+                    'Resolved open access for DOI %s in document %s',
+                    $before['doi'],
+                    $paperReference->getDocument()?->getId() ?? 'unknown'
+                ));
+            }
+
+            if (!$dryRun) {
+                $paperReference->setReference($after);
+                $paperReference->setUpdatedAt(new DateTimeImmutable());
+                $this->entityManager->persist($paperReference);
+            }
+        }
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function initialStats(): array
+    {
+        return [
             'scanned' => 0,
             'processed' => 0,
             'foundOa' => 0,
@@ -57,63 +163,13 @@ class OpenAccessEnrichReferencesCommand extends Command
             'skippedManual' => 0,
             'unchanged' => 0,
         ];
+    }
 
-        foreach (array_chunk($referenceIds, $batchSize) as $idBatch) {
-            $paperReferences = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id' => $idBatch]);
-            $processable = [];
-            $originalReferences = [];
-
-            foreach ($paperReferences as $paperReference) {
-                $stats['scanned']++;
-                $reference = $paperReference->getReference();
-                if (!$this->hasDoi($reference)) {
-                    continue;
-                }
-                if ($this->isManuallyProvided($reference)) {
-                    $stats['skippedManual']++;
-                    continue;
-                }
-                if ($onlyMissing && $this->hasOpenAccessMetadata($reference)) {
-                    continue;
-                }
-
-                $processable[] = $paperReference;
-                $originalReferences[] = $reference;
-            }
-
-            if ($processable === []) {
-                continue;
-            }
-
-            $enrichedReferences = $this->openAccessReferenceEnricher->enrichReferences($originalReferences, $force);
-
-            foreach ($processable as $index => $paperReference) {
-                $stats['processed']++;
-                $before = $originalReferences[$index];
-                $after = $enrichedReferences[$index] ?? $before;
-                $this->classifyChange($before, $after, $stats);
-
-                if ($after !== $before && $output->isVerbose()) {
-                    $output->writeln(sprintf(
-                        'Resolved open access for DOI %s in document %s',
-                        $before['doi'],
-                        $paperReference->getDocument()?->getId() ?? 'unknown'
-                    ));
-                }
-
-                if (!$dryRun && $after !== $before) {
-                    $paperReference->setReference($after);
-                    $paperReference->setUpdatedAt(new DateTimeImmutable());
-                    $this->entityManager->persist($paperReference);
-                }
-            }
-
-            if (!$dryRun) {
-                $this->entityManager->flush();
-                $this->entityManager->clear();
-            }
-        }
-
+    /**
+     * @param array<string, int> $stats
+     */
+    private function writeSummary(OutputInterface $output, array $stats, int $batchSize, bool $dryRun): void
+    {
         $output->writeln(sprintf(
             'Open-access enrichment: scanned=%d processed=%d foundOa=%d noOa=%d skippedManual=%d unchanged=%d batchSize=%d dryRun=%s',
             $stats['scanned'],
@@ -125,54 +181,6 @@ class OpenAccessEnrichReferencesCommand extends Command
             $batchSize,
             $dryRun ? 'yes' : 'no'
         ));
-
-        return Command::SUCCESS;
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    private function getReferenceIds(InputInterface $input): array
-    {
-        $queryBuilder = $this->entityManager->createQueryBuilder()
-            ->select('p.id')
-            ->from(PaperReferences::class, 'p')
-            ->orderBy('p.id', 'ASC');
-
-        if ($input->getOption('docid') !== null) {
-            $queryBuilder
-                ->andWhere('p.document = :docId')
-                ->setParameter('docId', (int) $input->getOption('docid'));
-        }
-
-        if ($input->getOption('source') !== null) {
-            $queryBuilder
-                ->andWhere('p.source = :source')
-                ->setParameter('source', $input->getOption('source'));
-        }
-
-        return array_map(
-            static fn (array $row): int => (int) $row['id'],
-            $queryBuilder->getQuery()->getArrayResult()
-        );
-    }
-
-    private function isValidSource(string $source): bool
-    {
-        return in_array($source, [
-            PaperReferences::SOURCE_METADATA_GROBID,
-            PaperReferences::SOURCE_METADATA_EPI_USER,
-            PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT,
-            PaperReferences::SOURCE_SEMANTICS_SCHOLAR,
-        ], true);
-    }
-
-    /**
-     * @param array<string, mixed> $reference
-     */
-    private function hasDoi(array $reference): bool
-    {
-        return isset($reference['doi']) && is_string($reference['doi']) && trim($reference['doi']) !== '';
     }
 
     /**
