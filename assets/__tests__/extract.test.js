@@ -217,6 +217,25 @@ describe('extract.js', () => {
         expect(document.getElementById('linkOaRef-1').href).toBe('https://oa.example.org/paper');
     });
 
+    test('should reject a javascript: open access url even when the scheme is split by a tab', () => {
+        // Browsers strip tabs/newlines from a URL before parsing its scheme, so a payload like
+        // this used to slip past a blocklist regex that only rejected a literal "javascript:"
+        // prefix. Guards the fix rather than the original (bypassable) check.
+        const editBtn = document.getElementById('modifyBtn-1');
+        fireEvent.click(editBtn);
+
+        const oaInput = document.getElementById('textOaLinkRef-1');
+        oaInput.value = 'java\tscript:alert(1)';
+        fireEvent.input(oaInput);
+
+        const confirmBtn = document.getElementById('acceptModifyBtn-1');
+        fireEvent.click(confirmBtn);
+
+        const stored = JSON.parse(document.getElementById('reference-1').value);
+        expect(stored['open-access']).toBeUndefined();
+        expect(document.getElementById('linkOaRef-1')).toBeNull();
+    });
+
     test('should not touch open-access data when the field was left untouched', () => {
         document.getElementById('reference-1').value = JSON.stringify({
             'open-access': { url: 'https://auto.example.org/x', source_title: 'Auto Repo', origin: 'openalex', checked_at: '2026-01-01T00:00:00+00:00' },

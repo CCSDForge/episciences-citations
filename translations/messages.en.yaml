@@ -85,6 +85,7 @@ Confirm reference addition: Confirm adding reference
 Cancel adding: Cancel
 Enriching reference...: Auto-fixing reference from DOI citation...
 Invalid DOI, URL or SWHID format: 'Invalid format. Expected a DOI (e.g. 10.1000/xyz), a URL (https://...) or a SWHID (swh:1:cnt:...)'
+'Invalid open access link: must be an absolute http(s) URL': 'Invalid open access link: must be an absolute http(s) URL'
 The DOI was not found: The DOI was not found
 Failed to fetch DOI metadata: Failed to fetch DOI metadata
 Could not reach the server or invalid response: Could not reach the server or invalid response

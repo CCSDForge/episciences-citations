@@ -285,6 +285,88 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
+    public function testAddNewReference_WithValidOpenAccessUrl_IsPersisted(): void
+    {
+        $persistedReference = $this->addNewReferenceWithOpenAccessUrl('https://oa.example.org/paper');
+
+        $this->assertSame('https://oa.example.org/paper', $persistedReference['open-access']['url']);
+        $this->assertSame('user', $persistedReference['open-access']['origin']);
+    }
+
+    /**
+     * A javascript: scheme split with a tab bypasses a naive "doesn't start with javascript:"
+     * blocklist (browsers strip tabs/newlines from a URL before parsing its scheme), so this
+     * guards the fix rather than the original (bypassable) client-side regex.
+     */
+    #[Test]
+    public function testAddNewReference_WithTabSplitJavascriptUrl_OpenAccessIsDropped(): void
+    {
+        $persistedReference = $this->addNewReferenceWithOpenAccessUrl("java\tscript:alert(1)");
+
+        $this->assertArrayNotHasKey('open-access', $persistedReference);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function addNewReferenceWithOpenAccessUrl(string $openAccessUrl): array
+    {
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $doc = new Document();
+        $doc->setId(123456);
+
+        $form = [
+            'id' => 123456,
+            'addReference' => 'New test reference',
+            'addReferenceOpenAccessUrl' => $openAccessUrl,
+        ];
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $query = $this->createMock(Query::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+        $query->method('getSingleScalarResult')->willReturn(1);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnCallback(function ($class) use ($user, $doc, $qb) {
+                if ($class === UserInformations::class) {
+                    $repo = $this->userRepository;
+                    $repo->method('find')->willReturn($user);
+                    return $repo;
+                }
+                if ($class === Document::class) {
+                    $repo = $this->documentRepository;
+                    $repo->method('find')->willReturn($doc);
+                    return $repo;
+                }
+                if ($class === PaperReferences::class) {
+                    $repo = $this->refRepository;
+                    $repo->method('createQueryBuilder')->willReturn($qb);
+                    return $repo;
+                }
+                return null;
+            });
+
+        $persistedReference = null;
+        $this->entityManager->expects($this->once())
+            ->method('persist')
+            ->with($this->callback(function (PaperReferences $ref) use (&$persistedReference): bool {
+                $persistedReference = $ref->getReference();
+                return true;
+            }));
+
+        $result = $this->service->addNewReference($form, $userInfo);
+        $this->assertTrue($result);
+
+        return $persistedReference;
+    }
+
+    #[Test]
     #[AllowMockObjectsWithoutExpectations]
     public function testPersistOrderRef_UpdatesOrdering(): void
     {
@@ -351,6 +433,38 @@ class ReferencesTest extends TestCase
         $this->assertNotNull($ref->getUid());
         $this->assertEquals(1001, $ref->getUid()->getId());
         $this->assertEquals('', $ref->getUid()->getSurname());
+    }
+
+    /**
+     * The client-side check can be bypassed by calling /autosave directly, so this exercises
+     * the server-side guard that must reject an unsafe scheme regardless.
+     */
+    #[Test]
+    public function testAutosaveReference_WithMaliciousOpenAccessUrl_IsDropped(): void
+    {
+        // Arrange
+        $refId = 1;
+        $ref = new PaperReferences();
+        $this->refRepository->method('find')->willReturn($ref);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+                [UserInformations::class, $this->userRepository],
+            ]);
+
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $referenceJson = json_encode([
+            'raw_reference' => 'Some reference',
+            'open-access' => ['url' => "java\tscript:alert(1)", 'source_title' => '', 'origin' => 'user', 'checked_at' => null],
+        ]);
+
+        // Act
+        $result = $this->service->autosaveReference($refId, $referenceJson, 1, true, $userInfo);
+
+        // Assert
+        $this->assertArrayNotHasKey('open-access', $result);
+        $this->assertArrayNotHasKey('open-access', $ref->getReference());
     }
 
     #[Test]

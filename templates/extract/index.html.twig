@@ -258,8 +258,11 @@
                                     {% set doiDecodedRef = jsonDecodedRef['doi'] %}
                                 {% endif %}
                                 {% set openAccessUrl = '' %}
-                                {% if jsonDecodedRef['open-access']['url'] is defined and jsonDecodedRef['open-access']['url'] is not empty %}
-                                    {% set openAccessUrl = jsonDecodedRef['open-access']['url'] %}
+                                {% set rawOpenAccessUrl = jsonDecodedRef['open-access']['url'] ?? '' %}
+                                {# The backend only ever persists http(s) links, but this guard keeps
+                                   the anchor safe even against legacy/direct-DB data. #}
+                                {% if rawOpenAccessUrl is not empty and (rawOpenAccessUrl starts with 'http://' or rawOpenAccessUrl starts with 'https://') %}
+                                    {% set openAccessUrl = rawOpenAccessUrl %}
                                     <br>
                                     <a href="{{ openAccessUrl }}"
                                        class="link-success small text-decoration-underline"

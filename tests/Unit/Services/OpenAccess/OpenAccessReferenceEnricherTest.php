@@ -63,6 +63,21 @@ class OpenAccessReferenceEnricherTest extends TestCase
         $this->assertNotNull($result['open-access']['checked_at']);
     }
 
+    /**
+     * Defense in depth: even a resolver-provided URL is re-validated before being stored, in
+     * case a provider ever returns something other than a clean http(s) location.
+     */
+    #[Test]
+    public function testResolutionWithUnsafeSchemeDoesNotSetOpenAccessField(): void
+    {
+        $resolver = $this->createResolverReturning(['10.1234/test' => new OpenAccessResult('javascript:alert(1)', 'Example Repo')]);
+
+        $reference = ['raw_reference' => 'Reference', 'doi' => '10.1234/test'];
+        $result = $this->createService($resolver)->enrichReference($reference);
+
+        $this->assertArrayNotHasKey('open-access', $result);
+    }
+
     #[Test]
     public function testFailedResolutionKeepsExistingOpenAccessData(): void
     {

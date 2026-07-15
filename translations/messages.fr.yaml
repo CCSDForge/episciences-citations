@@ -89,6 +89,7 @@ Confirm reference addition: Confirmer l'ajout de la référence
 Cancel adding: Annuler
 Enriching reference...: Auto-correction de la référence via le DOI...
 Invalid DOI, URL or SWHID format: 'Format invalide. Saisissez un DOI (ex. 10.1000/xyz), une URL (https://...) ou un SWHID (swh:1:cnt:...)'
+'Invalid open access link: must be an absolute http(s) URL': "Lien open access invalide : une URL http(s) absolue est requise"
 The DOI was not found: Le DOI n'a pas été trouvé
 Failed to fetch DOI metadata: Échec de la récupération des métadonnées du DOI
 Could not reach the server or invalid response: Impossible de contacter le serveur ou réponse invalide

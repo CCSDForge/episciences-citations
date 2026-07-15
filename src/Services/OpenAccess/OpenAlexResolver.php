@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\OpenAccess;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
@@ -287,8 +288,12 @@ class OpenAlexResolver extends AbstractOpenAccessResolver
         }
     }
 
+    /**
+     * OpenAlex's daily bulk budget refills at midnight UTC, so the cache key must
+     * roll over on the same boundary regardless of the server's local timezone.
+     */
     private function quotaCacheKey(): string
     {
-        return 'openalex_bulk_calls_' . new DateTimeImmutable()->format('Y-m-d');
+        return 'openalex_bulk_calls_' . new DateTimeImmutable('now', new DateTimeZone('UTC'))->format('Y-m-d');
     }
 }

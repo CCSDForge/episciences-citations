@@ -116,8 +116,13 @@ class OpenAccessReferenceEnricher
      */
     private function applyResult(array $reference, OpenAccessResult $result): array
     {
+        $sanitizedUrl = OpenAccessUrlSanitizer::sanitize($result->url);
+        if ($sanitizedUrl === null) {
+            return $reference;
+        }
+
         $reference['open-access'] = [
-            'url' => $result->url,
+            'url' => $sanitizedUrl,
             'source_title' => $result->sourceTitle,
             'origin' => $this->resolver->getProviderName(),
             'checked_at' => new DateTimeImmutable()->format(DATE_ATOM),

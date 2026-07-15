@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Services\OpenAccess;
 
 use App\Services\OpenAccess\OpenAlexResolver;
 use DateTimeImmutable;
+use DateTimeZone;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -138,7 +139,7 @@ class OpenAlexResolverTest extends TestCase
     public function testResolveManyFallsBackToSingletonCallsWhenDailyBulkQuotaIsExhausted(): void
     {
         $quotaCache = new ArrayAdapter();
-        $item = $quotaCache->getItem('openalex_bulk_calls_' . new DateTimeImmutable()->format('Y-m-d'));
+        $item = $quotaCache->getItem('openalex_bulk_calls_' . new DateTimeImmutable('now', new DateTimeZone('UTC'))->format('Y-m-d'));
         $item->set(10);
         $quotaCache->save($item);
 

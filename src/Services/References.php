@@ -4,6 +4,7 @@ use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
 use App\Services\OpenAccess\OpenAccessReferenceEnricher;
+use App\Services\OpenAccess\OpenAccessUrlSanitizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
@@ -55,7 +56,7 @@ class References {
             if (!isset($paperReference['checkboxIdTodelete'])) {
                 if (!is_null($ref) && isset($paperReference['accepted'])) {
                     if (isset($paperReference['reference'])) {
-                        $ref->setReference($this->normalizeReferenceInput($paperReference['reference']));
+                        $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
                     }
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
@@ -168,8 +169,8 @@ class References {
                 }
                 $refInfo['doi'] = $addReferenceDoi;
             }
-            $addReferenceOpenAccessUrl = trim((string) ($form['addReferenceOpenAccessUrl'] ?? ''));
-            if ($addReferenceOpenAccessUrl !== '') {
+            $addReferenceOpenAccessUrl = OpenAccessUrlSanitizer::sanitize($form['addReferenceOpenAccessUrl'] ?? null);
+            if ($addReferenceOpenAccessUrl !== null) {
                 $refInfo['open-access'] = [
                     'url' => $addReferenceOpenAccessUrl,
                     'source_title' => '',
@@ -273,6 +274,7 @@ class References {
         }
 
         $refData = json_decode($referenceJson, true) ?? [];
+        $refData = $this->sanitizeOpenAccessUrl($refData);
         $refData = $this->solrReferenceEnricher->enrichReference($refData);
         $refData = $this->openAccessReferenceEnricher->enrichReference($refData);
         $ref->setReference($refData);
@@ -309,6 +311,30 @@ class References {
         }
 
         return [];
+    }
+
+    /**
+     * Drops the open-access URL when it isn't an absolute http(s) link, so a request that
+     * bypasses the client-side check can't smuggle a javascript:/data: URI into storage.
+     *
+     * @param array<string, mixed> $reference
+     * @return array<string, mixed>
+     */
+    private function sanitizeOpenAccessUrl(array $reference): array
+    {
+        if (!is_array($reference['open-access'] ?? null)) {
+            return $reference;
+        }
+
+        $sanitizedUrl = OpenAccessUrlSanitizer::sanitize($reference['open-access']['url'] ?? null);
+        if ($sanitizedUrl === null) {
+            unset($reference['open-access']);
+            return $reference;
+        }
+
+        $reference['open-access']['url'] = $sanitizedUrl;
+
+        return $reference;
     }
 
     /**

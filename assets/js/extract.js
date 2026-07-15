@@ -495,7 +495,7 @@ function confirmEdit(idRef) {
     const sanitizedOaUrl = oaInput ? oaInput.value.trim() : '';
 
     if (oaTouched) {
-        if (sanitizedOaUrl !== '' && !/^(javascript:|data:|vbscript:)/i.test(sanitizedOaUrl)) {
+        if (isValidUrl(sanitizedOaUrl)) {
             if (linkOaTag === null) {
                 linkOaTag = document.createElement('a');
                 linkOaTag.id = 'linkOaRef-' + idRef;
@@ -536,7 +536,7 @@ function confirmEdit(idRef) {
     // Only touch open-access data if the user actually edited the field, so an
     // automatically resolved value isn't silently overwritten just by editing other fields.
     if (oaTouched) {
-        if (sanitizedOaUrl !== '' && !/^(javascript:|data:|vbscript:)/i.test(sanitizedOaUrl)) {
+        if (isValidUrl(sanitizedOaUrl)) {
             referenceValue['open-access'] = { url: sanitizedOaUrl, source_title: '', origin: 'user', checked_at: null };
         } else {
             delete referenceValue['open-access'];
@@ -787,7 +787,8 @@ function updateReferenceUI(idRef, referenceData) {
     }
 
     // Update open access link display and edit input with freshly resolved data
-    const oaUrl = referenceData['open-access']?.url ?? '';
+    // (the server already validates the scheme; re-checking here is defense in depth)
+    const oaUrl = isValidUrl(referenceData['open-access']?.url ?? '') ? referenceData['open-access'].url : '';
     let linkOaTag = document.getElementById('linkOaRef-' + idRef);
     if (oaUrl !== '') {
         if (linkOaTag === null) {
