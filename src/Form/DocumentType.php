@@ -6,6 +6,7 @@ namespace App\Form;
 
 use App\Entity\Document;
 use App\Entity\PaperReferences;
+use App\Services\OpenAccess\OpenAccessUrlSanitizer;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ButtonType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -51,6 +52,22 @@ class DocumentType extends AbstractType
                     }
                     if (!self::isValidDoiUrlOrSwhid($value)) {
                         $context->buildViolation('Invalid DOI, URL or SWHID format')->addViolation();
+                    }
+                }),
+            ],
+        ]);
+        $builder->add("addReferenceOpenAccessUrl",TextType::class,[
+            'attr' => ['class' => 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'],
+            'mapped' => false,
+            'required' => false,
+            'label' => 'Open access link',
+            'constraints' => [
+                new Callback(static function (?string $value, ExecutionContextInterface $context): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if (OpenAccessUrlSanitizer::sanitize($value) === null) {
+                        $context->buildViolation('Invalid open access link: must be an absolute http(s) URL')->addViolation();
                     }
                 }),
             ],

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -22,6 +23,7 @@ class SemanticScholarImporter
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface        $logger,
         private readonly SolrReferenceEnricher  $solrReferenceEnricher,
+        private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher,
     ) {
     }
 
@@ -197,6 +199,7 @@ class SemanticScholarImporter
         }
 
         $reference = $this->solrReferenceEnricher->enrichReference($refRetrieved);
+        $reference = $this->openAccessReferenceEnricher->enrichReference($reference);
 
         $ref = new PaperReferences();
         $ref->setReference($reference);

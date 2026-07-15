@@ -7,6 +7,7 @@ use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
 use App\Repository\DocumentRepository;
 use App\Services\Doi;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use App\Services\References;
 use App\Services\SemanticScholarImporter;
 use App\Services\SolrReferenceEnricher;
@@ -32,6 +33,7 @@ class GetBibRefCommand extends Command
         private readonly DocumentRepository     $documentRepository,
         private readonly LoggerInterface        $logger,
         private readonly SolrReferenceEnricher  $solrReferenceEnricher,
+        private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher,
     )
     {
         parent::__construct();
@@ -77,6 +79,7 @@ class GetBibRefCommand extends Command
             $user->setName('System');
         }
         $reference = $this->solrReferenceEnricher->enrichReference($refRetrieved);
+        $reference = $this->openAccessReferenceEnricher->enrichReference($reference);
         $ref = new PaperReferences();
         $ref->setReference($reference);
         $ref->setSource($source);

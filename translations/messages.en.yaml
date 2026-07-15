@@ -72,6 +72,8 @@ Supported ID formats: Supported ID formats
 Please enter a paper ID.: Please enter a paper ID.
 '%count% reference(s) imported from Semantic Scholar': '%count% reference(s) imported from Semantic Scholar'
 DOI, URL, SWHID: DOI, URL, SWHID
+Open access link: Open access link
+Open access: Open access
 DOI not found in Semantic Scholar: DOI not found in Semantic Scholar
 No references found for this paper ID: No references found for this paper ID
 Import: Import
@@ -83,6 +85,7 @@ Confirm reference addition: Confirm adding reference
 Cancel adding: Cancel
 Enriching reference...: Auto-fixing reference from DOI citation...
 Invalid DOI, URL or SWHID format: 'Invalid format. Expected a DOI (e.g. 10.1000/xyz), a URL (https://...) or a SWHID (swh:1:cnt:...)'
+'Invalid open access link: must be an absolute http(s) URL': 'Invalid open access link: must be an absolute http(s) URL'
 The DOI was not found: The DOI was not found
 Failed to fetch DOI metadata: Failed to fetch DOI metadata
 Could not reach the server or invalid response: Could not reach the server or invalid response

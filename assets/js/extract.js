@@ -368,6 +368,14 @@ function changeValueOfReference() {
             validateInlineDoiField(idRef);
         });
     });
+
+    // 6. Open access link input: only overwrite the stored value when the user actually edits it
+    const oaInputs = document.querySelectorAll('[id^=textOaLinkRef-]');
+    oaInputs.forEach((input) => {
+        input.addEventListener('input', () => {
+            input.dataset.touched = '1';
+        });
+    });
 }
 
 function validateInlineDoiField(idRef) {
@@ -394,12 +402,14 @@ function enterEditMode(idRef) {
     const btnModify = document.getElementById('modifyBtn-' + idRef);
     const modifyReferenceText = document.getElementById('modifyTextArea-' + idRef);
     const modifyReferenceDoi = document.getElementById('modifyReferenceDoi-' + idRef);
+    const modifyReferenceOa = document.getElementById('modifyReferenceOa-' + idRef);
     const editActionBtns = document.getElementById('editActionBtns-' + idRef);
     const containerInfo = document.getElementById('container-reference-informations-' + idRef);
     const card = document.querySelector(`.container-reference[data-idref="${idRef}"]`);
 
     modifyReferenceText.classList.remove('d-none');
     modifyReferenceDoi.classList.remove('d-none');
+    modifyReferenceOa.classList.remove('d-none');
     editActionBtns.classList.remove('d-none');
     modifyReferenceText.classList.add('w-100');
     modifyReferenceDoi.classList.add('w-50');
@@ -412,6 +422,7 @@ function exitEditMode(idRef) {
     const btnModify = document.getElementById('modifyBtn-' + idRef);
     const modifyReferenceText = document.getElementById('modifyTextArea-' + idRef);
     const modifyReferenceDoi = document.getElementById('modifyReferenceDoi-' + idRef);
+    const modifyReferenceOa = document.getElementById('modifyReferenceOa-' + idRef);
     const editActionBtns = document.getElementById('editActionBtns-' + idRef);
     const containerInfo = document.getElementById('container-reference-informations-' + idRef);
     const card = document.querySelector(`.container-reference[data-idref="${idRef}"]`);
@@ -420,6 +431,7 @@ function exitEditMode(idRef) {
     modifyReferenceDoi.classList.remove('w-50');
     modifyReferenceText.classList.add('d-none');
     modifyReferenceDoi.classList.add('d-none');
+    modifyReferenceOa.classList.add('d-none');
     editActionBtns.classList.add('d-none');
     btnModify.classList.remove('d-none');
     containerInfo.classList.remove('d-none');
@@ -477,6 +489,32 @@ function confirmEdit(idRef) {
         linkDoiTag.remove();
     }
 
+    const oaInput = document.getElementById('textOaLinkRef-' + idRef);
+    const oaTouched = oaInput && oaInput.dataset.touched === '1';
+    let linkOaTag = document.getElementById('linkOaRef-' + idRef);
+    const sanitizedOaUrl = oaInput ? oaInput.value.trim() : '';
+
+    if (oaTouched) {
+        if (isValidUrl(sanitizedOaUrl)) {
+            if (linkOaTag === null) {
+                linkOaTag = document.createElement('a');
+                linkOaTag.id = 'linkOaRef-' + idRef;
+                linkOaTag.className = 'link-success small text-decoration-underline';
+                linkOaTag.target = '_blank';
+                linkOaTag.rel = 'noopener';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-lock-open me-1';
+                icon.setAttribute('aria-hidden', 'true');
+                linkOaTag.appendChild(icon);
+                linkOaTag.appendChild(document.createTextNode(window.translations?.['Open access'] ?? 'Open access'));
+                showedText.after(document.createElement('br'), linkOaTag);
+            }
+            linkOaTag.href = sanitizedOaUrl;
+        } else if (linkOaTag !== null) {
+            linkOaTag.remove();
+        }
+    }
+
     acceptRefModificationsDone(idRef);
     let referenceValueForm = document.getElementById('reference-' + idRef);
     let referenceValue = {};
@@ -494,6 +532,15 @@ function confirmEdit(idRef) {
         referenceValue.doi = doiContent;
     } else {
         delete referenceValue.doi;
+    }
+    // Only touch open-access data if the user actually edited the field, so an
+    // automatically resolved value isn't silently overwritten just by editing other fields.
+    if (oaTouched) {
+        if (isValidUrl(sanitizedOaUrl)) {
+            referenceValue['open-access'] = { url: sanitizedOaUrl, source_title: '', origin: 'user', checked_at: null };
+        } else {
+            delete referenceValue['open-access'];
+        }
     }
     referenceValueForm.value = JSON.stringify(referenceValue);
     autosaveReference(idRef, '1');
@@ -737,6 +784,35 @@ function updateReferenceUI(idRef, referenceData) {
                 }
             }
         });
+    }
+
+    // Update open access link display and edit input with freshly resolved data
+    // (the server already validates the scheme; re-checking here is defense in depth)
+    const oaUrl = isValidUrl(referenceData['open-access']?.url ?? '') ? referenceData['open-access'].url : '';
+    let linkOaTag = document.getElementById('linkOaRef-' + idRef);
+    if (oaUrl !== '') {
+        if (linkOaTag === null) {
+            const showedText = document.getElementById('textReference-' + idRef);
+            linkOaTag = document.createElement('a');
+            linkOaTag.id = 'linkOaRef-' + idRef;
+            linkOaTag.className = 'link-success small text-decoration-underline';
+            linkOaTag.target = '_blank';
+            linkOaTag.rel = 'noopener';
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-lock-open me-1';
+            icon.setAttribute('aria-hidden', 'true');
+            linkOaTag.appendChild(icon);
+            linkOaTag.appendChild(document.createTextNode(window.translations?.['Open access'] ?? 'Open access'));
+            showedText.after(document.createElement('br'), linkOaTag);
+        }
+        linkOaTag.href = oaUrl;
+    } else if (linkOaTag !== null) {
+        linkOaTag.remove();
+    }
+    const oaInput = document.getElementById('textOaLinkRef-' + idRef);
+    if (oaInput) {
+        oaInput.value = oaUrl;
+        delete oaInput.dataset.touched;
     }
 
     // Update form input with enriched data

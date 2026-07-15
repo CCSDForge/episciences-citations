@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Command;
 use App\Command\GetBibRefCommand;
 use App\Repository\DocumentRepository;
 use App\Services\Doi;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use App\Services\References;
 use App\Services\SemanticScholarImporter;
 use App\Services\SolrReferenceEnricher;
@@ -29,6 +30,8 @@ class GetBibRefCommandTest extends TestCase
         $logger                 = $this->createStub(LoggerInterface::class);
         $solrReferenceEnricher  = $this->createStub(SolrReferenceEnricher::class);
         $solrReferenceEnricher->method('enrichReference')->willReturnArgument(0);
+        $openAccessReferenceEnricher = $this->createStub(OpenAccessReferenceEnricher::class);
+        $openAccessReferenceEnricher->method('enrichReference')->willReturnArgument(0);
 
         $this->command = new GetBibRefCommand(
             $doiService,
@@ -37,7 +40,8 @@ class GetBibRefCommandTest extends TestCase
             $entityManager,
             $documentRepository,
             $logger,
-            $solrReferenceEnricher
+            $solrReferenceEnricher,
+            $openAccessReferenceEnricher
         );
     }
 

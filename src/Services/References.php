@@ -3,12 +3,15 @@ namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
+use App\Services\OpenAccess\OpenAccessUrlSanitizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class References {
     private const array SOLR_REFERENCE_FIELDS = ['detectors', 'status', 'pubpeerurl'];
+    private const array OPEN_ACCESS_REFERENCE_FIELDS = ['open-access'];
 
 
     public function __construct(
@@ -16,6 +19,7 @@ class References {
         private readonly Grobid $grobid,
         private readonly Bibtex $bibtex,
         private readonly SolrReferenceEnricher $solrReferenceEnricher,
+        private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher,
         private readonly LoggerInterface $logger
     )
     {
@@ -52,7 +56,7 @@ class References {
             if (!isset($paperReference['checkboxIdTodelete'])) {
                 if (!is_null($ref) && isset($paperReference['accepted'])) {
                     if (isset($paperReference['reference'])) {
-                        $ref->setReference($this->normalizeReferenceInput($paperReference['reference']));
+                        $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
                     }
                     if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
                        $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
@@ -123,6 +127,11 @@ class References {
                     $formattedReference[$field] = $refData[$field];
                 }
             }
+            foreach (self::OPEN_ACCESS_REFERENCE_FIELDS as $field) {
+                if (array_key_exists($field, $refData)) {
+                    $formattedReference[$field] = $refData[$field];
+                }
+            }
 
             $rawReferences[$refId]['ref'] = $formattedReference;
 
@@ -160,7 +169,17 @@ class References {
                 }
                 $refInfo['doi'] = $addReferenceDoi;
             }
+            $addReferenceOpenAccessUrl = OpenAccessUrlSanitizer::sanitize($form['addReferenceOpenAccessUrl'] ?? null);
+            if ($addReferenceOpenAccessUrl !== null) {
+                $refInfo['open-access'] = [
+                    'url' => $addReferenceOpenAccessUrl,
+                    'source_title' => '',
+                    'origin' => 'user',
+                    'checked_at' => null,
+                ];
+            }
             $refInfo = $this->solrReferenceEnricher->enrichReference($refInfo);
+            $refInfo = $this->openAccessReferenceEnricher->enrichReference($refInfo);
             $ref->setReference($refInfo);
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
@@ -255,7 +274,9 @@ class References {
         }
 
         $refData = json_decode($referenceJson, true) ?? [];
+        $refData = $this->sanitizeOpenAccessUrl($refData);
         $refData = $this->solrReferenceEnricher->enrichReference($refData);
+        $refData = $this->openAccessReferenceEnricher->enrichReference($refData);
         $ref->setReference($refData);
         
         if ($ref->getAccepted() !== $accepted) {
@@ -293,6 +314,30 @@ class References {
     }
 
     /**
+     * Drops the open-access URL when it isn't an absolute http(s) link, so a request that
+     * bypasses the client-side check can't smuggle a javascript:/data: URI into storage.
+     *
+     * @param array<string, mixed> $reference
+     * @return array<string, mixed>
+     */
+    private function sanitizeOpenAccessUrl(array $reference): array
+    {
+        if (!is_array($reference['open-access'] ?? null)) {
+            return $reference;
+        }
+
+        $sanitizedUrl = OpenAccessUrlSanitizer::sanitize($reference['open-access']['url'] ?? null);
+        if ($sanitizedUrl === null) {
+            unset($reference['open-access']);
+            return $reference;
+        }
+
+        $reference['open-access']['url'] = $sanitizedUrl;
+
+        return $reference;
+    }
+
+    /**
      * @param array<int, PaperReferences> $paperReferences
      */
     private function enrichPaperReferences(array $paperReferences): void
@@ -306,7 +351,10 @@ class References {
             $paperReferences
         );
 
-        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $index => $reference) {
+        $references = $this->solrReferenceEnricher->enrichReferences($references);
+        $references = $this->openAccessReferenceEnricher->enrichReferences($references);
+
+        foreach ($references as $index => $reference) {
             $paperReferences[$index]->setReference($reference);
         }
     }
