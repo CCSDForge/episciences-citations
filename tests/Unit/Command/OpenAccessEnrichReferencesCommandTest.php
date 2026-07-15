@@ -109,6 +109,7 @@ class OpenAccessEnrichReferencesCommandTest extends TestCase
 
         $this->assertStringContainsString('foundOa=1', $tester->getDisplay());
         $this->assertArrayNotHasKey('open-access', $ref->getReference());
+        $this->assertNull($ref->getUpdatedAt());
     }
 
     #[Test]
@@ -138,5 +139,30 @@ class OpenAccessEnrichReferencesCommandTest extends TestCase
         $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
         $this->assertStringContainsString('foundOa=1', $tester->getDisplay());
         $this->assertSame('https://oa/x', $ref->getReference()['open-access']['url']);
+        $this->assertNotNull($ref->getUpdatedAt());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testUnchangedReferenceIsPersistedWithoutTouchingUpdatedAt(): void
+    {
+        $ref = new PaperReferences();
+        $ref->setReference(['doi' => '10.1/a']);
+
+        $this->stubReferenceIds([1]);
+        $this->entityManager->method('getRepository')->willReturn($this->repository);
+        $this->repository->method('findBy')->willReturn([$ref]);
+
+        $this->openAccessReferenceEnricher->method('enrichReferences')
+            ->willReturnCallback(static fn (array $refs): array => $refs);
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $tester = new CommandTester($this->command);
+        $tester->execute([]);
+
+        $this->assertStringContainsString('noOa=1', $tester->getDisplay());
+        $this->assertNull($ref->getUpdatedAt());
     }
 }

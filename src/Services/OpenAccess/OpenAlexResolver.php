@@ -18,7 +18,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class OpenAlexResolver extends AbstractOpenAccessResolver
 {
-    private const string SELECT_FIELDS = 'title,authorships,open_access,biblio,primary_location,locations,publication_year,best_oa_location,type_crossref';
+    private const string SELECT_FIELDS = 'doi,primary_location,locations,best_oa_location';
     private const int MAX_BATCH_SIZE = 100;
 
     public function __construct(
