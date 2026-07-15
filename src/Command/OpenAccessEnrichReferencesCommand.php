@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Entity\PaperReferences;
 use App\Services\OpenAccess\OpenAccessReferenceEnricher;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -100,8 +101,9 @@ class OpenAccessEnrichReferencesCommand extends Command
                     ));
                 }
 
-                if (!$dryRun) {
+                if (!$dryRun && $after !== $before) {
                     $paperReference->setReference($after);
+                    $paperReference->setUpdatedAt(new DateTimeImmutable());
                     $this->entityManager->persist($paperReference);
                 }
             }
