@@ -39,3 +39,11 @@ phpstan.neon
 /.editorconfig
 /.phpunit.cache/
 /config/reference.php
+
+###> yarn v4 ###
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+.pnp.*
+###< yarn v4 ###
+
