@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## v1.3.0 - 2026-07-15
+
+### Added
+- **Open Access Resolution via OpenAlex**: Added automatic resolution of open-access locations for bibliographical references using the OpenAlex API.
+  - Implemented `OpenAccessReferenceEnricher` and `OpenAlexResolver` services.
+  - Utilized optimized bulk queries to minimize daily API usage, with an automatic fallback to singleton calls when bulk quota is exhausted.
+  - Displayed open-access links directly as clickable URLs in the read view and added an open-lock icon to the inputs.
+- **Bulk Auto-Fix**: Added support for mass auto-fixing references with DOI, including a confirmation modal.
+- **Real-time Citation Positioning**: Displayed a real-time numbered badge on citation cards, renumbering automatically on drag-and-drop.
+- **Reference Validation**: Added client-side and server-side validation for reference identifier fields, with support for DOI, URL, and SWHID (Software Heritage Identifiers) formats.
+- **Automatic DOI Cleaning**: Automatically stripped the `doi.org` or `dx.doi.org` URL prefix from DOI input fields on blur to retrieve only the raw DOI.
+- **Source Badges**: Enhanced reference cards with distinct visual badges and icons corresponding to their source (GROBID, User, Semantic Scholar, BibTeX).
+
+### Changed
+- **Docker & Infrastructure**: Migrated local database and phpMyAdmin management to the `episciences-infrastructure` shared project, reducing local resource usage.
+- **HTTPS Routing**: Routed local HTTPS traffic through Traefik instead of self-signed Apache SSL configuration, simplifying Docker setup.
+- **CSL Deduplication**: Deduplicated CSL rendering logic by using `Bibtex::getCslRefText` as the single source of truth and injecting it into `JsonGrobidExtension`.
+- **Yarn Update**: Upgraded Yarn package manager to version 4.17.1.
+
+### Fixed
+- **Empty Document Stub**: Created a stub document on the fly when accessing `/viewref/{docId}` directly before extraction, preventing empty document IDs and template rendering crashes.
+- **CSL Type Fallback**: Resolved PHP fatal errors caused by missing `type` fields in GROBID/Semantic Scholar CSL data by applying a fallback default type (`article-journal` or `article`).
+
+### Security
+- **Open Access URL Validation**: Validated Open Access URL schemes on the server side to ensure only absolute HTTP/HTTPS URLs are allowed, preventing potential XSS bypasses in `/autosave`.
+
 ## v1.2.2.2 - 2026-05-31
 
 ### Added
