@@ -125,7 +125,10 @@ class OpenAlexResolverTest extends TestCase
         $client = $this->createMock(HttpClientInterface::class);
         $client->expects($this->once())
             ->method('request')
-            ->with('GET', $this->stringContains('filter=doi:10.1%2Fa|10.2%2Fb|10.3%2Fc'))
+            ->with('GET', $this->logicalAnd(
+                $this->stringContains('filter=doi:10.1%2Fa|10.2%2Fb|10.3%2Fc'),
+                $this->stringContains('select=doi,')
+            ))
             ->willReturn($response);
 
         $results = $this->createResolver($client)->resolveMany(['10.1/a', '10.2/b', '10.3/c']);
