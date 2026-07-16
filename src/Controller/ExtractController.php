@@ -73,40 +73,52 @@ class ExtractController extends AbstractController
         $this->logger->info('Extracting for pdf ', ['PDF' => $getPdf]);
 
         if ($request->query->get('exportbib') === "1") {
-            if (!$this->references->getDocument($docId) instanceof Document) {
-                $this->references->createDocumentId($docId);
-            }
-            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+            return $this->exportBibRedirect($docId);
         }
         if (isset($getPdf['status']) && $getPdf['status'] === 404) {
             $this->logger->error('Unable to get PDF from Episciences ', ['PDF' => $getPdf]);
             throw $this->createNotFoundException('Unable to get PDF from Episciences');
+        }
 
-        }
-        $session = $request->getSession();
-        $session->set('openModalClose', 0);
-        if ($this->references->documentAlreadyExtracted($docId) && $request->query->has('rextract')) {
-            $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
-            return $this->extractReferencesOrShowProcessing($docId, $request, false)
-                ?? $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
-        }
+        $request->getSession()->set('openModalClose', 0);
 
         if ($this->references->documentAlreadyExtracted($docId)) {
-            if ($this->references->getReferences($docId, 'all') === []) {
-                // Refs absent — attempt (re)insertion: uses cache if available, calls GROBID otherwise
-                $this->logger->info('Document exists with no refs — retrying extraction', ['DocId' => $docId]);
-                $processing = $this->extractReferencesOrShowProcessing($docId, $request, false);
-                if ($processing !== null) {
-                    return $processing;
-                }
-            }
-            $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
-            return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+            return $this->handleAlreadyExtracted($docId, $request);
         }
 
         $this->logger->info('Insert references for the first time ', ['DocId' => $docId]);
         return $this->extractReferencesOrShowProcessing($docId, $request, true)
             ?? $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+    }
+
+    private function exportBibRedirect(int $docId): RedirectResponse
+    {
+        if (!$this->references->getDocument($docId) instanceof Document) {
+            $this->references->createDocumentId($docId);
+        }
+
+        return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+    }
+
+    private function handleAlreadyExtracted(int $docId, Request $request): RedirectResponse|Response
+    {
+        if ($request->query->has('rextract')) {
+            $this->logger->info('Rextract => ', ['Rextract - DocId' => $docId]);
+            return $this->extractReferencesOrShowProcessing($docId, $request, false)
+                ?? $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
+        }
+
+        if ($this->references->getReferences($docId, 'all') === []) {
+            // Refs absent — attempt (re)insertion: uses cache if available, calls GROBID otherwise
+            $this->logger->info('Document exists with no refs — retrying extraction', ['DocId' => $docId]);
+            $processing = $this->extractReferencesOrShowProcessing($docId, $request, false);
+            if ($processing !== null) {
+                return $processing;
+            }
+        }
+
+        $this->logger->info('Get in database document refs already extracted ', ['DocId' => $docId]);
+        return $this->redirectToRoute('app_view_ref', ['docId' => $docId]);
     }
 
     /**
@@ -309,6 +321,16 @@ class ExtractController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function autosave(int $docId, Request $request): JsonResponse
     {
+        $authError = $this->validateAutosaveRequest($docId, $request);
+        if ($authError !== null) {
+            return $authError;
+        }
+
+        return $this->processAutosaveData($docId, $request);
+    }
+
+    private function validateAutosaveRequest(int $docId, Request $request): ?JsonResponse
+    {
         if (!$this->isCsrfTokenValid('autosave', $request->request->get('_token'))) {
             $this->logger->warning('Autosave: Invalid CSRF token');
             return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token'], Response::HTTP_FORBIDDEN);
@@ -318,15 +340,21 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Access Denied'], Response::HTTP_FORBIDDEN);
         }
 
+        return null;
+    }
+
+    private function processAutosaveData(int $docId, Request $request): JsonResponse
+    {
         $data = $request->request->all();
         $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
-        $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
+
         if (isset($data['orderRef'])) {
             $this->references->autosaveOrder($data['orderRef']);
             return new JsonResponse(['success' => true]);
         }
 
         if (isset($data['refId'])) {
+            $userInfo = $this->container->get('security.token_storage')->getToken()->getAttributes();
             $enrichedReference = $this->references->autosaveReference(
                 (int) $data['refId'],
                 $data['reference'] ?? '{}',
@@ -369,10 +397,28 @@ class ExtractController extends AbstractController
     #[Route('/api/extract', name: 'app_api_extract', methods: ['GET'])]
     public function apiExtract(Request $request): JsonResponse
     {
-        if (!$this->isValidApiToken($request)) {
-            return new JsonResponse(['success' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        $tokenError = $this->validateApiToken($request);
+        if ($tokenError !== null) {
+            return $tokenError;
         }
 
+        $url = $this->resolveApiExtractUrl($request);
+        if ($url instanceof JsonResponse) {
+            return $url;
+        }
+
+        return $this->resolveApiExtractDocIdAndExtract($request, $url);
+    }
+
+    private function validateApiToken(Request $request): ?JsonResponse
+    {
+        return $this->isValidApiToken($request)
+            ? null
+            : new JsonResponse(['success' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+    }
+
+    private function resolveApiExtractUrl(Request $request): string|JsonResponse
+    {
         $url = (string) $request->query->get('url', '');
         if ($url === '') {
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
@@ -386,6 +432,21 @@ class ExtractController extends AbstractController
             );
         }
 
+        return $url;
+    }
+
+    private function resolveApiExtractDocIdAndExtract(Request $request, string $url): JsonResponse
+    {
+        $docId = $this->resolveApiExtractDocId($request, $url);
+        if ($docId instanceof JsonResponse) {
+            return $docId;
+        }
+
+        return $this->performApiExtraction($url, $docId);
+    }
+
+    private function resolveApiExtractDocId(Request $request, string $url): int|JsonResponse
+    {
         $docIdParam = $request->query->get('docid');
         $docId = $docIdParam !== null
             ? (int) $docIdParam
@@ -398,11 +459,21 @@ class ExtractController extends AbstractController
             );
         }
 
+        return $docId;
+    }
+
+    private function performApiExtraction(string $url, int $docId): JsonResponse
+    {
         $referenceCount = $this->grobid->countAllReferencesFromDB($docId);
         if ($referenceCount > 0) {
             return new JsonResponse(['success' => true, 'docId' => $docId, 'alreadyExtracted' => true, 'referenceCount' => $referenceCount]);
         }
 
+        return $this->downloadAndExtractViaApi($url, $docId);
+    }
+
+    private function downloadAndExtractViaApi(string $url, int $docId): JsonResponse
+    {
         $getPdf = $this->episciences->downloadPdf($url, $docId);
         if (is_array($getPdf)) {
             $status = $getPdf['status'] === 404 ? Response::HTTP_NOT_FOUND : Response::HTTP_BAD_GATEWAY;
@@ -442,6 +513,16 @@ class ExtractController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function importFromSemanticScholar(int $docId, Request $request): JsonResponse
     {
+        $authError = $this->validateSemanticScholarRequest($docId, $request);
+        if ($authError !== null) {
+            return $authError;
+        }
+
+        return $this->performSemanticScholarImport($docId, $request);
+    }
+
+    private function validateSemanticScholarRequest(int $docId, Request $request): ?JsonResponse
+    {
         if (!$this->isCsrfTokenValid('import-semantic-scholar', $request->request->get('_token'))) {
             return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
@@ -449,6 +530,11 @@ class ExtractController extends AbstractController
             return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
 
+        return null;
+    }
+
+    private function performSemanticScholarImport(int $docId, Request $request): JsonResponse
+    {
         $paperId = trim((string) $request->request->get('paperId', ''));
         if ($paperId === '') {
             return new JsonResponse(

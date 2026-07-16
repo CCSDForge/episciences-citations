@@ -99,23 +99,34 @@ class References {
     private function updateAcceptedState(PaperReferences $ref, array $paperReference): int
     {
         if ($paperReference['accepted'] !== '') {
-            $newAccepted = (int) $paperReference['accepted'];
-            if ($ref->getAccepted() === $newAccepted) {
-                return 0;
-            }
-
-            $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
-            $ref->setAccepted($newAccepted);
-            return 1;
+            return $this->applyExplicitAcceptedValue($ref, (int) $paperReference['accepted']);
         }
 
-        if ($ref->getAccepted() === null) {
-            $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
-            $ref->setAccepted(0);
-            return 1;
+        return $this->applyDefaultAcceptedValue($ref);
+    }
+
+    private function applyExplicitAcceptedValue(PaperReferences $ref, int $newAccepted): int
+    {
+        if ($ref->getAccepted() === $newAccepted) {
+            return 0;
         }
 
-        return 0;
+        $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
+        $ref->setAccepted($newAccepted);
+
+        return 1;
+    }
+
+    private function applyDefaultAcceptedValue(PaperReferences $ref): int
+    {
+        if ($ref->getAccepted() !== null) {
+            return 0;
+        }
+
+        $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
+        $ref->setAccepted(0);
+
+        return 1;
     }
 
     /**

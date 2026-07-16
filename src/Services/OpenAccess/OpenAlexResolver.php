@@ -156,36 +156,70 @@ class OpenAlexResolver extends AbstractOpenAccessResolver
      */
     private function resolveBestOaInfo(?array $primary, array $locations, ?array $bestOa): ?array
     {
-        if ($bestOa !== null && is_array($bestOa['source'] ?? null)) {
-            return [
-                'source_title' => (string) ($bestOa['source']['display_name'] ?? ''),
-                'oa_link' => (string) ($bestOa['landing_page_url'] ?? ''),
-            ];
+        $fromBestOa = $this->extractLocationOaInfo($bestOa);
+        if ($fromBestOa !== null) {
+            return $fromBestOa;
         }
 
-        if ($primary !== null && ($primary['is_oa'] ?? false) === true && is_array($primary['source'] ?? null)) {
-            return [
-                'source_title' => (string) ($primary['source']['display_name'] ?? ''),
-                'oa_link' => (string) ($primary['landing_page_url'] ?? ''),
-            ];
+        if (($primary['is_oa'] ?? false) === true) {
+            $fromPrimary = $this->extractLocationOaInfo($primary);
+            if ($fromPrimary !== null) {
+                return $fromPrimary;
+            }
         }
 
+        return $this->findLocationOaInfo($locations) ?? $this->findFirstAlternativeLocation($locations);
+    }
+
+    /**
+     * @param array<string, mixed>|null $source
+     * @return array{source_title: string, oa_link: string}|null
+     */
+    private function extractLocationOaInfo(?array $source): ?array
+    {
+        if ($source === null || !is_array($source['source'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'source_title' => (string) ($source['source']['display_name'] ?? ''),
+            'oa_link' => (string) ($source['landing_page_url'] ?? ''),
+        ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $locations
+     * @return array{source_title: string, oa_link: string}|null
+     */
+    private function findLocationOaInfo(array $locations): ?array
+    {
         foreach ($locations as $location) {
             if (($location['is_oa'] ?? false) !== true || !is_array($location['source'] ?? null)) {
                 continue;
             }
 
-            $sourceTitle = (string) ($location['source']['type'] ?? '') === 'journal'
-                ? (string) ($location['source']['display_name'] ?? '')
-                : ($this->findJournalNameInLocations($locations) ?: (string) ($location['source']['display_name'] ?? ''));
-
             return [
-                'source_title' => $sourceTitle,
+                'source_title' => $this->resolveSourceTitle($location, $locations),
                 'oa_link' => (string) ($location['landing_page_url'] ?? ''),
             ];
         }
 
-        return $this->findFirstAlternativeLocation($locations);
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $location
+     * @param array<int, array<string, mixed>> $locations
+     */
+    private function resolveSourceTitle(array $location, array $locations): string
+    {
+        if ((string) ($location['source']['type'] ?? '') === 'journal') {
+            return (string) ($location['source']['display_name'] ?? '');
+        }
+
+        $journalName = $this->findJournalNameInLocations($locations);
+
+        return $journalName !== '' ? $journalName : (string) ($location['source']['display_name'] ?? '');
     }
 
     /**
@@ -222,15 +256,11 @@ class OpenAlexResolver extends AbstractOpenAccessResolver
                 continue;
             }
 
-            $sourceTitle = (string) ($location['source']['type'] ?? '') === 'journal'
-                ? (string) ($location['source']['display_name'] ?? '')
-                : ($this->findJournalNameInLocations($locations) ?: (string) ($location['source']['display_name'] ?? ''));
-
             $oaLink = ($location['is_oa'] ?? false) === true
                 ? (string) ($location['source']['landing_page_url'] ?? '')
                 : '';
 
-            return ['source_title' => $sourceTitle, 'oa_link' => $oaLink];
+            return ['source_title' => $this->resolveSourceTitle($location, $locations), 'oa_link' => $oaLink];
         }
 
         return null;

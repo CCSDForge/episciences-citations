@@ -29,10 +29,7 @@ class EpisciencesController extends AbstractController
         $url = $request->query->get('url');
         if (empty($url)) {
             $this->logger->warning('API called with bad URL or NULL', ['url' => $url]);
-            return new JsonResponse(
-                ['status' => Response::HTTP_BAD_REQUEST, 'message' => 'An URL is missing'],
-                Response::HTTP_BAD_REQUEST
-            );
+            return $this->jsonMessage('An URL is missing', Response::HTTP_BAD_REQUEST);
         }
 
         // Extraction docId
@@ -40,12 +37,14 @@ class EpisciencesController extends AbstractController
         $this->logger->info('API called for docid: ', [$docId]);
 
         if ($docId === "") {
-            return new JsonResponse(
-                ['status' => Response::HTTP_BAD_REQUEST, 'message' => 'A docid is missing'],
-                Response::HTTP_BAD_REQUEST
-            );
+            return $this->jsonMessage('A docid is missing', Response::HTTP_BAD_REQUEST);
         }
 
+        return $this->buildReferencesResponse($request, $docId);
+    }
+
+    private function buildReferencesResponse(Request $request, string $docId): JsonResponse
+    {
         // Détermination du type de références (ternaire pour plus de concision)
         $type = ($request->query->has('all') && $request->query->get('all') === "1") ? 'all' : 'accepted';
         $this->logger->info("API called for {$type} references with docid", [$docId]);
@@ -55,12 +54,14 @@ class EpisciencesController extends AbstractController
 
         if ($refs === []) {
             $this->logger->info('API called but no references were found for: ', [$docId]);
-            return new JsonResponse(
-                ['status' => Response::HTTP_OK, 'message' => 'No reference found'],
-                Response::HTTP_OK
-            );
+            return $this->jsonMessage('No reference found', Response::HTTP_OK);
         }
 
         return new JsonResponse($refs, Response::HTTP_OK);
+    }
+
+    private function jsonMessage(string $message, int $status): JsonResponse
+    {
+        return new JsonResponse(['status' => $status, 'message' => $message], $status);
     }
 }

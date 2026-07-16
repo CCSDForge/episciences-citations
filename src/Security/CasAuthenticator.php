@@ -119,18 +119,14 @@ class CasAuthenticator extends AbstractAuthenticator
 
     private function resolveUser(): string
     {
-        if ($this->getParam('gateway')) {
-            if ($this->getParam('force')) {
-                \phpCAS::forceAuthentication();
-                return \phpCAS::getUser();
-            }
-
-            return \phpCAS::checkAuthentication() ? \phpCAS::getUser() : '__NO_USER__';
-        }
-
+        // The "force" behavior is identical whether or not gateway mode is enabled.
         if ($this->getParam('force')) {
             \phpCAS::forceAuthentication();
             return \phpCAS::getUser();
+        }
+
+        if ($this->getParam('gateway')) {
+            return \phpCAS::checkAuthentication() ? \phpCAS::getUser() : '__NO_USER__';
         }
 
         return \phpCAS::isAuthenticated() ? \phpCAS::getUser() : '__NO_USER__';
@@ -173,6 +169,13 @@ class CasAuthenticator extends AbstractAuthenticator
         $begin = strpos($logoutRequest, $open);
         $end = strpos($logoutRequest, $close, $begin);
         $sessionId = substr($logoutRequest, $begin + strlen($open), $end - strlen($close) - $begin + 1);
+
+        // The session index comes from the CAS server's SLO request, not from a client
+        // cookie: reject anything that doesn't look like a session ID PHP itself would
+        // generate, so a malformed/forged value can't be handed to session_id().
+        if (!preg_match('/^[a-zA-Z0-9,-]{1,128}$/', $sessionId)) {
+            return;
+        }
 
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();

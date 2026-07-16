@@ -46,6 +46,10 @@ class Bibtex
         $listener->addProcessor(new NamesProcessor());
         $parser = new Parser();
         $parser->addListener($listener);
+
+        $entries = [];
+        $error = null;
+
         try {
             static::logger();
             $bibtexLog = ($isFile) ? file_get_contents($bibtexFile) : $bibtexFile;
@@ -57,18 +61,19 @@ class Bibtex
         } catch (ParserException $exception) {
             // The BibTeX isn't valid
             self::logger()->error('BIBTEX NOT VALID => '. $exception->getMessage(),['file'=> $exception->getFile()]);
-            return ["error" => 'BibTeX is not valid'];
+            $error = 'BibTeX is not valid';
         } catch (ExceptionInterface $exception) {
             // Alternatively, you can use this exception to catch all of them at once
             self::logger()->error('EXCEPTION FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
-            return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
+            $error = 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.';
         } catch (\ErrorException $exception) {
             self::logger()->error('ERROR FROM BIBTEX CONVERTER => '. $exception->getMessage(),
                 ['file'=> $exception->getFile(), 'error' => $exception->getMessage()]);
-            return ["error" => 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.'];
+            $error = 'Something went wrong with the BibTeX converter. Please check the syntax and the format of your file.';
         }
-        return $entries;
+
+        return $error !== null ? ['error' => $error] : $entries;
     }
     public function initStatic(): void
     {
@@ -134,54 +139,17 @@ class Bibtex
      */
     public function processBibtex(mixed $bibtexFile, array $userInfo, int $docId): array
     {
-        $allBibFromDocId = $this->entityManager->getRepository(PaperReferences::class)
-            ->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
-        $countAllRef = count($this->entityManager->getRepository(PaperReferences::class)
-            ->findBy(['document' => $docId]));
-        if ($allBibFromDocId !== []){
-            foreach ($allBibFromDocId as $bib){
-                $this->entityManager->remove($bib);
-            }
-            $this->entityManager->flush();
-        }
+        $countAllRef = $this->removeExistingBibtexImports($docId);
+
         $bibtex = self::convertBibtexToArray($bibtexFile);
         if (isset($bibtex['error'])) {
             return ['error' => $bibtex['error']];
         }
 
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
-        if (is_null($user)) {
-            $user = new UserInformations();
-            $user->setId($userInfo['UID']);
-            $user->setSurname($userInfo['FIRSTNAME']);
-            $user->setName($userInfo['LASTNAME']);
-        }
+        $user = $this->findOrCreateUser($userInfo);
         $document = $this->entityManager->getRepository(Document::class)->find($docId);
-        $references = [];
-        foreach ($bibtex as $bibtexInfo) {
-            $doi = $bibtexInfo['doi'] ?? null;
-            if ($doi === null && isset($bibtexInfo['url'])) {
-                // Try to extract DOI from URL if present
-                $doiRegex = '/10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+/';
-                if (preg_match($doiRegex, (string) $bibtexInfo['url'], $matches)) {
-                    $doi = $matches[0];
-                }
-            }
+        $references = array_map($this->buildReferenceData(...), $bibtex);
 
-            if (array_key_exists('crossref_doi', $bibtexInfo)) {
-                $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
-                $references[] = [
-                    'csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
-                    'doi' => $bibtexInfo['crossref_doi']
-                ];
-            } else {
-                $refData = ['csl' => self::generateCSL($bibtexInfo)];
-                if ($doi !== null) {
-                    $refData['doi'] = $doi;
-                }
-                $references[] = $refData;
-            }
-        }
         foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
             $ref = new PaperReferences();
             $ref->setReference($reference);
@@ -195,6 +163,83 @@ class Bibtex
         }
         $this->entityManager->flush();
         return [];
+    }
+
+    private function removeExistingBibtexImports(int $docId): int
+    {
+        $repository = $this->entityManager->getRepository(PaperReferences::class);
+        $allBibFromDocId = $repository->findBy(['document' => $docId, 'source' => PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT]);
+        $countAllRef = count($repository->findBy(['document' => $docId]));
+
+        if ($allBibFromDocId !== []) {
+            foreach ($allBibFromDocId as $bib) {
+                $this->entityManager->remove($bib);
+            }
+            $this->entityManager->flush();
+        }
+
+        return $countAllRef;
+    }
+
+    /**
+     * @param array<string, mixed> $userInfo
+     */
+    private function findOrCreateUser(array $userInfo): UserInformations
+    {
+        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
+        if ($user instanceof UserInformations) {
+            return $user;
+        }
+
+        $user = new UserInformations();
+        $user->setId($userInfo['UID']);
+        $user->setSurname($userInfo['FIRSTNAME']);
+        $user->setName($userInfo['LASTNAME']);
+
+        return $user;
+    }
+
+    /**
+     * @param array<string, mixed> $bibtexInfo
+     * @return array<string, mixed>
+     * @throws \JsonException
+     */
+    private function buildReferenceData(array $bibtexInfo): array
+    {
+        if (array_key_exists('crossref_doi', $bibtexInfo)) {
+            $csl = $this->doi->getCsl($bibtexInfo['crossref_doi']);
+            return [
+                'csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR),
+                'doi' => $bibtexInfo['crossref_doi'],
+            ];
+        }
+
+        $refData = ['csl' => self::generateCSL($bibtexInfo)];
+        $doi = self::extractDoiFromBibtexInfo($bibtexInfo);
+        if ($doi !== null) {
+            $refData['doi'] = $doi;
+        }
+
+        return $refData;
+    }
+
+    /**
+     * @param array<string, mixed> $bibtexInfo
+     */
+    private static function extractDoiFromBibtexInfo(array $bibtexInfo): ?string
+    {
+        $doi = $bibtexInfo['doi'] ?? null;
+        if ($doi !== null || !isset($bibtexInfo['url'])) {
+            return $doi;
+        }
+
+        // Try to extract DOI from URL if present
+        $doiRegex = '/10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+/';
+        if (preg_match($doiRegex, (string) $bibtexInfo['url'], $matches)) {
+            return $matches[0];
+        }
+
+        return null;
     }
 
     /**
