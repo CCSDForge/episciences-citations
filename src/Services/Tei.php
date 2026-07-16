@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 
 class Tei
@@ -14,7 +15,8 @@ class Tei
 
     public function __construct(private readonly EntityManagerInterface $entityManager,
                                 private readonly DocumentRepository $documentRepository,
-                                private readonly SolrReferenceEnricher $solrReferenceEnricher)
+                                private readonly SolrReferenceEnricher $solrReferenceEnricher,
+                                private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher)
     {
     }
 
@@ -101,7 +103,10 @@ class Tei
             $doc = new Document();
             $doc->setId($docId);
         }
-        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
+        $references = $this->solrReferenceEnricher->enrichReferences($references);
+        $references = $this->openAccessReferenceEnricher->enrichReferences($references);
+
+        foreach ($references as $reference) {
             if (!in_array(serialize($reference), $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
                 $refs->setReference($reference);
