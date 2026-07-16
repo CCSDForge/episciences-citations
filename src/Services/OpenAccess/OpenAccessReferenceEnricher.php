@@ -178,6 +178,6 @@ class OpenAccessReferenceEnricher
 
     private function cacheKey(string $doi): string
     {
-        return sha1($doi) . '_openAccess';
+        return hash('sha256', $doi) . '_openAccess';
     }
 }

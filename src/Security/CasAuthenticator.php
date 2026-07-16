@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Security;
 
 use L3\Bundle\CasGuardBundle\Entity\CasUserInterface;
@@ -119,18 +121,14 @@ class CasAuthenticator extends AbstractAuthenticator
 
     private function resolveUser(): string
     {
-        if ($this->getParam('gateway')) {
-            if ($this->getParam('force')) {
-                \phpCAS::forceAuthentication();
-                return \phpCAS::getUser();
-            }
-
-            return \phpCAS::checkAuthentication() ? \phpCAS::getUser() : '__NO_USER__';
-        }
-
+        // The "force" behavior is identical whether or not gateway mode is enabled.
         if ($this->getParam('force')) {
             \phpCAS::forceAuthentication();
             return \phpCAS::getUser();
+        }
+
+        if ($this->getParam('gateway')) {
+            return \phpCAS::checkAuthentication() ? \phpCAS::getUser() : '__NO_USER__';
         }
 
         return \phpCAS::isAuthenticated() ? \phpCAS::getUser() : '__NO_USER__';
@@ -174,10 +172,22 @@ class CasAuthenticator extends AbstractAuthenticator
         $end = strpos($logoutRequest, $close, $begin);
         $sessionId = substr($logoutRequest, $begin + strlen($open), $end - strlen($close) - $begin + 1);
 
+        // The session index comes from the CAS server's SLO request, not from a client
+        // cookie: reject anything that doesn't look like a session ID PHP itself would
+        // generate, so a malformed/forged value can't be handed to session_id().
+        if (!preg_match('/^[a-zA-Z0-9,-]{1,128}$/', $sessionId)) {
+            return;
+        }
+
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
-        session_id($sessionId);
+        // $sessionId is externally supplied by design: CAS Single Logout works by having
+        // the CAS server send back the SessionIndex it was given at login, which must
+        // become the local PHP session ID so that session can be destroyed. The format
+        // check above rejects anything that isn't a plausible PHP session ID before it
+        // reaches session_id().
+        session_id($sessionId); // NOSONAR (php:S5328)
         session_destroy();
     }
 

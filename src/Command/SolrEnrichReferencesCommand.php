@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use App\Entity\PaperReferences;
@@ -14,6 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'app:solr:enrich-references', description: 'Enrich existing references with Solr metadata by DOI')]
 class SolrEnrichReferencesCommand extends Command
 {
+    use ReferenceIdFilterTrait;
+
     private const array SOLR_FIELDS = ['detectors', 'status', 'pubpeerurl'];
 
     public function __construct(
@@ -60,53 +64,7 @@ class SolrEnrichReferencesCommand extends Command
         ];
 
         foreach (array_chunk($referenceIds, $batchSize) as $idBatch) {
-            $paperReferences = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id' => $idBatch]);
-            $processable = [];
-            $originalReferences = [];
-
-            foreach ($paperReferences as $paperReference) {
-                $stats['scanned']++;
-                $reference = $paperReference->getReference();
-                if (!$this->hasDoi($reference)) {
-                    continue;
-                }
-                if ($onlyMissing && $this->hasSolrMetadata($reference)) {
-                    continue;
-                }
-
-                $processable[] = $paperReference;
-                $originalReferences[] = $reference;
-            }
-
-            if ($processable === []) {
-                continue;
-            }
-
-            $enrichedReferences = $this->solrReferenceEnricher->enrichReferences($originalReferences, $force, $batchSize);
-
-            foreach ($processable as $index => $paperReference) {
-                $stats['processed']++;
-                $before = $originalReferences[$index];
-                $after = $enrichedReferences[$index] ?? $before;
-                $change = $this->classifyChange($before, $after, $stats);
-                if ($change === 'enriched' && $output->isVerbose()) {
-                    $output->writeln(sprintf(
-                        'Enriched DOI %s in document %s',
-                        $before['doi'],
-                        $paperReference->getDocument()?->getId() ?? 'unknown'
-                    ));
-                }
-
-                if (!$dryRun) {
-                    $paperReference->setReference($after);
-                    $this->entityManager->persist($paperReference);
-                }
-            }
-
-            if (!$dryRun) {
-                $this->entityManager->flush();
-                $this->entityManager->clear();
-            }
+            $this->processBatch($idBatch, $onlyMissing, $dryRun, $force, $batchSize, $output, $stats);
         }
 
         $output->writeln(sprintf(
@@ -125,49 +83,80 @@ class SolrEnrichReferencesCommand extends Command
     }
 
     /**
-     * @return array<int, int>
+     * @param array<int, int|string> $idBatch
+     * @param array<string, int> $stats
      */
-    private function getReferenceIds(InputInterface $input): array
+    private function processBatch(array $idBatch, bool $onlyMissing, bool $dryRun, bool $force, int $batchSize, OutputInterface $output, array &$stats): void
     {
-        $queryBuilder = $this->entityManager->createQueryBuilder()
-            ->select('p.id')
-            ->from(PaperReferences::class, 'p')
-            ->orderBy('p.id', 'ASC');
+        $paperReferences = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id' => $idBatch]);
+        [$processable, $originalReferences] = $this->filterProcessable($paperReferences, $onlyMissing, $stats);
 
-        if ($input->getOption('docid') !== null) {
-            $queryBuilder
-                ->andWhere('p.document = :docId')
-                ->setParameter('docId', (int) $input->getOption('docid'));
+        if ($processable === []) {
+            return;
         }
 
-        if ($input->getOption('source') !== null) {
-            $queryBuilder
-                ->andWhere('p.source = :source')
-                ->setParameter('source', $input->getOption('source'));
+        $enrichedReferences = $this->solrReferenceEnricher->enrichReferences($originalReferences, $force, $batchSize);
+        $this->applyEnrichedReferences($processable, $originalReferences, $enrichedReferences, $dryRun, $output, $stats);
+
+        if (!$dryRun) {
+            $this->entityManager->flush();
+            $this->entityManager->clear();
         }
-
-        return array_map(
-            static fn (array $row): int => (int) $row['id'],
-            $queryBuilder->getQuery()->getArrayResult()
-        );
-    }
-
-    private function isValidSource(string $source): bool
-    {
-        return in_array($source, [
-            PaperReferences::SOURCE_METADATA_GROBID,
-            PaperReferences::SOURCE_METADATA_EPI_USER,
-            PaperReferences::SOURCE_METADATA_BIBTEX_IMPORT,
-            PaperReferences::SOURCE_SEMANTICS_SCHOLAR,
-        ], true);
     }
 
     /**
-     * @param array<string, mixed> $reference
+     * @param array<PaperReferences> $paperReferences
+     * @param array<string, int> $stats
+     * @return array{0: array<PaperReferences>, 1: array<array<string, mixed>>}
      */
-    private function hasDoi(array $reference): bool
+    private function filterProcessable(array $paperReferences, bool $onlyMissing, array &$stats): array
     {
-        return isset($reference['doi']) && is_string($reference['doi']) && trim($reference['doi']) !== '';
+        $processable = [];
+        $originalReferences = [];
+
+        foreach ($paperReferences as $paperReference) {
+            $stats['scanned']++;
+            $reference = $paperReference->getReference();
+            if (!$this->hasDoi($reference)) {
+                continue;
+            }
+            if ($onlyMissing && $this->hasSolrMetadata($reference)) {
+                continue;
+            }
+
+            $processable[] = $paperReference;
+            $originalReferences[] = $reference;
+        }
+
+        return [$processable, $originalReferences];
+    }
+
+    /**
+     * @param array<PaperReferences> $processable
+     * @param array<array<string, mixed>> $originalReferences
+     * @param array<array<string, mixed>> $enrichedReferences
+     * @param array<string, int> $stats
+     */
+    private function applyEnrichedReferences(array $processable, array $originalReferences, array $enrichedReferences, bool $dryRun, OutputInterface $output, array &$stats): void
+    {
+        foreach ($processable as $index => $paperReference) {
+            $stats['processed']++;
+            $before = $originalReferences[$index];
+            $after = $enrichedReferences[$index] ?? $before;
+            $change = $this->classifyChange($before, $after, $stats);
+            if ($change === 'enriched' && $output->isVerbose()) {
+                $output->writeln(sprintf(
+                    'Enriched DOI %s in document %s',
+                    $before['doi'],
+                    $paperReference->getDocument()?->getId() ?? 'unknown'
+                ));
+            }
+
+            if (!$dryRun) {
+                $paperReference->setReference($after);
+                $this->entityManager->persist($paperReference);
+            }
+        }
     }
 
     /**

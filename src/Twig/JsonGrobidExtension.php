@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 // src/Twig/AppExtension.php
 namespace App\Twig;
 
@@ -38,12 +41,6 @@ class JsonGrobidExtension
             } elseif (isset($author['persName']['forename'], $author['persName']['surname']) && is_array($author['persName']['surname'])) {
                 $infoAuthor[] = [
                     "forename" => $author['persName']['forename'],
-                    "surname" => $this->composeNames($author['persName']['surname']),
-                    "orcid" => $this->getOrcid($author)
-                ];
-            } elseif (isset($author['persName']['forename'], $author['persName']['surname']) && is_array($author['persName']['surname'])) {
-                $infoAuthor[] = [
-                    "forename" => $this->composeNames($author['persName']['surname']),
                     "surname" => $this->composeNames($author['persName']['surname']),
                     "orcid" => $this->getOrcid($author)
                 ];
@@ -106,34 +103,42 @@ class JsonGrobidExtension
     #[AsTwigFunction(name: 'prettyReference')]
     public function prettyReference(string $jsonRawReference): array
     {
-        $jsonReference = [];
-        if ($jsonRawReference !== '' && $jsonRawReference !== '0') {
-            try {
-                $jsonReference = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
-                if (!is_array($jsonReference)) {
-                    return [];
-                }
-
-                // Unwrap legacy outer-array format created by old JS double-encoding:
-                //   [{"raw_reference":"..."}]      → {"raw_reference":"..."}  (array wrapper)
-                //   ["{\"raw_reference\":\"...\"}"] → {"raw_reference":"..."}  (array + string wrapper)
-                if (array_is_list($jsonReference) && count($jsonReference) === 1) {
-                    $inner = $jsonReference[0];
-                    if (is_array($inner)) {
-                        $jsonReference = $inner;
-                    } elseif (is_string($inner)) {
-                        $decoded = json_decode($inner, true);
-                        if (is_array($decoded)) {
-                            $jsonReference = $decoded;
-                        }
-                    }
-                }
-
-                $jsonReference = $this->bibtex->getCslRefText($jsonReference);
-            } catch (JsonException|CiteProcException) {
+        try {
+            $jsonReference = json_decode($jsonRawReference, true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($jsonReference)) {
                 return [];
             }
+
+            /** @var array<string, mixed> $reference */
+            $reference = $this->unwrapLegacyEncoding($jsonReference);
+
+            return $this->bibtex->getCslRefText($reference);
+        } catch (JsonException|CiteProcException) {
+            return [];
         }
-        return $jsonReference;
+    }
+
+    /**
+     * Unwrap legacy outer-array format created by old JS double-encoding:
+     *   [{"raw_reference":"..."}]      → {"raw_reference":"..."}  (array wrapper)
+     *   ["{\"raw_reference\":\"...\"}"] → {"raw_reference":"..."}  (array + string wrapper)
+     *
+     * @param array<int|string, mixed> $jsonReference
+     * @return array<int|string, mixed>
+     */
+    private function unwrapLegacyEncoding(array $jsonReference): array
+    {
+        if (!array_is_list($jsonReference) || count($jsonReference) !== 1) {
+            return $jsonReference;
+        }
+
+        $inner = $jsonReference[0];
+        if (is_array($inner)) {
+            return $inner;
+        }
+
+        $decoded = is_string($inner) ? json_decode($inner, true) : null;
+
+        return is_array($decoded) ? $decoded : $jsonReference;
     }
 }

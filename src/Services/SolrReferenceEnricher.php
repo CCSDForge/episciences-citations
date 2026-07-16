@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Psr\Log\LoggerInterface;
@@ -39,6 +41,23 @@ class SolrReferenceEnricher
             return $references;
         }
 
+        $doiByIndex = $this->extractDois($references);
+        if ($doiByIndex === []) {
+            return $references;
+        }
+
+        [$metadataByDoi, $failedDoi] = $this->resolveMetadata($doiByIndex, $this->getEffectiveBatchSize($batchSize));
+        $this->applyResolvedMetadata($references, $doiByIndex, $metadataByDoi, $failedDoi);
+
+        return $references;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $references
+     * @return array<int, string>
+     */
+    private function extractDois(array &$references): array
+    {
         $doiByIndex = [];
         foreach ($references as $index => $reference) {
             $doi = $this->normalizeDoi($reference['doi'] ?? null);
@@ -49,13 +68,18 @@ class SolrReferenceEnricher
             $doiByIndex[$index] = $doi;
         }
 
-        if ($doiByIndex === []) {
-            return $references;
-        }
+        return $doiByIndex;
+    }
 
+    /**
+     * @param array<int, string> $doiByIndex
+     * @return array{0: array<string, array<string, mixed>>, 1: array<string, bool>}
+     */
+    private function resolveMetadata(array $doiByIndex, int $effectiveBatchSize): array
+    {
         $metadataByDoi = [];
         $failedDoi = [];
-        $effectiveBatchSize = $this->getEffectiveBatchSize($batchSize);
+
         foreach (array_chunk(array_values(array_unique($doiByIndex)), $effectiveBatchSize) as $doiBatch) {
             $batchMetadata = $this->fetchMetadataByDoi($doiBatch);
             if ($batchMetadata === null) {
@@ -67,6 +91,17 @@ class SolrReferenceEnricher
             $metadataByDoi += $batchMetadata;
         }
 
+        return [$metadataByDoi, $failedDoi];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $references
+     * @param array<int, string> $doiByIndex
+     * @param array<string, array<string, mixed>> $metadataByDoi
+     * @param array<string, bool> $failedDoi
+     */
+    private function applyResolvedMetadata(array &$references, array $doiByIndex, array $metadataByDoi, array $failedDoi): void
+    {
         foreach ($doiByIndex as $index => $doi) {
             if (isset($failedDoi[$doi])) {
                 continue;
@@ -78,8 +113,6 @@ class SolrReferenceEnricher
 
             $references[$index] = $this->applyMetadata($this->clearSolrFields($references[$index]), $metadataByDoi[$doi]);
         }
-
-        return $references;
     }
 
     public function getEffectiveBatchSize(?int $batchSize = null): int

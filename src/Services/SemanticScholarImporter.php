@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Entity\UserInformations;
+use App\Exception\SemanticScholarImportException;
 use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -30,20 +31,20 @@ class SemanticScholarImporter
     /**
      * Fetches references from Semantic Scholar for the given paper ID and inserts them into the DB.
      *
-     * @throws \RuntimeException when the paper ID is not found or has no references
+     * @throws SemanticScholarImportException when the paper ID is not found or has no references
      * @throws \JsonException
      */
     public function importByPaperId(string $paperId, int $docId, int $startOrder): int
     {
         $raw = $this->semanticsscholar->getRef($paperId);
         if ($raw === '') {
-            throw new \RuntimeException('DOI not found in Semantic Scholar');
+            throw new SemanticScholarImportException('DOI not found in Semantic Scholar');
         }
 
         $semanticsRef = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
 
         if (!isset($semanticsRef['data']) || $semanticsRef['data'] === []) {
-            throw new \RuntimeException('No references found for this paper ID');
+            throw new SemanticScholarImportException('No references found for this paper ID');
         }
 
         $this->removeAllS2RefFromDb($docId);
