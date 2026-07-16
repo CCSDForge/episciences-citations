@@ -73,10 +73,9 @@ class ApiExtractController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'Missing required parameter: url'], Response::HTTP_BAD_REQUEST);
         }
 
-        $scheme = strtolower(parse_url($url, PHP_URL_SCHEME) ?? '');
-        if ($scheme !== 'http' && $scheme !== 'https') {
+        if (!$this->episciences->isAllowedUrl($url)) {
             return new JsonResponse(
-                ['success' => false, 'error' => 'Invalid URL: only http and https are allowed'],
+                ['success' => false, 'error' => 'Invalid URL: only http(s) URLs on an allowed Episciences host are accepted'],
                 Response::HTTP_BAD_REQUEST
             );
         }
@@ -147,6 +146,6 @@ class ApiExtractController extends AbstractController
             $this->logger->warning('API_EXTRACT_TOKEN is not configured — /api/extract is disabled');
             return false;
         }
-        return $request->headers->get('Authorization') === 'Bearer ' . $expected;
+        return hash_equals('Bearer ' . $expected, (string) $request->headers->get('Authorization'));
     }
 }
