@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\Document;
@@ -67,7 +69,7 @@ class ReferenceEditController extends AbstractController
     {
         $this->logger->info('view ref page', ['docId' => $docId, 'attribute cas' => $this->getUserAttributes()]);
 
-        if (!$this->isAuthorizeForApp($docId)) {
+        if (!$this->isAuthorizeForApp($this->episciences, $docId)) {
             $this->logger->warning('Access Denied for this user : ',
                 ['DOCID' => $docId, 'USER CAS' => $this->getUserAttributes()]);
             throw $this->createAccessDeniedException();
@@ -222,7 +224,7 @@ class ReferenceEditController extends AbstractController
             $this->logger->warning('Autosave: Invalid CSRF token');
             return new JsonResponse(['success' => false, 'error' => 'Invalid CSRF token'], Response::HTTP_FORBIDDEN);
         }
-        if (!$this->isAuthorizeForApp($docId)) {
+        if (!$this->isAuthorizeForApp($this->episciences, $docId)) {
             $this->logger->warning('Autosave: Access Denied', ['docId' => $docId]);
             return new JsonResponse(['success' => false, 'error' => 'Access Denied'], Response::HTTP_FORBIDDEN);
         }

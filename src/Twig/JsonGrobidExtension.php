@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 // src/Twig/AppExtension.php
 namespace App\Twig;
 

@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
+use App\Services\Episciences;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -14,8 +17,10 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
  * gate an action by the current user's rights on a given Episciences document.
  *
  * Requires the using class to extend Symfony's AbstractController (for
- * `$this->container`) and to expose a `$episciences` property of type
- * `App\Services\Episciences`.
+ * `$this->container`). Takes the Episciences service as an explicit parameter
+ * rather than reading it off `$this` so each host controller's own field stays
+ * visibly used within its own file (a cross-file `$this->episciences` read here
+ * previously tripped Sonar's unused-private-field check, php:S1068).
  */
 trait DocumentAccessTrait
 {
@@ -35,9 +40,9 @@ trait DocumentAccessTrait
      * @throws ServerExceptionInterface
      * @throws TransportExceptionInterface
      */
-    private function isAuthorizeForApp(int $docId): bool
+    private function isAuthorizeForApp(Episciences $episciences, int $docId): bool
     {
-        return $this->episciences->getRightUser((string) $docId,
+        return $episciences->getRightUser((string) $docId,
             $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 }

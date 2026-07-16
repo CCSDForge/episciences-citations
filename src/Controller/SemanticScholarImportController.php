@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\Services\Episciences;
@@ -47,7 +49,7 @@ class SemanticScholarImportController extends AbstractController
         if (!$this->isCsrfTokenValid('import-semantic-scholar', $request->request->get('_token'))) {
             return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
-        if (!$this->isAuthorizeForApp($docId)) {
+        if (!$this->isAuthorizeForApp($this->episciences, $docId)) {
             return new JsonResponse(['success' => false], Response::HTTP_FORBIDDEN);
         }
 
