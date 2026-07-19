@@ -21,7 +21,10 @@
             'autofix-all-confirm-body': '{{ 'autofix-all-confirm-body'|trans }}',
             'autofix-complete': '{{ 'autofix-complete'|trans }}',
             'No references with DOI found': '{{ 'No references with DOI found'|trans }}',
-            'Invalid DOI, URL or SWHID format': '{{ 'Invalid DOI, URL or SWHID format'|trans }}'
+            'Invalid DOI, URL or SWHID format': '{{ 'Invalid DOI, URL or SWHID format'|trans }}',
+            'New position (1 to {total})': '{{ 'New position (1 to {total})'|trans }}',
+            'Reference moved to position {position} of {total}.': '{{ 'Reference moved to position {position} of {total}.'|trans }}',
+            'Reference order updated.': '{{ 'Reference order updated.'|trans }}'
         };
     </script>
     {{ encore_entry_script_tags('extract') }}
@@ -210,7 +213,8 @@
                 'SEMANTICS': 'fas fa-graduation-cap',
                 'BIBTEX':    'fas fa-file-import'
             } %}
-            <div id="sortref">
+            <div id="sortref" data-position-aria-template="{{ 'Reference position, activate to move: {position} of {total}'|trans }}">
+                {% set referencesCount = form.paperReferences|length %}
                 {% for paperReferences in form.paperReferences %}
                     {% set jsonDecodedRef = prettyReference(paperReferences.reference.vars.data) %}
                     {% set doiDecodedRef = '' %}
@@ -232,7 +236,11 @@
                     <div class="card mb-2 shadow-sm container-reference position-relative{% if isDeclined %} declinedRef filtered{% else %} acceptedRef{% endif %}{% if hasDetectors %} border-danger-important{% endif %}"
                          data-idref="{{ paperReferences.id.vars.value }}"
                          data-has-detectors="{% if hasDetectors %}1{% else %}0{% endif %}">
-                        <span class="badge rounded-pill bg-light text-dark position-absolute top-0 start-0 m-1 ref-position-badge" aria-label="{{ 'Citation number'|trans }}">{{ loop.index }}</span>
+                        <div class="position-absolute top-0 start-0 m-1 ref-position-wrapper">
+                            <button type="button"
+                                    class="badge rounded-pill bg-light text-dark border-0 ref-position-badge"
+                                    aria-label="{{ ('Reference position, activate to move: {position} of {total}'|trans)|replace({'{position}': loop.index, '{total}': referencesCount}) }}">{{ loop.index }}</button>
+                        </div>
                         <span class="badge source-color-{{ paperReferences.vars.data.source|lower }} position-absolute bottom-0 end-0 m-2">
                             <i class="{{ sourceIcons[paperReferences.vars.data.source] ?? 'fas fa-tag' }} me-1" aria-hidden="true"></i>{{ 'Source'|trans }}: {{ paperReferences.vars.data.source|trans }}
                         </span>
@@ -401,6 +409,7 @@
 
                 {% endfor %}
             </div>
+            <div id="reorder-live-region" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
             {% endif %}
 

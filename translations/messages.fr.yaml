@@ -101,6 +101,10 @@ Auto-fix all references with DOI: Auto-corriger toutes les références avec DOI
 autofix-all-confirm-body: "Cette action va corriger automatiquement {count} référence(s) ayant un DOI. Voulez-vous continuer ?"
 autofix-complete: "{done} référence(s) corrigée(s) automatiquement"
 No references with DOI found: Aucune référence avec un DOI n'a été trouvée
+'Reference position, activate to move: {position} of {total}': "Position de la référence, activer pour la déplacer : {position} sur {total}"
+'New position (1 to {total})': "Nouvelle position (de 1 à {total})"
+'Reference moved to position {position} of {total}.': "Référence déplacée en position {position} sur {total}."
+'Reference order updated.': "Ordre des références mis à jour."
 Saved: Enregistré
 Activate/Deactivate: Activer/Désactiver
 Close: Fermer

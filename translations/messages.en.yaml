@@ -97,6 +97,10 @@ Auto-fix all references with DOI: Auto-fix all references with DOI
 autofix-all-confirm-body: 'This will automatically correct {count} reference(s) that have a DOI. Do you want to continue?'
 autofix-complete: '{done} reference(s) auto-fixed'
 No references with DOI found: No references with a DOI were found
+'Reference position, activate to move: {position} of {total}': 'Reference position, activate to move: {position} of {total}'
+'New position (1 to {total})': 'New position (1 to {total})'
+'Reference moved to position {position} of {total}.': 'Reference moved to position {position} of {total}.'
+'Reference order updated.': Reference order updated.
 Saved: Saved
 Activate/Deactivate: Activate/Deactivate
 Close: Close
