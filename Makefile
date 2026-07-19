@@ -250,5 +250,6 @@ rebuild: ## Rebuild and restart docker containers
 # SONARQUBE COMMANDS
 # ============================================================================
 
-sonar: ## Run SonarQube analysis (requires SONAR_TOKEN environment variable)
-	npx sonarqube-scanner
+sonar: ## Run SonarQube analysis (loads SONAR_TOKEN from env files if present)
+	@TOKEN=$$(grep -E '^SONAR_TOKEN=' .env.local 2>/dev/null | cut -d= -f2- || grep -E '^SONAR_TOKEN=' .env 2>/dev/null | cut -d= -f2-); \
+	SONAR_TOKEN="$${TOKEN:-$$SONAR_TOKEN}" npx sonarqube-scanner
