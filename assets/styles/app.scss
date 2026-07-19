@@ -98,3 +98,20 @@
 // Delete mode: hide controls, show checkboxes via parent class toggle
 #sortref.delete-mode .ref-controls    { display: none !important; }
 #sortref.delete-mode .ref-delete-check { display: block !important; }
+
+// Editable reference position badge: keep the pill look on a real <button>
+// so it stays keyboard-operable without a visual regression.
+.ref-position-badge {
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid $primary;
+        outline-offset: 2px;
+    }
+}
+
+.ref-position-input {
+    width: 3.5rem;
+    padding: 0.1rem 0.25rem;
+    text-align: center;
+}

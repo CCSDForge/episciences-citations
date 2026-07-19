@@ -59,9 +59,11 @@ describe('extract.js', () => {
                 <button id="confirm-adding" type="button"></button>
                 <div id="doi-error-msg" class="d-none"></div>
 
-                <div id="sortref">
+                <div id="sortref" data-position-aria-template="Reference position, activate to move: {position} of {total}">
                     <div class="container-reference" data-idref="1">
-                        <span class="ref-position-badge">1</span>
+                        <div class="ref-position-wrapper">
+                            <button type="button" class="ref-position-badge" aria-label="Reference position, activate to move: 1 of 3">1</button>
+                        </div>
                         <div id="container-reference-informations-1">
                             <div id="textReference-1">Original Text</div>
                             <a id="linkDoiRef-1" href="https://doi.org/10.1000/old">10.1000/old</a>
@@ -88,13 +90,26 @@ describe('extract.js', () => {
                         </div>
                     </div>
                     <div class="container-reference" data-idref="2">
-                        <span class="ref-position-badge">2</span>
+                        <div class="ref-position-wrapper">
+                            <button type="button" class="ref-position-badge" aria-label="Reference position, activate to move: 2 of 3">2</button>
+                        </div>
                         <div id="textReference-2">Other Text</div>
                         <input id="reference-2" value='{}'>
                         <input id="accepted-2" value="1">
                         <input data-dirty-ref="2" value="0">
                     </div>
+                    <div class="container-reference" data-idref="3">
+                        <div class="ref-position-wrapper">
+                            <button type="button" class="ref-position-badge" aria-label="Reference position, activate to move: 3 of 3">3</button>
+                        </div>
+                        <div id="textReference-3">Third Text</div>
+                        <input id="reference-3" value='{}'>
+                        <input id="accepted-3" value="1">
+                        <input data-dirty-ref="3" value="0">
+                    </div>
                 </div>
+                <div id="reorder-live-region"></div>
+                <input id="document_orderRef" value="">
                 <input id="document_save" type="button">
                 <div id="loading-screen" class="d-none"></div>
                 <button id="extract-all" type="button" data-url-from-epi="test-url"></button>
@@ -684,5 +699,137 @@ describe('extract.js', () => {
         expect(cancelBtn).toHaveClass('d-none');
         expect(toggleAllBtn).toHaveClass('d-none');
         expect(deleteCheck.checked).toBe(false);
+    });
+
+    describe('editable reference position', () => {
+        const getBadge = (idRef) =>
+            document.querySelector(`.container-reference[data-idref="${idRef}"] .ref-position-badge`);
+
+        const orderOf = () =>
+            Array.from(document.querySelectorAll('#sortref .container-reference')).map((el) => el.dataset.idref);
+
+        test('does not initiate drag from within the position input', () => {
+            const { Sortable } = require('sortablejs/modular/sortable.core.esm');
+            const lastCall = Sortable.create.mock.calls.at(-1);
+            expect(lastCall[1].filter).toContain('ref-position-input');
+        });
+
+        test('clicking the badge reveals a number input scoped to the reference count', () => {
+            const badge = getBadge('2');
+            fireEvent.click(badge);
+
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            expect(input).not.toBeNull();
+            expect(input.type).toBe('number');
+            expect(input.min).toBe('1');
+            expect(input.max).toBe('3');
+            expect(input.value).toBe('2');
+            expect(badge).toHaveClass('d-none');
+        });
+
+        test('pressing Enter with a new position moves the reference and autosaves the new order', async () => {
+            const badge = getBadge('1');
+            fireEvent.click(badge);
+
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '3';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(orderOf()).toEqual(['2', '3', '1']);
+            expect(document.getElementById('document_orderRef').value).toBe('2;3;1');
+            expect(badge.parentElement.querySelector('input')).toBeNull();
+            expect(badge).not.toHaveClass('d-none');
+            expect(badge.textContent).toBe('3');
+
+            await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.any(Object)));
+        });
+
+        test('renumbers badges and refreshes their aria-labels after a move', () => {
+            const badge = getBadge('3');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '1';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(getBadge('3').textContent).toBe('1');
+            expect(getBadge('3').getAttribute('aria-label')).toBe('Reference position, activate to move: 1 of 3');
+            expect(getBadge('1').textContent).toBe('2');
+            expect(getBadge('2').textContent).toBe('3');
+        });
+
+        test('announces the new position in the live region', () => {
+            window.translations = {
+                'Reference moved to position {position} of {total}.': 'Moved to {position} of {total}.',
+            };
+            const badge = getBadge('2');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '1';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(document.getElementById('reorder-live-region').textContent).toBe('Moved to 1 of 3.');
+        });
+
+        test('pressing Escape cancels the edit without saving', () => {
+            const badge = getBadge('2');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '1';
+            fireEvent.keyDown(input, { key: 'Escape' });
+
+            expect(orderOf()).toEqual(['1', '2', '3']);
+            expect(badge.parentElement.querySelector('input')).toBeNull();
+            expect(badge.textContent).toBe('2');
+            expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        test('blurring the input commits the value like Enter', () => {
+            const badge = getBadge('1');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '2';
+            fireEvent.blur(input);
+
+            expect(orderOf()).toEqual(['2', '1', '3']);
+        });
+
+        test('clamps an out-of-range value to the last position', () => {
+            const badge = getBadge('1');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '999';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(orderOf()).toEqual(['2', '3', '1']);
+        });
+
+        test('clamps a value below 1 to the first position', () => {
+            const badge = getBadge('3');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '-5';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(orderOf()).toEqual(['3', '1', '2']);
+        });
+
+        test('does not autosave when the position is unchanged', () => {
+            const badge = getBadge('2');
+            fireEvent.click(badge);
+            const input = badge.parentElement.querySelector('input.ref-position-input');
+            input.value = '2';
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            expect(orderOf()).toEqual(['1', '2', '3']);
+            expect(global.fetch).not.toHaveBeenCalled();
+        });
+
+        test('clicking the badge again while editing does not spawn a second input', () => {
+            const badge = getBadge('1');
+            fireEvent.click(badge);
+            fireEvent.click(badge);
+
+            expect(badge.parentElement.querySelectorAll('input').length).toBe(1);
+        });
     });
 });

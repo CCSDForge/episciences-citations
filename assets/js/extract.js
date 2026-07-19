@@ -53,6 +53,11 @@ const setContent = (element, content) => {
     element.value = content;
 };
 
+const announceLiveRegion = (message) => {
+    const liveRegion = document.getElementById('reorder-live-region');
+    if (liveRegion) liveRegion.textContent = message;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOI Enrichment: DOMContentLoaded triggered');
     let sortEl = null;
@@ -62,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             easing: 'cubic-bezier(0.11, 0, 0.5, 0)',
             animation: 150,
             ghostClass: 'highlighted',
-            filter: '.filtered',
+            filter: '.filtered, .ref-position-input',
             touchStartThreshold: 5,
             onStart() {
                 initialOrder = Array.from(document.querySelectorAll('.container-reference'))
@@ -81,11 +86,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     let hiddenRefNode = document.getElementById('document_orderRef');
                     if (hiddenRefNode) hiddenRefNode.value = strOrder;
                     autosave({ orderRef: strOrder });
+                    announceLiveRegion(
+                        window.translations?.['Reference order updated.'] ?? 'Reference order updated.',
+                    );
                 }
                 updateBadges();
             },
         });
         disabledSortWhenChangeRef(sortEl);
+        manageEditablePosition();
     }
 
     // Bootstrap modal initialisation
@@ -992,9 +1001,103 @@ function acceptRefModificationsDone(idRef) {
 }
 
 function updateBadges() {
-    document.querySelectorAll('#sortref .container-reference').forEach((el, index) => {
+    const container = document.getElementById('sortref');
+    if (!container) return;
+    const template =
+        container.dataset.positionAriaTemplate ?? 'Reference position, activate to move: {position} of {total}';
+    const refs = container.querySelectorAll('.container-reference');
+    const total = refs.length;
+    refs.forEach((el, index) => {
         const badge = el.querySelector('.ref-position-badge');
-        if (badge) badge.textContent = index + 1;
+        if (!badge) return;
+        const position = index + 1;
+        badge.textContent = position;
+        badge.setAttribute('aria-label', template.replace('{position}', position).replace('{total}', total));
+    });
+}
+
+// Lets a keyboard or mouse user retype a reference's position instead of dragging it,
+// which is impractical once the list grows past a few dozen items.
+function manageEditablePosition() {
+    const container = document.getElementById('sortref');
+    if (!container) return;
+
+    const commitMove = (badge, rawValue, currentPosition, total) => {
+        const parsed = parseInt(rawValue, 10);
+        const targetPosition = Number.isNaN(parsed) ? currentPosition : Math.min(Math.max(parsed, 1), total);
+        if (targetPosition === currentPosition) return;
+
+        const card = badge.closest('.container-reference');
+        const refs = Array.from(container.querySelectorAll('.container-reference'));
+        const currentIndex = refs.indexOf(card);
+        refs.splice(currentIndex, 1);
+        refs.splice(targetPosition - 1, 0, card);
+        refs.forEach((el) => container.appendChild(el));
+
+        const strOrder = refs.map((el) => el.dataset.idref).join(';');
+        const hiddenRefNode = document.getElementById('document_orderRef');
+        if (hiddenRefNode) hiddenRefNode.value = strOrder;
+        autosave({ orderRef: strOrder });
+        updateBadges();
+
+        const template =
+            window.translations?.['Reference moved to position {position} of {total}.'] ??
+            'Reference moved to position {position} of {total}.';
+        announceLiveRegion(template.replace('{position}', targetPosition).replace('{total}', total));
+    };
+
+    const enterEdit = (badge) => {
+        const wrapper = badge.parentElement;
+        if (wrapper.querySelector('input')) return;
+
+        const total = container.querySelectorAll('.container-reference').length;
+        const currentPosition = parseInt(badge.textContent, 10) || 1;
+        const originalLabel = badge.textContent;
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = '1';
+        input.max = String(total);
+        input.value = String(currentPosition);
+        input.className = 'form-control form-control-sm ref-position-input';
+        const inputLabelTemplate =
+            window.translations?.['New position (1 to {total})'] ?? 'New position (1 to {total})';
+        input.setAttribute('aria-label', inputLabelTemplate.replace('{total}', total));
+
+        badge.classList.add('d-none');
+        wrapper.appendChild(input);
+        input.focus();
+        input.select();
+
+        const finish = (commit) => {
+            const value = input.value;
+            input.removeEventListener('keydown', onKeyDown);
+            input.removeEventListener('blur', onBlur);
+            input.remove();
+            badge.textContent = originalLabel;
+            badge.classList.remove('d-none');
+            if (commit) commitMove(badge, value, currentPosition, total);
+            badge.focus();
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                finish(true);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                finish(false);
+            }
+        };
+        const onBlur = () => finish(true);
+
+        input.addEventListener('keydown', onKeyDown);
+        input.addEventListener('blur', onBlur);
+    };
+
+    container.addEventListener('click', (event) => {
+        const badge = event.target.closest('.ref-position-badge');
+        if (badge && !badge.parentElement.querySelector('input')) enterEdit(badge);
     });
 }
 
