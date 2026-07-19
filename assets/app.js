@@ -1,5 +1,4 @@
 import './styles/app.scss';
-import { Toast } from 'bootstrap';
 import 'bootstrap';
 import './bootstrap';
 
