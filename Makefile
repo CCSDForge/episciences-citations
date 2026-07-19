@@ -245,3 +245,10 @@ rebuild: ## Rebuild and restart docker containers
 	$(DOCKER_COMPOSE) build --no-cache
 	$(DOCKER_COMPOSE) up -d --force-recreate
 	@echo "$(GREEN)✓ Containers rebuilt and restarted$(NC)"
+
+# ============================================================================
+# SONARQUBE COMMANDS
+# ============================================================================
+
+sonar: ## Run SonarQube analysis (requires SONAR_TOKEN environment variable)
+	npx sonarqube-scanner
