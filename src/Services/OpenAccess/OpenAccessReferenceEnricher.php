@@ -63,11 +63,37 @@ class OpenAccessReferenceEnricher
         foreach ($doiByIndex as $index => $doi) {
             $result = $resultByDoi[$doi] ?? null;
             if ($result !== null) {
-                $references[$index] = $this->applyResult($references[$index], $result);
+                $references[$index] = $this->applyResult($references[$index], $doi, $result);
             }
         }
 
         return $references;
+    }
+
+    /**
+     * True when $url just points back to the DOI's own resolver link (e.g. a publisher landing
+     * page that already equals https://doi.org/{doi}), so storing it as "open access" would only
+     * duplicate the DOI link already shown for the reference.
+     */
+    public function isRedundantWithDoiLink(mixed $doi, mixed $url): bool
+    {
+        $normalizedDoi = $this->normalizeDoi($doi);
+        $sanitizedUrl = OpenAccessUrlSanitizer::sanitize($url);
+
+        if ($normalizedDoi === null || $sanitizedUrl === null) {
+            return false;
+        }
+
+        return $this->normalizeUrlForComparison($sanitizedUrl) === 'doi.org/' . $normalizedDoi;
+    }
+
+    private function normalizeUrlForComparison(string $url): string
+    {
+        $url = strtolower(rawurldecode($url));
+        $url = preg_replace('#^https?://#', '', $url) ?? $url;
+        $url = preg_replace('#^(?:www\.|dx\.)?doi\.org/#', 'doi.org/', $url) ?? $url;
+
+        return rtrim($url, '/');
     }
 
     /**
@@ -114,10 +140,10 @@ class OpenAccessReferenceEnricher
      * @param array<string, mixed> $reference
      * @return array<string, mixed>
      */
-    private function applyResult(array $reference, OpenAccessResult $result): array
+    private function applyResult(array $reference, string $doi, OpenAccessResult $result): array
     {
         $sanitizedUrl = OpenAccessUrlSanitizer::sanitize($result->url);
-        if ($sanitizedUrl === null) {
+        if ($sanitizedUrl === null || $this->isRedundantWithDoiLink($doi, $sanitizedUrl)) {
             return $reference;
         }
 
