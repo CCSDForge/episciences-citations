@@ -58,6 +58,16 @@ const announceLiveRegion = (message) => {
     if (liveRegion) liveRegion.textContent = message;
 };
 
+// Looks up `key` in window.translations (falling back to the key itself, which
+// doubles as the English text) and fills in any {placeholder} params.
+const translate = (key, params = {}) => {
+    const template = window.translations?.[key] ?? key;
+    return Object.entries(params).reduce(
+        (text, [placeholder, value]) => text.replace(`{${placeholder}}`, value),
+        template,
+    );
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOI Enrichment: DOMContentLoaded triggered');
     let sortEl = null;
@@ -86,9 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let hiddenRefNode = document.getElementById('document_orderRef');
                     if (hiddenRefNode) hiddenRefNode.value = strOrder;
                     autosave({ orderRef: strOrder });
-                    announceLiveRegion(
-                        window.translations?.['Reference order updated.'] ?? 'Reference order updated.',
-                    );
+                    announceLiveRegion(translate('Reference order updated.'));
                 }
                 updateBadges();
             },
@@ -1040,10 +1048,9 @@ function manageEditablePosition() {
         autosave({ orderRef: strOrder });
         updateBadges();
 
-        const template =
-            window.translations?.['Reference moved to position {position} of {total}.'] ??
-            'Reference moved to position {position} of {total}.';
-        announceLiveRegion(template.replace('{position}', targetPosition).replace('{total}', total));
+        announceLiveRegion(
+            translate('Reference moved to position {position} of {total}.', { position: targetPosition, total }),
+        );
     };
 
     const enterEdit = (badge) => {
@@ -1060,9 +1067,7 @@ function manageEditablePosition() {
         input.max = String(total);
         input.value = String(currentPosition);
         input.className = 'form-control form-control-sm ref-position-input';
-        const inputLabelTemplate =
-            window.translations?.['New position (1 to {total})'] ?? 'New position (1 to {total})';
-        input.setAttribute('aria-label', inputLabelTemplate.replace('{total}', total));
+        input.setAttribute('aria-label', translate('New position (1 to {total})', { total }));
 
         badge.classList.add('d-none');
         wrapper.appendChild(input);
