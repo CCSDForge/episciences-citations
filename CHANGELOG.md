@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Manual Citation Positioning**: Added the ability to manually input/type a reference's target position as an alternative to drag-and-drop.
+- **SonarQube Integration**: Configured SonarQube static analysis and added a `make sonar` command target.
+
+### Changed
+- **Code Refactoring & Quality**: Split oversized classes and reduced cognitive complexity (specifically in `References::validateChoicesReferencesByUser`, `ExtractController`, and enrichment commands) to address SonarQube quality findings.
+- **Strict Types**: Added `declare(strict_types=1);` declaration to all remaining PHP files.
+- **CI / Environment Updates**: Added PHP 8.5 to the GitHub Actions test matrix, configured platform requirements in `composer.json`, and enabled Corepack for Yarn 4 compatibility.
+- **Dependency Upgrades**: Upgraded various dependencies including webpack, webpack-cli, Jest, uuid, sass-loader, Node.js (to v24), ESLint, autoprefixer, and GitHub Actions (actions/checkout v7, codecov-action v7).
+- **Translations Helper**: Deduped translation lookup into a new `translate()` helper function.
+
+### Fixed
+- **Open Access Enrichment**: Ensured open-access links are enriched during the insertion of GROBID-extracted references.
+- **Open Access Deduplication**: Skip redundant open-access links that duplicate the reference's own DOI.
+- **Bootstrap Styling**: Fixed a double import of Bootstrap styles.
+- **SonarQube Findings**: Resolved quality and styling issues identified by SonarQube across services, commands, and controllers.
+
+### Security
+- **SSRF Hardening**: Restricted the `/api/extract` endpoint to accept only URLs matching the allowed Episciences hosts list rather than any HTTP/HTTPS URL, blocking potential SSRF to internal hosts.
+- **Timing Attack Mitigation**: Used `hash_equals()` for API bearer token verification in `/api/extract`.
+
 ## v1.3.0 - 2026-07-15
 
 ### Added
