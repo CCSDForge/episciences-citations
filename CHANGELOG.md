@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.3.1 - 2026-07-20
+
 ### Added
 - **Manual Citation Positioning**: Added the ability to manually input/type a reference's target position as an alternative to drag-and-drop.
 - **SonarQube Integration**: Configured SonarQube static analysis and added a `make sonar` command target.
