@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Services\OpenAccess;
 
+use App\Services\OpenAccess\OpenAlexQuotaTracker;
 use App\Services\OpenAccess\OpenAlexResolver;
+use App\Services\OpenAccess\OpenAlexWorkParser;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\Attributes\Test;
@@ -199,11 +201,11 @@ class OpenAlexResolverTest extends TestCase
         return new OpenAlexResolver(
             $client,
             $this->createStub(LoggerInterface::class),
-            $quotaCache ?? new ArrayAdapter(),
+            new OpenAlexQuotaTracker($quotaCache ?? new ArrayAdapter(), $dailyBulkQuota),
+            new OpenAlexWorkParser(),
             'https://api.openalex.org/works/',
             'test@example.org',
-            'test-api-key',
-            $dailyBulkQuota
+            'test-api-key'
         );
     }
 }

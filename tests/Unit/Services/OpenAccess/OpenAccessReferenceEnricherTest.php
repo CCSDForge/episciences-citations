@@ -78,6 +78,43 @@ class OpenAccessReferenceEnricherTest extends TestCase
         $this->assertArrayNotHasKey('open-access', $result);
     }
 
+    /**
+     * When the resolved open-access location is just the publisher's DOI landing page (i.e.
+     * the reference was already open access via its own DOI), storing it as "open-access"
+     * would only duplicate the DOI link already shown for the reference.
+     */
+    #[Test]
+    public function testResolutionEqualToDoiLinkDoesNotSetOpenAccessField(): void
+    {
+        $resolver = $this->createResolverReturning(['10.1234/test' => new OpenAccessResult('https://doi.org/10.1234/test', 'Publisher')]);
+
+        $reference = ['raw_reference' => 'Reference', 'doi' => '10.1234/test'];
+        $result = $this->createService($resolver)->enrichReference($reference);
+
+        $this->assertArrayNotHasKey('open-access', $result);
+    }
+
+    #[Test]
+    public function testResolutionEqualToDoiLinkViaDxDoiOrgDoesNotSetOpenAccessField(): void
+    {
+        $resolver = $this->createResolverReturning(['10.1234/test' => new OpenAccessResult('http://dx.doi.org/10.1234/TEST/', 'Publisher')]);
+
+        $reference = ['raw_reference' => 'Reference', 'doi' => '10.1234/test'];
+        $result = $this->createService($resolver)->enrichReference($reference);
+
+        $this->assertArrayNotHasKey('open-access', $result);
+    }
+
+    #[Test]
+    public function testIsRedundantWithDoiLinkComparesNormalizedForms(): void
+    {
+        $service = $this->createService($this->createStub(OpenAccessResolverInterface::class));
+
+        $this->assertTrue($service->isRedundantWithDoiLink('10.1234/Test', 'https://DOI.ORG/10.1234/test/'));
+        $this->assertFalse($service->isRedundantWithDoiLink('10.1234/test', 'https://oa.example/x'));
+        $this->assertFalse($service->isRedundantWithDoiLink(null, 'https://doi.org/10.1234/test'));
+    }
+
     #[Test]
     public function testFailedResolutionKeepsExistingOpenAccessData(): void
     {

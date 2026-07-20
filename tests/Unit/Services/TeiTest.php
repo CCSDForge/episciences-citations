@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tests\Unit\Services;
 
 use PHPUnit\Framework\MockObject\MockObject;
@@ -7,6 +9,7 @@ use App\Repository\PaperReferencesRepository;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use App\Services\SolrReferenceEnricher;
 use App\Services\Tei;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,6 +23,7 @@ class TeiTest extends TestCase
     private MockObject $entityManager;
     private MockObject $documentRepository;
     private MockObject $solrReferenceEnricher;
+    private MockObject $openAccessReferenceEnricher;
 
     protected function setUp(): void
     {
@@ -27,11 +31,14 @@ class TeiTest extends TestCase
         $this->documentRepository = $this->createMock(DocumentRepository::class);
         $this->solrReferenceEnricher = $this->createMock(SolrReferenceEnricher::class);
         $this->solrReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
+        $this->openAccessReferenceEnricher = $this->createMock(OpenAccessReferenceEnricher::class);
+        $this->openAccessReferenceEnricher->method('enrichReferences')->willReturnArgument(0);
 
         $this->service = new Tei(
             $this->entityManager,
             $this->documentRepository,
-            $this->solrReferenceEnricher
+            $this->solrReferenceEnricher,
+            $this->openAccessReferenceEnricher
         );
     }
 

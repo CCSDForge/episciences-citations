@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Services;
 use App\Entity\Document;
 use App\Entity\PaperReferences;
@@ -32,12 +35,110 @@ class References {
      */
     public function validateChoicesReferencesByUser(array $form, array $userInfo) : array
     {
-        $refChanged = 0;
-        $orderChanged = 0;
-
         // Récupérer ou créer l'utilisateur UNE SEULE FOIS avant la boucle (optimisation)
+        $user = $this->resolveOrCreateUser($userInfo);
+        if ($user === null) {
+            return ['orderPersisted' => 0, 'referencePersisted' => 0];
+        }
+
+        $refChanged = 0;
+        $referencesToEnrich = [];
+        $paperReferences = $form['paperReferences'] ?? [];
+
+        foreach ($paperReferences as $paperReference) {
+            $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
+
+            if (isset($paperReference['checkboxIdTodelete'])) {
+                if ($ref !== null) {
+                    $this->entityManager->remove($ref);
+                    $refChanged++;
+                }
+                continue;
+            }
+
+            if ($ref === null || !isset($paperReference['accepted'])) {
+                continue;
+            }
+
+            $refChanged += $this->applyReferenceChoice($ref, $paperReference, $user);
+            $referencesToEnrich[] = $ref;
+        }
+
+        $this->enrichPaperReferences($referencesToEnrich);
+        $orderChanged = $this->persistOrderRef($form['orderRef'] ?? '', 0);
+
+        // UN SEUL flush() pour toutes les opérations (optimisation performance - gain 80-90%)
+        $this->entityManager->flush();
+
+        return ['orderPersisted' => $orderChanged, 'referencePersisted' => $refChanged];
+    }
+
+    /**
+     * @param array<string, mixed> $paperReference
+     * @return int 1 if the reference's accepted state, source or metadata changed, 0 otherwise
+     */
+    private function applyReferenceChoice(PaperReferences $ref, array $paperReference, UserInformations $user): int
+    {
+        if (isset($paperReference['reference'])) {
+            $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
+        }
+        if ($paperReference['isDirtyTextAreaModifyRef'] === "1") {
+            $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
+        }
+
+        $refChanged = $this->updateAcceptedState($ref, $paperReference);
+
+        $ref->setUpdatedAt(new \DateTimeImmutable());
+        $ref->setUid($user);
+        $user->addPaperReferences($ref);
+        $this->entityManager->persist($ref);
+
+        return $refChanged;
+    }
+
+    /**
+     * @param array<string, mixed> $paperReference
+     */
+    private function updateAcceptedState(PaperReferences $ref, array $paperReference): int
+    {
+        if ($paperReference['accepted'] !== '') {
+            return $this->applyExplicitAcceptedValue($ref, (int) $paperReference['accepted']);
+        }
+
+        return $this->applyDefaultAcceptedValue($ref);
+    }
+
+    private function applyExplicitAcceptedValue(PaperReferences $ref, int $newAccepted): int
+    {
+        if ($ref->getAccepted() === $newAccepted) {
+            return 0;
+        }
+
+        $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
+        $ref->setAccepted($newAccepted);
+
+        return 1;
+    }
+
+    private function applyDefaultAcceptedValue(PaperReferences $ref): int
+    {
+        if ($ref->getAccepted() !== null) {
+            return 0;
+        }
+
+        $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
+        $ref->setAccepted(0);
+
+        return 1;
+    }
+
+    /**
+     * @param array<string, mixed> $userInfo
+     */
+    private function resolveOrCreateUser(array $userInfo): ?UserInformations
+    {
         $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
-        if (is_null($user) && isset($userInfo['UID'])) {
+        if ($user === null && isset($userInfo['UID'])) {
             $user = new UserInformations();
             $user->setId((int) $userInfo['UID']);
             $user->setSurname($userInfo['FIRSTNAME'] ?? '');
@@ -45,56 +146,7 @@ class References {
             $this->entityManager->persist($user);
         }
 
-        if (is_null($user)) {
-             return ['orderPersisted' => 0, 'referencePersisted' => 0];
-        }
-
-        $referencesToEnrich = [];
-        $paperReferences = $form['paperReferences'] ?? [];
-        foreach ($paperReferences as $paperReference) {
-            $ref = $this->entityManager->getRepository(PaperReferences::class)->find($paperReference['id']);
-            if (!isset($paperReference['checkboxIdTodelete'])) {
-                if (!is_null($ref) && isset($paperReference['accepted'])) {
-                    if (isset($paperReference['reference'])) {
-                        $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
-                    }
-                    if ($paperReference['isDirtyTextAreaModifyRef'] === "1"){
-                       $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
-                    }
-                    if (isset($paperReference['accepted']) && $paperReference['accepted'] !== '') {
-                        $newAccepted = (int) $paperReference['accepted'];
-                        if ($ref->getAccepted() !== $newAccepted) {
-                            $this->logger->info('Updating reference accepted state', ['id' => $ref->getId(), 'old' => $ref->getAccepted(), 'new' => $newAccepted]);
-                            $ref->setAccepted($newAccepted);
-                            $refChanged++;
-                        }
-                    } elseif (is_null($ref->getAccepted())) {
-                        $this->logger->info('Initializing null accepted state to 0', ['id' => $ref->getId()]);
-                        $ref->setAccepted(0);
-                        $refChanged++;
-                    }
-
-                    if (isset($paperReference['accepted'])) {
-                        $ref->setUpdatedAt(new \DateTimeImmutable());
-                        $ref->setUid($user);
-                        $user->addPaperReferences($ref);
-                        $this->entityManager->persist($ref);
-                        $referencesToEnrich[] = $ref;
-                    }
-                }
-            } elseif (!is_null($ref)) {
-                $this->entityManager->remove($ref);
-                $refChanged++;
-            }
-
-        }
-        $this->enrichPaperReferences($referencesToEnrich);
-        $orderChanged = $this->persistOrderRef($form['orderRef'] ?? '', $orderChanged);
-
-        // UN SEUL flush() pour toutes les opérations (optimisation performance - gain 80-90%)
-        $this->entityManager->flush();
-
-        return ['orderPersisted' => $orderChanged,'referencePersisted' => $refChanged];
+        return $user;
     }
 
     /**
@@ -259,15 +311,7 @@ class References {
             return [];
         }
 
-        $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID'] ?? null);
-        if ($user === null && isset($userInfo['UID'])) {
-            $user = new UserInformations();
-            $user->setId((int) $userInfo['UID']);
-            $user->setSurname($userInfo['FIRSTNAME'] ?? '');
-            $user->setName($userInfo['LASTNAME'] ?? '');
-            $this->entityManager->persist($user);
-        }
-
+        $user = $this->resolveOrCreateUser($userInfo);
         if ($user === null) {
              // Fallback or handle error if UID is missing
              return [];

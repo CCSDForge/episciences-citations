@@ -47,3 +47,6 @@ phpstan.neon
 .pnp.*
 ###< yarn v4 ###
 
+# SonarQube Scanner
+/.scannerwork/
+

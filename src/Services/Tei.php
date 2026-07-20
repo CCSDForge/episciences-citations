@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Entity\Document;
 use App\Entity\PaperReferences;
 use App\Repository\DocumentRepository;
+use App\Services\OpenAccess\OpenAccessReferenceEnricher;
 use Doctrine\ORM\EntityManagerInterface;
 
 class Tei
@@ -12,7 +15,8 @@ class Tei
 
     public function __construct(private readonly EntityManagerInterface $entityManager,
                                 private readonly DocumentRepository $documentRepository,
-                                private readonly SolrReferenceEnricher $solrReferenceEnricher)
+                                private readonly SolrReferenceEnricher $solrReferenceEnricher,
+                                private readonly OpenAccessReferenceEnricher $openAccessReferenceEnricher)
     {
     }
 
@@ -21,28 +25,58 @@ class Tei
      */
     public function getReferencesInTei(string $tei): array
     {
-        $tei = simplexml_load_string($tei);
-        $info = [];
-        if ($tei !== false) {
-            foreach ($tei->text as $teInfo) {
-                foreach ($teInfo->back->div->listBibl->biblStruct as $value) {
-                    $raw_reference = [];
-                    foreach ($value->note as $note) {
-                        if (!is_null($note->attributes()) && (string)$note->attributes() === 'raw_reference') {
-                            $raw_reference['raw_reference'] = (string)$note;
-                        }
-                    }
-
-                    if ($value->analytic && $value->analytic->idno &&
-                        (string)$value->analytic->idno->attributes() === 'DOI') {
-                        $raw_reference['doi'] = (string)$value->analytic->idno;
-                    }
-                    $info[] = $raw_reference;
-                }
-            }
-            return $info;
+        $xml = simplexml_load_string($tei);
+        if ($xml === false) {
+            return [];
         }
-        return [];
+
+        $info = [];
+        foreach ($xml->text as $teInfo) {
+            foreach ($teInfo->back->div->listBibl->biblStruct as $value) {
+                $info[] = $this->extractReferenceFromBiblStruct($value);
+            }
+        }
+
+        return $info;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractReferenceFromBiblStruct(\SimpleXMLElement $value): array
+    {
+        $rawReference = $this->extractRawReferenceNote($value);
+
+        $doi = $this->extractDoi($value);
+        if ($doi !== null) {
+            $rawReference['doi'] = $doi;
+        }
+
+        return $rawReference;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractRawReferenceNote(\SimpleXMLElement $value): array
+    {
+        $rawReference = [];
+        foreach ($value->note as $note) {
+            if (!is_null($note->attributes()) && (string) $note->attributes() === 'raw_reference') {
+                $rawReference['raw_reference'] = (string) $note;
+            }
+        }
+
+        return $rawReference;
+    }
+
+    private function extractDoi(\SimpleXMLElement $value): ?string
+    {
+        if ($value->analytic && $value->analytic->idno && (string) $value->analytic->idno->attributes() === 'DOI') {
+            return (string) $value->analytic->idno;
+        }
+
+        return null;
     }
 
     /**
@@ -69,7 +103,10 @@ class Tei
             $doc = new Document();
             $doc->setId($docId);
         }
-        foreach ($this->solrReferenceEnricher->enrichReferences($references) as $reference) {
+        $references = $this->solrReferenceEnricher->enrichReferences($references);
+        $references = $this->openAccessReferenceEnricher->enrichReferences($references);
+
+        foreach ($references as $reference) {
             if (!in_array(serialize($reference), $referenceAlreadyAcceptedByUser, true)) {
                 $refs = new PaperReferences();
                 $refs->setReference($reference);

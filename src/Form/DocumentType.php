@@ -25,6 +25,8 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 /** @extends AbstractType<Document> */
 class DocumentType extends AbstractType
 {
+    private const HALF_WIDTH_ROW_ATTR = ['class' => 'w-1/2'];
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder->add('id',HiddenType::class);
@@ -73,7 +75,7 @@ class DocumentType extends AbstractType
             ],
         ]);
         $builder->add('btnModalNewReference',ButtonType::class,
-            [ 'label' => 'Add reference','row_attr' => ['class'=>'w-1/2']]);
+            [ 'label' => 'Add reference','row_attr' => self::HALF_WIDTH_ROW_ATTR]);
         $builder->add('btnCancelAddNewReference',ButtonType::class,['label' => 'Cancel']);
         $builder->add('submitNewRef',SubmitType::class,[
             'label' => 'Add reference',
@@ -90,12 +92,12 @@ class DocumentType extends AbstractType
             ],
         ]);
         $builder->add('btnModalImportBibtex',ButtonType::class,
-            ['label' => 'Import BibTeX','row_attr' => ['class'=>'w-1/2']]);
+            ['label' => 'Import BibTeX','row_attr' => self::HALF_WIDTH_ROW_ATTR]);
         $builder->add('btnCancelImportBib',ButtonType::class,['label' => 'Cancel']);
         $builder->add('submitImportBib',SubmitType::class,[
             'label' => 'Import',
         ]);
-        $builder->add('save',SubmitType::class, ['row_attr' => ['class'=>'w-1/2']]);
+        $builder->add('save',SubmitType::class, ['row_attr' => self::HALF_WIDTH_ROW_ATTR]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -107,18 +109,23 @@ class DocumentType extends AbstractType
 
     public static function isValidDoiUrlOrSwhid(string $value): bool
     {
+        return self::isDoi($value) || self::isUrl($value) || self::isSwhid($value);
+    }
+
+    private static function isDoi(string $value): bool
+    {
         // DOI: 10.digits[.digits]*/suffix (also matches https://doi.org/10.xxx/yyy)
-        if (preg_match('/10\.\d{4,}(?:\.\d+)*\/.+/i', $value)) {
-            return true;
-        }
-        // URL
-        if (preg_match('/^https?:\/\/\S+/i', $value)) {
-            return true;
-        }
+        return (bool) preg_match('/10\.\d{4,}(?:\.\d+)*\/.+/i', $value);
+    }
+
+    private static function isUrl(string $value): bool
+    {
+        return (bool) preg_match('/^https?:\/\/\S+/i', $value);
+    }
+
+    private static function isSwhid(string $value): bool
+    {
         // SWHID: swh:1:(snp|rel|rev|dir|cnt):<40 hex chars>[;qualifier=value...]
-        if (preg_match('/^swh:1:(snp|rel|rev|dir|cnt):[0-9a-f]{40}(;(origin|visit|anchor|path|lines|bytes)=[^;]+)*$/', $value)) {
-            return true;
-        }
-        return false;
+        return (bool) preg_match('/^swh:1:(snp|rel|rev|dir|cnt):[0-9a-f]{40}(;(origin|visit|anchor|path|lines|bytes)=[^;]+)*$/', $value);
     }
 }

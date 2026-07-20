@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tests\Unit\Services;
 
 use PHPUnit\Framework\MockObject\MockObject;
@@ -368,7 +370,7 @@ class EpisciencesTest extends TestCase
             ->willReturn($response);
 
         // Act
-        $result = $this->service->getRightUser($docId, $uid);
+        $result = $this->service->getRightUser((string) $docId, (string) $uid);
 
         // Assert
         $this->assertTrue($result);
@@ -391,7 +393,7 @@ class EpisciencesTest extends TestCase
             ->willReturn($response);
 
         // Act
-        $result = $this->service->getRightUser($docId, $uid);
+        $result = $this->service->getRightUser((string) $docId, (string) $uid);
 
         // Assert
         $this->assertFalse($result);
@@ -418,7 +420,7 @@ class EpisciencesTest extends TestCase
             ->willThrowException($exception);
 
         // Act
-        $result = $this->service->getRightUser($docId, $uid);
+        $result = $this->service->getRightUser((string) $docId, (string) $uid);
 
         // Assert
         $this->assertFalse($result);

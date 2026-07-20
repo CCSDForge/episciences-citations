@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use App\Entity\Document;
@@ -142,52 +144,19 @@ class GetBibRefCommand extends Command
             '',
         ]);
         $globalData = $this->processCsv($input);
-        // creates a new progress bar (50 units)
-        $progressBar = new ProgressBar($output, count($globalData));
-        $progressBar->start();
-        $progressBar->setBarCharacter('<fg=green>=</>');
-        $progressBar->setEmptyBarCharacter("<fg=red>|</>");
-        $progressBar->setProgressCharacter("<fg=green>></>");
-        $progressBar->start();
+        $progressBar = $this->buildProgressBar($output, count($globalData));
 
         // Print the processed data array
         foreach ($globalData as $docId => $allRef) {
             $this->logger->info('==== START SCRIPT CSV ==== ');
             $output->writeln(' SEARCH FOR THIS => ' . $docId);
             $this->logger->info('SCRIPT CSV => SEARCH FOR THIS => DocId : ' . $docId);
+
             $docExisting = $this->documentRepository->find($docId);
-            $referenceAlreadyAccepted = [];
-            $arrayDoiInDb = [];
-            $arrayRefTxt = [];
-            $counterRef = 0;
-            if ($docExisting !== null) {
-                $reOrdonateCounter = 0;
-                foreach ($docExisting->getPaperReferences() as $doc) {
-                    $doc->setReferenceOrder($reOrdonateCounter);
-                    $referenceAlreadyAccepted[] = $doc->getReference();
-                    $this->entityManager->persist($doc);
-                    $reOrdonateCounter++;
-                    $counterRef++;
-                }
+            [$arrayDoiInDb, $arrayRefTxt, $counterRef] = $this->collectExistingReferences($docExisting);
 
-                foreach ($referenceAlreadyAccepted as $refDb) {
-                    $arrayRefTxt[] = array_key_exists('csl', $refDb) ? serialize($refDb['csl']) : serialize($refDb['raw_reference']);
-                    if (isset($refDb['doi'])) {
-                        $arrayDoiInDb[] = $refDb['doi'];
-                    }
-                }
-                $this->entityManager->flush();
-            }
+            $this->processReferences($allRef, $input, $output, $docId, $counterRef, $arrayDoiInDb, $arrayRefTxt);
 
-            foreach ($allRef as $ref) {
-                $optionValue = $input->getOption('api');
-                if (!is_null($optionValue) && $optionValue !== false && $optionValue === "S2") {
-                    $this->semanticsScholarImporter->importByPaperId('DOI:' . $ref['doi'], (int) $docId, $counterRef);
-                } else {
-                    $csl = $this->doiService->getCsl($ref['doi']);
-                    $refRetrieved = $this->processCslToGetRef($csl, $arrayDoiInDb, $arrayRefTxt, $output, $counterRef, $docId);
-                }
-            }
             $progressBar->advance();
         }
         $output->writeln([
@@ -197,5 +166,70 @@ class GetBibRefCommand extends Command
         ]);
         $this->logger->info('==== END SCRIPT CSV ==== ');
         return Command::SUCCESS;
+    }
+
+    private function buildProgressBar(OutputInterface $output, int $total): ProgressBar
+    {
+        // creates a new progress bar (50 units)
+        $progressBar = new ProgressBar($output, $total);
+        $progressBar->setBarCharacter('<fg=green>=</>');
+        $progressBar->setEmptyBarCharacter("<fg=red>|</>");
+        $progressBar->setProgressCharacter("<fg=green>></>");
+        $progressBar->start();
+
+        return $progressBar;
+    }
+
+    /**
+     * @return array{0: array<string>, 1: array<string>, 2: int}
+     */
+    private function collectExistingReferences(?Document $docExisting): array
+    {
+        $arrayDoiInDb = [];
+        $arrayRefTxt = [];
+        $counterRef = 0;
+
+        if ($docExisting === null) {
+            return [$arrayDoiInDb, $arrayRefTxt, $counterRef];
+        }
+
+        $referenceAlreadyAccepted = [];
+        $reOrdonateCounter = 0;
+        foreach ($docExisting->getPaperReferences() as $doc) {
+            $doc->setReferenceOrder($reOrdonateCounter);
+            $referenceAlreadyAccepted[] = $doc->getReference();
+            $this->entityManager->persist($doc);
+            $reOrdonateCounter++;
+            $counterRef++;
+        }
+
+        foreach ($referenceAlreadyAccepted as $refDb) {
+            $arrayRefTxt[] = array_key_exists('csl', $refDb) ? serialize($refDb['csl']) : serialize($refDb['raw_reference']);
+            if (isset($refDb['doi'])) {
+                $arrayDoiInDb[] = $refDb['doi'];
+            }
+        }
+        $this->entityManager->flush();
+
+        return [$arrayDoiInDb, $arrayRefTxt, $counterRef];
+    }
+
+    /**
+     * @param array<int, array<string, string>> $allRef
+     * @param array<string> $arrayDoiInDb
+     * @param array<string> $arrayRefTxt
+     */
+    private function processReferences(array $allRef, InputInterface $input, OutputInterface $output, int|string $docId, int $counterRef, array $arrayDoiInDb, array $arrayRefTxt): void
+    {
+        foreach ($allRef as $ref) {
+            $optionValue = $input->getOption('api');
+            if ($optionValue === 'S2') {
+                $this->semanticsScholarImporter->importByPaperId('DOI:' . $ref['doi'], (int) $docId, $counterRef);
+                continue;
+            }
+
+            $csl = $this->doiService->getCsl($ref['doi']);
+            $this->processCslToGetRef($csl, $arrayDoiInDb, $arrayRefTxt, $output, $counterRef, $docId);
+        }
     }
 }

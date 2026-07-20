@@ -94,13 +94,16 @@ services:
             $defaultLifetime: 90000 # ~25h
             $directory: '%app.cache_folder%'
 
-    App\Services\OpenAccess\OpenAlexResolver:
+    App\Services\OpenAccess\OpenAlexQuotaTracker:
         arguments:
             $quotaCache: '@openalex.quota.cache'
+            $dailyBulkQuota: '%env(int:default:openalex_daily_bulk_quota_default:APP_OPENALEX_DAILY_BULK_QUOTA)%'
+
+    App\Services\OpenAccess\OpenAlexResolver:
+        arguments:
             $apiUrl: '%env(string:default:openalex_api_url_default:APP_OPENALEX_API_URL)%'
             $mailto: '%env(string:default:openalex_mailto_default:APP_OPENALEX_MAILTO)%'
             $apiKey: '%env(string:default:openalex_api_key_default:APP_OPENALEX_API_KEY)%'
-            $dailyBulkQuota: '%env(int:default:openalex_daily_bulk_quota_default:APP_OPENALEX_DAILY_BULK_QUOTA)%'
 
     App\Services\OpenAccess\OpenAccessResolverInterface: '@App\Services\OpenAccess\OpenAlexResolver'
 
