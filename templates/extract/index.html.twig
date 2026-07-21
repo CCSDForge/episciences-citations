@@ -241,9 +241,6 @@
                                     class="badge rounded-pill bg-light text-dark border-0 ref-position-badge"
                                     aria-label="{{ ('Reference position, activate to move: {position} of {total}'|trans)|replace({'{position}': loop.index, '{total}': referencesCount}) }}">{{ loop.index }}</button>
                         </div>
-                        <span class="badge source-color-{{ paperReferences.vars.data.source|lower }} position-absolute bottom-0 end-0 m-2">
-                            <i class="{{ sourceIcons[paperReferences.vars.data.source] ?? 'fas fa-tag' }} me-1" aria-hidden="true"></i>{{ 'Source'|trans }}: {{ paperReferences.vars.data.source|trans }}
-                        </span>
                         <div class="card-body p-3 ps-5">
 
                             {{ form_widget(paperReferences.reference, {'id': 'reference-'~paperReferences.id.vars.value, 'attr': {'class': 'd-none'}}) }}
@@ -391,6 +388,9 @@
                                             <span class="visually-hidden">PubPeer</span>
                                         </a>
                                     {% endif %}
+                                    <span class="badge source-color-{{ paperReferences.vars.data.source|lower }}">
+                                        <i class="{{ sourceIcons[paperReferences.vars.data.source] ?? 'fas fa-tag' }} me-1" aria-hidden="true"></i>{{ 'Source'|trans }}: {{ paperReferences.vars.data.source|trans }}
+                                    </span>
                                 </div>
                             </div>
 
