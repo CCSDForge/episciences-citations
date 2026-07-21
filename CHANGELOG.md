@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Reference Card Badge Overlap**: Moved the "Source" badge out of its absolutely positioned corner and into the same badge row as the PPS warning badges (Annulled, Clay Feet, Tortured phrases, etc.), preventing it from overlapping them when present.
+
 ## v1.3.1 - 2026-07-20
 
 ### Added
