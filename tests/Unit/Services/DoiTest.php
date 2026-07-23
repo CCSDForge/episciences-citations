@@ -185,6 +185,21 @@ class DoiTest extends TestCase
     }
 
     #[Test]
+    public function testGetCsl_WithKnownDoi_ReturnsCslJson(): void
+    {
+        // Arrange - a real, stable DOI so the success branch (200 response) is exercised,
+        // not just the GuzzleException catch branch.
+        $doi = '10.1038/nphys1170';
+
+        // Act
+        $result = $this->service->getCsl($doi);
+
+        // Assert
+        $this->assertNotSame('', $result);
+        $this->assertStringContainsString('"DOI"', $result);
+    }
+
+    #[Test]
     public function testGetBibtex_ReturnsString(): void
     {
         // Arrange
@@ -196,5 +211,99 @@ class DoiTest extends TestCase
         // Assert - vérifie juste que la méthode retourne une string
         // (tests d'intégration complets nécessiteraient l'API réelle)
         $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function testGetBibtex_WithKnownDoi_ReturnsBibtexString(): void
+    {
+        // Arrange - a real, stable DOI so the success branch (200 response) is exercised
+        $doi = '10.1038/nphys1170';
+
+        // Act
+        $result = $this->service->getBibtex($doi);
+
+        // Assert
+        $this->assertNotSame('', $result);
+        $this->assertStringContainsString('@article', $result);
+    }
+
+    #[Test]
+    public function testGetCsl_WithUnknownDoi_ReturnsEmptyStringOnGuzzleException(): void
+    {
+        // Arrange - a DOI unlikely to exist: doi.org replies 404, Guzzle throws a
+        // ClientException (GuzzleException), exercising the catch branch of getCsl().
+        $doi = 'this-doi-does-not-exist-' . uniqid('', true);
+
+        // Act
+        $result = $this->service->getCsl($doi);
+
+        // Assert
+        $this->assertSame('', $result);
+    }
+
+    #[Test]
+    public function testGetBibtex_WithUnknownDoi_ReturnsEmptyStringOnGuzzleException(): void
+    {
+        // Arrange - same idea for getBibtex()'s catch branch
+        $doi = 'this-doi-does-not-exist-' . uniqid('', true);
+
+        // Act
+        $result = $this->service->getBibtex($doi);
+
+        // Assert
+        $this->assertSame('', $result);
+    }
+
+    #[Test]
+    public function testGetFormattedCitation_ReturnsString(): void
+    {
+        // Arrange
+        $doi = '10.1234/test';
+
+        // Act
+        $result = $this->service->getFormattedCitation($doi);
+
+        // Assert - method not previously covered at all
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function testGetFormattedCitation_WithKnownDoi_ReturnsFormattedCitation(): void
+    {
+        // Arrange - a real, stable DOI so the success branch (200 response) is exercised
+        $doi = '10.1038/nphys1170';
+
+        // Act
+        $result = $this->service->getFormattedCitation($doi, 'apa', 'en-GB');
+
+        // Assert
+        $this->assertNotSame('', $result);
+        $this->assertStringContainsString('Aspelmeyer', $result);
+    }
+
+    #[Test]
+    public function testGetFormattedCitation_WithCustomStyleAndLang_ReturnsString(): void
+    {
+        // Arrange - exercise the non-default $style/$lang parameters
+        $doi = '10.1234/test';
+
+        // Act
+        $result = $this->service->getFormattedCitation($doi, 'ieee', 'fr-FR');
+
+        // Assert
+        $this->assertIsString($result);
+    }
+
+    #[Test]
+    public function testGetFormattedCitation_WithUnknownDoi_ReturnsEmptyStringOnGuzzleException(): void
+    {
+        // Arrange - forces a 404 from citation.doi.org, exercising the catch branch
+        $doi = 'this-doi-does-not-exist-' . uniqid('', true);
+
+        // Act
+        $result = $this->service->getFormattedCitation($doi);
+
+        // Assert
+        $this->assertSame('', $result);
     }
 }
