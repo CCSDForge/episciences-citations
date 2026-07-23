@@ -15,14 +15,10 @@ class PaperReferencesFixtures extends Fixture implements DependentFixtureInterfa
 {
     public function load(ObjectManager $manager): void
     {
-        /** @var Document $doc1 */
-        $doc1 = $this->getReference(DocumentFixtures::DOC_1_REFERENCE);
-        /** @var Document $doc2 */
-        $doc2 = $this->getReference(DocumentFixtures::DOC_2_REFERENCE);
-        /** @var UserInformations $user1 */
-        $user1 = $this->getReference(UserFixtures::USER_1_REFERENCE);
-        /** @var UserInformations $user2 */
-        $user2 = $this->getReference(UserFixtures::USER_2_REFERENCE);
+        $doc1 = $this->getReference(DocumentFixtures::DOC_1_REFERENCE, Document::class);
+        $doc2 = $this->getReference(DocumentFixtures::DOC_2_REFERENCE, Document::class);
+        $user1 = $this->getReference(UserFixtures::USER_1_REFERENCE, UserInformations::class);
+        $user2 = $this->getReference(UserFixtures::USER_2_REFERENCE, UserInformations::class);
 
         // Document 1 : Références acceptées (source GROBID)
         $ref1 = new PaperReferences();

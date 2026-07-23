@@ -237,7 +237,7 @@ class References {
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
             if (is_null($user)) {
                 $user = new UserInformations();
-                $user->setId($userInfo['UID']);
+                $user->setId((int) $userInfo['UID']);
                 $user->setSurname($userInfo['FIRSTNAME']);
                 $user->setName($userInfo['LASTNAME']);
             }

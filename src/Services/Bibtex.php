@@ -54,7 +54,7 @@ class Bibtex
 
         try {
             static::logger();
-            $bibtexLog = ($isFile) ? file_get_contents($bibtexFile) : $bibtexFile;
+            $bibtexLog = ($isFile) ? (is_readable((string) $bibtexFile) ? file_get_contents($bibtexFile) : '') : $bibtexFile;
             ($isFile) ? $parser->parseFile($bibtexFile) : $parser->parseString($bibtexFile) ;
             $entries = $listener->export();
             self::logger()->info('bibtexImport => ', ['entries' => $entries,
@@ -110,7 +110,7 @@ class Bibtex
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
         }
-        if ($entry['type'] === 'article') {
+        if (($entry['type'] ?? null) === 'article') {
             if (isset($entry['journal'])){
                 $csl['container-title'] = $entry['journal'];
             }

@@ -6,10 +6,9 @@ namespace App\Tests\Fixtures;
 
 use App\Entity\Document;
 use Doctrine\Bundle\FixturesBundle\Fixture;
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 
-class DocumentFixtures extends Fixture implements DependentFixtureInterface
+class DocumentFixtures extends Fixture
 {
     public const DOC_1_REFERENCE = 'document-123456';
     public const DOC_2_REFERENCE = 'document-789012';
@@ -36,10 +35,5 @@ class DocumentFixtures extends Fixture implements DependentFixtureInterface
         $this->addReference(self::DOC_3_REFERENCE, $doc3);
 
         $manager->flush();
-    }
-
-    public function getDependencies(): array
-    {
-        return [];
     }
 }

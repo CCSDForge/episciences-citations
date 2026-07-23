@@ -104,15 +104,15 @@ class GetBibRefCommand extends Command
     public function processCsv(InputInterface $input): array
     {
         $pathCsv = $input->getArgument('csv');
-        $csvData = array_map(str_getcsv(...), file($pathCsv));
+        $csvData = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', '\\'), file($pathCsv));
         // Extract the column names from the first row
         $columnNames = array_map(trim(...), array_shift($csvData));
         // Initialize an empty array to store the processed data
         $globalData = [];
         // Loop through each row of the CSV data
         foreach ($csvData as $row) {
-            $rowData = array_combine($columnNames, $row);
-            $globalData[$rowData['docid']][] = array_map(trim(...), $rowData);
+            $rowData = array_map(trim(...), array_combine($columnNames, $row));
+            $globalData[$rowData['docid']][] = $rowData;
         }
         return $globalData;
     }
