@@ -54,7 +54,7 @@ class Bibtex
 
         try {
             static::logger();
-            $bibtexLog = ($isFile) ? file_get_contents($bibtexFile) : $bibtexFile;
+            $bibtexLog = ($isFile) ? (is_readable((string) $bibtexFile) ? file_get_contents($bibtexFile) : '') : $bibtexFile;
             ($isFile) ? $parser->parseFile($bibtexFile) : $parser->parseString($bibtexFile) ;
             $entries = $listener->export();
             self::logger()->info('bibtexImport => ', ['entries' => $entries,
@@ -91,8 +91,9 @@ class Bibtex
      */
     public static function generateCSL(array $entry): array
     {
+        $type = strtolower((string) ($entry['type'] ?? 'misc'));
         $csl = [
-            'type' => lcfirst((string) ($entry['type'] ?? 'misc')),
+            'type' => lcfirst($type),
             'author' => [],
             'title' => $entry['title'] ?? '',
             'issued' => [
@@ -110,7 +111,7 @@ class Bibtex
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
         }
-        if ($entry['type'] === 'article') {
+        if ($type === 'article') {
             if (isset($entry['journal'])){
                 $csl['container-title'] = $entry['journal'];
             }

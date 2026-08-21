@@ -499,4 +499,740 @@ class ReferencesTest extends TestCase
         $this->assertIsArray($result);
         $this->assertEquals(0, $result['referencePersisted']);
     }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_UserInfoMissingUid_ReturnsZeroCountsWithoutFlush(): void
+    {
+        // Arrange - resolveOrCreateUser() returns null when there's no user for the given UID
+        // AND no UID at all is provided, exercising the early-return branch.
+        $userInfo = [];
+        $form = ['paperReferences' => [], 'orderRef' => ''];
+
+        $this->userRepository->method('find')->willReturn(null);
+        $this->entityManager->method('getRepository')
+            ->with(UserInformations::class)
+            ->willReturn($this->userRepository);
+
+        $this->entityManager->expects($this->never())->method('flush');
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertSame(['orderPersisted' => 0, 'referencePersisted' => 0], $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_ReferenceNotFound_IsSkipped(): void
+    {
+        // Arrange - the reference id sent by the client no longer exists in DB:
+        // exercises the "continue" branch inside the loop.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 999, 'accepted' => 1, 'isDirtyTextAreaModifyRef' => '0'],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn(null);
+                return $repo;
+            }
+            return null;
+        });
+
+        $this->entityManager->expects($this->never())->method('persist');
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertEquals(0, $result['referencePersisted']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_MissingAcceptedKey_IsSkipped(): void
+    {
+        // Arrange - the reference exists, but "accepted" is absent from the payload:
+        // exercises the other half of the "continue" branch's condition.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(0);
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 1],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturnCallback(
+                    fn (mixed $id): ?PaperReferences => $id === 1 ? $ref : null
+                );
+                return $repo;
+            }
+            return null;
+        });
+
+        $this->entityManager->expects($this->never())->method('persist');
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertEquals(0, $result['referencePersisted']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_SameAcceptedValue_ReportsNoChange(): void
+    {
+        // Arrange - the client resends the same "accepted" value: applyExplicitAcceptedValue()
+        // must report 0 changes instead of always incrementing the counter.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 1, 'accepted' => 1, 'isDirtyTextAreaModifyRef' => '0'],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert - the reference is still persisted (touched), but reported as unchanged
+        $this->assertEquals(0, $result['referencePersisted']);
+        $this->assertEquals(1, $ref->getAccepted());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_EmptyAcceptedOnNullState_InitializesToZero(): void
+    {
+        // Arrange - paperReference['accepted'] === '' with a null current state:
+        // exercises applyDefaultAcceptedValue()'s "initialize" branch.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        // getAccepted() is null by default
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 1, 'accepted' => '', 'isDirtyTextAreaModifyRef' => '0'],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertEquals(1, $result['referencePersisted']);
+        $this->assertEquals(0, $ref->getAccepted());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_EmptyAcceptedOnExistingState_ReportsNoChange(): void
+    {
+        // Arrange - applyDefaultAcceptedValue()'s "already set" branch: accepted is already
+        // non-null, so re-sending an empty "accepted" value must not be reported as a change.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 1, 'accepted' => '', 'isDirtyTextAreaModifyRef' => '0'],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $result = $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertEquals(0, $result['referencePersisted']);
+        $this->assertEquals(1, $ref->getAccepted());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_WithArrayReferenceAndValidOpenAccessUrl_UpdatesReference(): void
+    {
+        // Arrange - paperReference['reference'] as an array with a valid open-access URL:
+        // exercises normalizeReferenceInput()'s array branch and sanitizeOpenAccessUrl()'s
+        // "valid URL" success branch (both previously untested).
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+
+        $form = [
+            'paperReferences' => [
+                [
+                    'id' => 1,
+                    'accepted' => 1,
+                    'isDirtyTextAreaModifyRef' => '0',
+                    'reference' => [
+                        'raw_reference' => 'Updated raw reference',
+                        'open-access' => ['url' => 'https://oa.example.org/paper', 'source_title' => '', 'origin' => 'user', 'checked_at' => null],
+                    ],
+                ],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertSame('Updated raw reference', $ref->getReference()['raw_reference']);
+        $this->assertSame('https://oa.example.org/paper', $ref->getReference()['open-access']['url']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_WithJsonStringReference_DecodesAndUpdatesReference(): void
+    {
+        // Arrange - paperReference['reference'] as a JSON string: exercises
+        // normalizeReferenceInput()'s string-decoding branch.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+
+        $form = [
+            'paperReferences' => [
+                [
+                    'id' => 1,
+                    'accepted' => 1,
+                    'isDirtyTextAreaModifyRef' => '0',
+                    'reference' => json_encode(['raw_reference' => 'From JSON string']),
+                ],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertSame('From JSON string', $ref->getReference()['raw_reference']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_WithUnparseableStringReference_LeavesExistingReferenceUnchanged(): void
+    {
+        // Arrange - normalizeReferenceInput()'s "not valid JSON" returns null so setReference() is skipped
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $initialReference = ['raw_reference' => 'Original Ref Text', 'doi' => '10.1234/orig'];
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+        $ref->setReference($initialReference);
+
+        $form = [
+            'paperReferences' => [
+                [
+                    'id' => 1,
+                    'accepted' => 1,
+                    'isDirtyTextAreaModifyRef' => '0',
+                    'reference' => 'not valid json',
+                ],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertSame($initialReference, $ref->getReference());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAddNewReference_WithEmptyAddReference_ReturnsFalse(): void
+    {
+        // Arrange - exercises the "return false" branch when there's nothing to add
+        $form = ['id' => 123456, 'addReference' => ''];
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        // Act
+        $result = $this->service->addNewReference($form, ['UID' => 1001]);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAddNewReference_WhenUserNotFound_CreatesNewUser(): void
+    {
+        // Arrange - exercises the "is_null($user)" branch: no existing UserInformations
+        $doc = new Document();
+        $doc->setId(123456);
+
+        $form = [
+            'id' => 123456,
+            'addReference' => 'A brand new reference',
+        ];
+        $userInfo = ['UID' => 4242, 'FIRSTNAME' => 'Ada', 'LASTNAME' => 'Lovelace'];
+
+        $qb = $this->createMock(QueryBuilder::class);
+        $query = $this->createMock(Query::class);
+        $qb->method('select')->willReturnSelf();
+        $qb->method('where')->willReturnSelf();
+        $qb->method('setParameter')->willReturnSelf();
+        $qb->method('getQuery')->willReturn($query);
+        $query->method('getSingleScalarResult')->willReturn(null);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnCallback(function ($class) use ($doc, $qb) {
+                if ($class === UserInformations::class) {
+                    $repo = $this->userRepository;
+                    $repo->method('find')->willReturn(null);
+                    return $repo;
+                }
+                if ($class === Document::class) {
+                    $repo = $this->documentRepository;
+                    $repo->method('find')->willReturn($doc);
+                    return $repo;
+                }
+                if ($class === PaperReferences::class) {
+                    $repo = $this->refRepository;
+                    $repo->method('createQueryBuilder')->willReturn($qb);
+                    return $repo;
+                }
+                return null;
+            });
+
+        $persistedRef = null;
+        $this->entityManager->expects($this->once())
+            ->method('persist')
+            ->with($this->callback(function (PaperReferences $ref) use (&$persistedRef): bool {
+                $persistedRef = $ref;
+                return true;
+            }));
+
+        // Act
+        $result = $this->service->addNewReference($form, $userInfo);
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertNotNull($persistedRef);
+        $this->assertSame(4242, $persistedRef->getUid()->getId());
+        $this->assertSame('Ada', $persistedRef->getUid()->getSurname());
+        $this->assertSame('Lovelace', $persistedRef->getUid()->getName());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testValidateChoicesReferencesByUser_WithNonArrayNonStringReference_LeavesExistingReferenceUnchanged(): void
+    {
+        // Arrange - normalizeReferenceInput()'s final fallback branch: "reference" is set
+        // (so isset() is true) but is neither an array nor a string.
+        $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
+        $user = new UserInformations();
+        $user->setId(1001);
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setAccepted(1);
+        $ref->setReference(['raw_reference' => 'Original']);
+
+        $form = [
+            'paperReferences' => [
+                ['id' => 1, 'accepted' => 1, 'isDirtyTextAreaModifyRef' => '0', 'reference' => 123],
+            ],
+            'orderRef' => '',
+        ];
+
+        $this->entityManager->method('getRepository')->willReturnCallback(function ($class) use ($user, $ref) {
+            if ($class === UserInformations::class) {
+                $repo = $this->userRepository;
+                $repo->method('find')->willReturn($user);
+                return $repo;
+            }
+            if ($class === PaperReferences::class) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturnCallback(
+                    fn (mixed $id): ?PaperReferences => $id === 1 ? $ref : null
+                );
+                return $repo;
+            }
+            return null;
+        });
+
+        // Act
+        $this->service->validateChoicesReferencesByUser($form, $userInfo);
+
+        // Assert
+        $this->assertSame(['raw_reference' => 'Original'], $ref->getReference());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetReferences_AcceptedType_UsesAcceptedRepositoryMethod(): void
+    {
+        // Arrange - the 'accepted' branch of the match() was never exercised
+        $docId = 123456;
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setReference(['raw_reference' => 'Accepted ref']);
+        $ref->setAccepted(1);
+        $ref->setReferenceOrder(0);
+
+        $this->grobid->expects($this->once())
+            ->method('getAcceptedReferencesFromDB')
+            ->with($docId)
+            ->willReturn([$ref]);
+        $this->grobid->expects($this->never())->method('getAllGrobidReferencesFromDB');
+
+        $this->bibtex->method('getCslRefText')->willReturn(['raw_reference' => 'Accepted ref']);
+
+        // Act
+        $result = $this->service->getReferences($docId, 'accepted');
+
+        // Assert
+        $this->assertArrayHasKey(1, $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetReferences_ReferenceWithEmptyData_IsSkipped(): void
+    {
+        // Arrange - a reference whose stored data is empty must be skipped (continue branch)
+        $docId = 123456;
+
+        $emptyRef = new PaperReferences();
+        $emptyRef->setId(1);
+        $emptyRef->setReference([]);
+
+        $validRef = new PaperReferences();
+        $validRef->setId(2);
+        $validRef->setReference(['raw_reference' => 'Valid ref']);
+        $validRef->setAccepted(1);
+        $validRef->setReferenceOrder(0);
+
+        $this->grobid->expects($this->once())
+            ->method('getAllGrobidReferencesFromDB')
+            ->willReturn([$emptyRef, $validRef]);
+
+        $this->bibtex->expects($this->once())
+            ->method('getCslRefText')
+            ->willReturn(['raw_reference' => 'Valid ref']);
+
+        // Act
+        $result = $this->service->getReferences($docId, 'all');
+
+        // Assert
+        $this->assertArrayNotHasKey(1, $result);
+        $this->assertArrayHasKey(2, $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetReferences_WithOpenAccessField_IncludesItInFormattedReference(): void
+    {
+        // Arrange - exercises the OPEN_ACCESS_REFERENCE_FIELDS branch
+        $docId = 123456;
+
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setReference([
+            'raw_reference' => 'Ref with OA',
+            'open-access' => ['url' => 'https://oa.example.org/paper', 'source_title' => 'Repo', 'origin' => 'openalex', 'checked_at' => null],
+        ]);
+        $ref->setAccepted(1);
+        $ref->setReferenceOrder(0);
+
+        $this->grobid->method('getAllGrobidReferencesFromDB')->willReturn([$ref]);
+        $this->bibtex->method('getCslRefText')->willReturn(['raw_reference' => 'Ref with OA']);
+
+        // Act
+        $result = $this->service->getReferences($docId, 'all');
+
+        // Assert
+        $this->assertSame('https://oa.example.org/paper', $result[1]['ref']['open-access']['url']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetDocument_ReturnsDocumentFromRepository(): void
+    {
+        // Arrange
+        $docId = 123456;
+        $document = new Document();
+        $document->setId($docId);
+
+        $this->entityManager->expects($this->once())
+            ->method('getRepository')
+            ->with(Document::class)
+            ->willReturn($this->documentRepository);
+        $this->documentRepository->expects($this->once())
+            ->method('find')
+            ->with($docId)
+            ->willReturn($document);
+
+        // Act
+        $result = $this->service->getDocument($docId);
+
+        // Assert
+        $this->assertSame($document, $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDocumentAlreadyExtracted_WhenDocumentExists_ReturnsTrue(): void
+    {
+        // Arrange
+        $docId = 123456;
+        $document = new Document();
+        $document->setId($docId);
+
+        $this->entityManager->method('getRepository')->with(Document::class)->willReturn($this->documentRepository);
+        $this->documentRepository->method('find')->with($docId)->willReturn($document);
+
+        // Act & Assert
+        $this->assertTrue($this->service->documentAlreadyExtracted($docId));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testDocumentAlreadyExtracted_WhenDocumentMissing_ReturnsFalse(): void
+    {
+        // Arrange
+        $docId = 123456;
+
+        $this->entityManager->method('getRepository')->with(Document::class)->willReturn($this->documentRepository);
+        $this->documentRepository->method('find')->with($docId)->willReturn(null);
+
+        // Act & Assert
+        $this->assertFalse($this->service->documentAlreadyExtracted($docId));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testCreateDocumentId_PersistsAndReturnsNewDocument(): void
+    {
+        // Arrange
+        $docId = 123456;
+
+        $this->entityManager->expects($this->once())->method('persist')
+            ->with($this->isInstanceOf(Document::class));
+        $this->entityManager->expects($this->once())->method('flush');
+
+        // Act
+        $result = $this->service->createDocumentId($docId);
+
+        // Assert
+        $this->assertSame($docId, $result->getId());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAutosaveOrder_PersistsOrderAndFlushes(): void
+    {
+        // Arrange
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setReferenceOrder(999);
+
+        $this->entityManager->expects($this->once())
+            ->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturnCallback(function () use ($ref) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturn($ref);
+                return $repo;
+            });
+
+        $this->entityManager->expects($this->once())->method('persist')->with($ref);
+        $this->entityManager->expects($this->once())->method('flush');
+
+        // Act
+        $this->service->autosaveOrder('1');
+
+        // Assert
+        $this->assertEquals(0, $ref->getReferenceOrder());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAutosaveReference_ReferenceNotFound_ReturnsEmptyArray(): void
+    {
+        // Arrange - exercises the early "$ref === null" return branch
+        $this->refRepository->method('find')->willReturn(null);
+        $this->entityManager->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturn($this->refRepository);
+
+        // Act
+        $result = $this->service->autosaveReference(999, '{}', 1, false, ['UID' => 1001]);
+
+        // Assert
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAutosaveReference_NoUidInUserInfo_ReturnsEmptyArray(): void
+    {
+        // Arrange - exercises the "$user === null" fallback branch: no UID at all is provided
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $this->refRepository->method('find')->willReturn($ref);
+
+        $this->userRepository->method('find')->willReturn(null);
+
+        $this->entityManager->method('getRepository')->willReturnMap([
+            [PaperReferences::class, $this->refRepository],
+            [UserInformations::class, $this->userRepository],
+        ]);
+
+        // Act
+        $result = $this->service->autosaveReference(1, '{}', 1, false, []);
+
+        // Assert
+        $this->assertSame([], $result);
+    }
 }

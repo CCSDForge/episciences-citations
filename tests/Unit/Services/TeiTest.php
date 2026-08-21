@@ -80,6 +80,61 @@ class TeiTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testGetReferencesInTei_MalformedXml_ReturnsEmptyArray(): void
+    {
+        // Arrange - genuinely malformed XML (simplexml_load_string() returns false),
+        // exercising the "$xml === false" early-return branch (as opposed to the
+        // well-formed-but-non-matching XML used by the other "invalid" test above).
+        $malformedXml = '<broken><unclosed>';
+
+        libxml_use_internal_errors(true);
+
+        // Act
+        $result = $this->service->getReferencesInTei($malformedXml);
+
+        libxml_clear_errors();
+
+        // Assert
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetReferencesInTei_WithDoiInAnalytic_ExtractsDoi(): void
+    {
+        // Arrange - DOI nested under <analytic>, matching GROBID's consolidated-citation
+        // output and the exact path read by Tei::extractDoi().
+        $teiXml = <<<'XML'
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <text xml:lang="en">
+        <back>
+            <div type="references">
+                <listBibl>
+                    <biblStruct xml:id="b0">
+                        <analytic>
+                            <title level="a" type="main">Reference with DOI</title>
+                            <idno type="DOI">10.1234/analytic-doi</idno>
+                        </analytic>
+                        <note type="raw_reference">Some raw reference text.</note>
+                    </biblStruct>
+                </listBibl>
+            </div>
+        </back>
+    </text>
+</TEI>
+XML;
+
+        // Act
+        $result = $this->service->getReferencesInTei($teiXml);
+
+        // Assert
+        $this->assertCount(1, $result);
+        $this->assertSame('10.1234/analytic-doi', $result[0]['doi']);
+        $this->assertSame('Some raw reference text.', $result[0]['raw_reference']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testInsertReferencesInDB_NewDocument_CreatesDocumentAndReferences(): void
     {
         // Arrange — references are now flat arrays, not JSON strings
@@ -176,5 +231,52 @@ class TeiTest extends TestCase
 
         // Assert - accepted reference preserved + new reference added
         $this->assertCount(2, $existingDoc->getPaperReferences());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testInsertReferencesInDB_RemovesUnacceptedAndNullAcceptedExistingReferences(): void
+    {
+        // Arrange - removeAllRefGrobidSource() must remove any existing reference whose
+        // accepted state is 0 or null (i.e. never validated by a user), and keep accepted ones.
+        $docId = 123456;
+        $newReferences = [
+            ['raw_reference' => 'New reference 1'],
+        ];
+        $source = PaperReferences::SOURCE_METADATA_GROBID;
+
+        $unacceptedRef = new PaperReferences();
+        $unacceptedRef->setId(1);
+        $unacceptedRef->setReference(['raw_reference' => 'Unaccepted reference']);
+        $unacceptedRef->setAccepted(0);
+
+        $nullAcceptedRef = new PaperReferences();
+        $nullAcceptedRef->setId(2);
+        $nullAcceptedRef->setReference(['raw_reference' => 'Null-accepted reference']);
+        $nullAcceptedRef->setAccepted(null);
+
+        $this->documentRepository->expects($this->once())
+            ->method('find')
+            ->with($docId)
+            ->willReturn(null);
+
+        $refRepo = $this->createMock(PaperReferencesRepository::class);
+        $refRepo->method('findBy')->willReturn([$unacceptedRef, $nullAcceptedRef]);
+
+        $this->entityManager->expects($this->once())
+            ->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturn($refRepo);
+
+        // Both stale references must be removed
+        $this->entityManager->expects($this->exactly(2))
+            ->method('remove')
+            ->with($this->logicalOr($unacceptedRef, $nullAcceptedRef));
+
+        // Act
+        $this->service->insertReferencesInDB($newReferences, $docId, $source);
+
+        // Assert - verified via the remove() expectations above
+        $this->assertTrue(true);
     }
 }

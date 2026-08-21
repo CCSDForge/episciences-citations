@@ -43,6 +43,6 @@ trait DocumentAccessTrait
     private function isAuthorizeForApp(Episciences $episciences, int $docId): bool
     {
         return $episciences->getRightUser((string) $docId,
-            $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
+            (string) $this->container->get('security.token_storage')->getToken()->getAttributes()['UID']);
     }
 }

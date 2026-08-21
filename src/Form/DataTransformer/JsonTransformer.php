@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Form\DataTransformer;
 
+use JsonException;
 use Symfony\Component\Form\DataTransformerInterface;
+use Symfony\Component\Form\Exception\TransformationFailedException;
 
 /**
  * Handles transforming json to array and backward
@@ -19,15 +21,23 @@ class JsonTransformer implements DataTransformerInterface
      */
     public function reverseTransform($value): mixed
     {
-        if (empty($value)) {
+        if ($value === null || $value === '') {
             return [];
         }
 
-        return json_decode((string) $value, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $decoded = json_decode((string) $value, true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($decoded)) {
+                throw new TransformationFailedException('Decoded JSON payload must be an array.');
+            }
+            return $decoded;
+        } catch (JsonException $exception) {
+            throw new TransformationFailedException('Invalid JSON payload for reference field.', 0, $exception);
+        }
     }
 
     /**
-     * @ihneritdoc
+     * @inheritdoc
      */
     public function transform($value): mixed
     {

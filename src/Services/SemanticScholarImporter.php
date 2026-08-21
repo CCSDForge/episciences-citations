@@ -71,8 +71,9 @@ class SemanticScholarImporter
         $inserted = 0;
         foreach ($semanticsRef['data'] as $rSemantics) {
             if ($this->hasDoi($rSemantics)) {
-                $this->insertRefS2fromDoi($rSemantics['citedPaper']['externalIds']['DOI'], $startOrder + $inserted, $docId);
-                $inserted++;
+                if ($this->insertRefS2fromDoi($rSemantics['citedPaper']['externalIds']['DOI'], $startOrder + $inserted, $docId)) {
+                    $inserted++;
+                }
             } elseif ($this->hasBibTeX($rSemantics)) {
                 if ($this->hasMandatoryBibtexInfo($rSemantics)) {
                     $this->insertCslFromBibtexS2($rSemantics['citedPaper']['citationStyles']['bibtex'], $startOrder + $inserted, $docId);
@@ -82,8 +83,9 @@ class SemanticScholarImporter
                     $inserted++;
                 }
             } elseif ($this->hasArxiv($rSemantics)) {
-                $this->insertRefFromArXivIdS2($rSemantics['citedPaper']['externalIds'], $startOrder + $inserted, $docId);
-                $inserted++;
+                if ($this->insertRefFromArXivIdS2($rSemantics['citedPaper']['externalIds'], $startOrder + $inserted, $docId)) {
+                    $inserted++;
+                }
             }
         }
         return $inserted;
@@ -98,14 +100,14 @@ class SemanticScholarImporter
 
     private function hasArxiv(mixed $rSemantics): bool
     {
-        return !isset($rSemantics['citedPaper']['externalIds']['DOI'])
+        return !$this->hasDoi($rSemantics)
             && isset($rSemantics['citedPaper']['externalIds']['ArXiv']);
     }
 
     private function hasBibTeX(mixed $rSemantics): bool
     {
         return !isset($rSemantics['citedPaper']['externalIds']) ||
-            (!isset($rSemantics['citedPaper']['externalIds']['DOI']) && !isset($rSemantics['citedPaper']['externalIds']['ArXiv']));
+            (!$this->hasDoi($rSemantics) && !isset($rSemantics['citedPaper']['externalIds']['ArXiv']));
     }
 
     private function hasMandatoryBibtexInfo(mixed $rSemantics): bool
@@ -126,23 +128,24 @@ class SemanticScholarImporter
     /**
      * @throws \JsonException
      */
-    private function insertRefS2fromDoi(string $doi, int $order, int $docId): void
+    private function insertRefS2fromDoi(string $doi, int $order, int $docId): bool
     {
         $this->logger->info('S2 import: DOI found in cited paper', ['doi' => $doi]);
         $csl = $this->doiService->getCsl($doi);
         if ($csl === '') {
             $this->logger->info('S2 import: CSL not found for DOI', ['doi' => $doi]);
-            return;
+            return false;
         }
         $newRef = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR), 'doi' => $doi];
         $this->insertRefInDb($newRef, $order, $docId);
+        return true;
     }
 
     /**
      * @param array<string, mixed> $externalIds
      * @throws \JsonException
      */
-    private function insertRefFromArXivIdS2(array $externalIds, int $order, int $docId): void
+    private function insertRefFromArXivIdS2(array $externalIds, int $order, int $docId): bool
     {
         $this->logger->info('S2 import: ArXiv ID found', ['arxiv' => $externalIds['ArXiv']]);
         $arxivId = $externalIds['ArXiv'];
@@ -153,10 +156,11 @@ class SemanticScholarImporter
         $csl = $this->doiService->getCsl($arxivId);
         if ($csl === '') {
             $this->logger->info('S2 import: CSL not found for ArXiv ID', ['arxivId' => $arxivId]);
-            return;
+            return false;
         }
         $newRef = ['csl' => json_decode($csl, true, 512, JSON_THROW_ON_ERROR), 'doi' => $arxivId];
         $this->insertRefInDb($newRef, $order, $docId);
+        return true;
     }
 
     /**
