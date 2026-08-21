@@ -78,7 +78,8 @@ class GetBibRefCommandTest extends TestCase
 
     private function createCsvFile(string $header, string ...$rows): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'getbibref_test_') . '.csv';
+        $path = tempnam(sys_get_temp_dir(), 'getbibref_test_');
+        $this->assertNotFalse($path);
         $this->tmpFiles[] = $path;
         file_put_contents($path, implode("\n", [$header, ...$rows]) . "\n");
 
@@ -122,6 +123,53 @@ class GetBibRefCommandTest extends TestCase
         $this->assertSame('10.1000/a', $result['1'][0]['doi']);
         $this->assertSame('10.1000/b', $result['1'][1]['doi']);
         $this->assertSame('10.1000/c', $result['2'][0]['doi']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testProcessCsvThrowsOnNonExistentFile(): void
+    {
+        $input = $this->createStub(InputInterface::class);
+        $input->method('getArgument')->willReturn('/non/existent/path.csv');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('does not exist or is not readable');
+
+        $this->command->processCsv($input);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testProcessCsvThrowsWhenDocIdColumnMissing(): void
+    {
+        $path = $this->createCsvFile('title, author', 'Paper Title, Author Name');
+        $input = $this->createStub(InputInterface::class);
+        $input->method('getArgument')->willReturn($path);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('must contain a "docid" column');
+
+        $this->command->processCsv($input);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testProcessCsvSkipsMalformedRows(): void
+    {
+        $path = $this->createCsvFile(
+            'docid, doi',
+            '1, 10.1000/a',
+            'too, many, columns, in, this, row',
+            '2, 10.1000/b'
+        );
+        $input = $this->createStub(InputInterface::class);
+        $input->method('getArgument')->willReturn($path);
+
+        $result = $this->command->processCsv($input);
+
+        $this->assertCount(2, $result);
+        $this->assertArrayHasKey('1', $result);
+        $this->assertArrayHasKey('2', $result);
     }
 
     #[Test]

@@ -136,6 +136,8 @@ class DocumentTypeTest extends TypeTestCase
     public static function provideDoiUrlSwhidCases(): iterable
     {
         yield 'valid doi' => ['10.1234/abcd.5678', true];
+        yield 'invalid embedded doi text' => ['invalid 10.1234/abcd.5678', false];
+        yield 'invalid trailing doi text' => ['10.1234/abcd.5678 trailing', false];
         yield 'valid doi url' => ['https://doi.org/10.1234/abcd.5678', true];
         yield 'valid http url' => ['http://example.com/paper.pdf', true];
         yield 'valid https url' => ['https://example.com/paper.pdf', true];

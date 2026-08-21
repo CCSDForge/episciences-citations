@@ -103,15 +103,33 @@ class GetBibRefCommand extends Command
      */
     public function processCsv(InputInterface $input): array
     {
-        $pathCsv = $input->getArgument('csv');
-        $csvData = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', '\\'), file($pathCsv));
-        // Extract the column names from the first row
-        $columnNames = array_map(trim(...), array_shift($csvData));
-        // Initialize an empty array to store the processed data
+        $pathCsv = (string) $input->getArgument('csv');
+        if (!is_file($pathCsv) || !is_readable($pathCsv)) {
+            throw new \RuntimeException(sprintf('CSV file "%s" does not exist or is not readable.', $pathCsv));
+        }
+
+        $lines = file($pathCsv, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false || $lines === []) {
+            throw new \RuntimeException(sprintf('CSV file "%s" is empty.', $pathCsv));
+        }
+
+        $csvData = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', '\\'), $lines);
+        $headerRow = (array) array_shift($csvData);
+        $columnNames = array_map(trim(...), $headerRow);
+        if (!in_array('docid', $columnNames, true)) {
+            throw new \RuntimeException(sprintf('CSV file "%s" must contain a "docid" column.', $pathCsv));
+        }
+
+        $expectedCount = count($columnNames);
         $globalData = [];
-        // Loop through each row of the CSV data
         foreach ($csvData as $row) {
+            if (count($row) !== $expectedCount) {
+                continue;
+            }
             $rowData = array_map(trim(...), array_combine($columnNames, $row));
+            if (!isset($rowData['docid']) || $rowData['docid'] === '') {
+                continue;
+            }
             $globalData[$rowData['docid']][] = $rowData;
         }
         return $globalData;

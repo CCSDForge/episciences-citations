@@ -80,12 +80,19 @@ class JsonTransformerTest extends TestCase
     }
 
     #[Test]
-    public function testReverseTransform_ZeroString_ReturnsEmptyArray(): void
+    public function testReverseTransform_ZeroString_ThrowsTransformationFailedException(): void
     {
-        // '0' is falsy in PHP, so empty('0') === true — documents this edge case
-        $result = $this->transformer->reverseTransform('0');
+        $this->expectException(TransformationFailedException::class);
 
-        $this->assertEquals([], $result);
+        $this->transformer->reverseTransform('0');
+    }
+
+    #[Test]
+    public function testReverseTransform_ScalarJson_ThrowsTransformationFailedException(): void
+    {
+        $this->expectException(TransformationFailedException::class);
+
+        $this->transformer->reverseTransform('123');
     }
 
     #[Test]

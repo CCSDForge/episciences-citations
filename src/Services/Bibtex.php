@@ -91,8 +91,9 @@ class Bibtex
      */
     public static function generateCSL(array $entry): array
     {
+        $type = strtolower((string) ($entry['type'] ?? 'misc'));
         $csl = [
-            'type' => lcfirst((string) ($entry['type'] ?? 'misc')),
+            'type' => lcfirst($type),
             'author' => [],
             'title' => $entry['title'] ?? '',
             'issued' => [
@@ -110,7 +111,7 @@ class Bibtex
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
         }
-        if (($entry['type'] ?? null) === 'article') {
+        if ($type === 'article') {
             if (isset($entry['journal'])){
                 $csl['container-title'] = $entry['journal'];
             }

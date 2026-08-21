@@ -20,6 +20,7 @@ final class PaperReferencesRepositoryTest extends KernelTestCase
 {
     private EntityManagerInterface $entityManager;
     private PaperReferencesRepository $repository;
+    private string|false $previousDatabaseUrl = false;
 
     protected function setUp(): void
     {
@@ -28,6 +29,7 @@ final class PaperReferencesRepositoryTest extends KernelTestCase
         // APP_ENV=test), which takes precedence over .env.test's sqlite
         // value. Force a fresh in-memory SQLite database for this process
         // before booting the kernel so these tests stay fast and isolated.
+        $this->previousDatabaseUrl = getenv('DATABASE_URL');
         putenv('DATABASE_URL=sqlite:///:memory:');
         $_ENV['DATABASE_URL'] = 'sqlite:///:memory:';
         $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:';
@@ -48,6 +50,14 @@ final class PaperReferencesRepositoryTest extends KernelTestCase
     protected function tearDown(): void
     {
         parent::tearDown();
+        if (false === $this->previousDatabaseUrl) {
+            putenv('DATABASE_URL');
+            unset($_ENV['DATABASE_URL'], $_SERVER['DATABASE_URL']);
+        } else {
+            putenv('DATABASE_URL=' . $this->previousDatabaseUrl);
+            $_ENV['DATABASE_URL'] = $this->previousDatabaseUrl;
+            $_SERVER['DATABASE_URL'] = $this->previousDatabaseUrl;
+        }
         unset($this->entityManager, $this->repository);
     }
 

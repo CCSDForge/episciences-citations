@@ -839,16 +839,18 @@ class ReferencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
-    public function testValidateChoicesReferencesByUser_WithUnparseableStringReference_ResultsInEmptyArray(): void
+    public function testValidateChoicesReferencesByUser_WithUnparseableStringReference_LeavesExistingReferenceUnchanged(): void
     {
-        // Arrange - normalizeReferenceInput()'s "not valid JSON" fallback (returns [])
+        // Arrange - normalizeReferenceInput()'s "not valid JSON" returns null so setReference() is skipped
         $userInfo = ['UID' => 1001, 'FIRSTNAME' => 'John', 'LASTNAME' => 'Doe'];
         $user = new UserInformations();
         $user->setId(1001);
 
+        $initialReference = ['raw_reference' => 'Original Ref Text', 'doi' => '10.1234/orig'];
         $ref = new PaperReferences();
         $ref->setId(1);
         $ref->setAccepted(1);
+        $ref->setReference($initialReference);
 
         $form = [
             'paperReferences' => [
@@ -880,7 +882,7 @@ class ReferencesTest extends TestCase
         $this->service->validateChoicesReferencesByUser($form, $userInfo);
 
         // Assert
-        $this->assertSame([], $ref->getReference());
+        $this->assertSame($initialReference, $ref->getReference());
     }
 
     #[Test]
@@ -963,7 +965,7 @@ class ReferencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
-    public function testValidateChoicesReferencesByUser_WithNonArrayNonStringReference_ResultsInEmptyArray(): void
+    public function testValidateChoicesReferencesByUser_WithNonArrayNonStringReference_LeavesExistingReferenceUnchanged(): void
     {
         // Arrange - normalizeReferenceInput()'s final fallback branch: "reference" is set
         // (so isset() is true) but is neither an array nor a string.
@@ -1003,7 +1005,7 @@ class ReferencesTest extends TestCase
         $this->service->validateChoicesReferencesByUser($form, $userInfo);
 
         // Assert
-        $this->assertSame([], $ref->getReference());
+        $this->assertSame(['raw_reference' => 'Original'], $ref->getReference());
     }
 
     #[Test]

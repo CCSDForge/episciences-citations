@@ -179,20 +179,27 @@ class CasAuthenticator extends AbstractAuthenticator
             return;
         }
 
-        // session_id() can only change the active session's ID *before* the session is
-        // started (PHP silently ignores it, with a warning, once a session is active) -
-        // so any currently active session must be closed first.
-        if (session_status() === PHP_SESSION_ACTIVE) {
+        // Disable cookies so the temporary session cannot emit a Set-Cookie header,
+        // switch to the session to destroy, start it and destroy it.
+        $originalSessionId = session_id();
+        $wasActive = (session_status() === PHP_SESSION_ACTIVE);
+        if ($wasActive) {
             session_write_close();
         }
+
         // $sessionId is externally supplied by design: CAS Single Logout works by having
         // the CAS server send back the SessionIndex it was given at login, which must
         // become the local PHP session ID so that session can be destroyed. The format
         // check above rejects anything that isn't a plausible PHP session ID before it
         // reaches session_id().
         session_id($sessionId); // NOSONAR (php:S5328)
-        session_start();
+        session_start(['use_cookies' => 0, 'use_only_cookies' => 0]);
         session_destroy();
+
+        if ($wasActive && $originalSessionId !== '') {
+            session_id($originalSessionId);
+            session_start();
+        }
     }
 
     private function getParam(string $key): mixed

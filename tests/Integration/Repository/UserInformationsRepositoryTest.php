@@ -20,6 +20,7 @@ final class UserInformationsRepositoryTest extends KernelTestCase
 {
     private EntityManagerInterface $entityManager;
     private UserInformationsRepository $repository;
+    private string|false $previousDatabaseUrl = false;
 
     protected function setUp(): void
     {
@@ -28,6 +29,7 @@ final class UserInformationsRepositoryTest extends KernelTestCase
         // APP_ENV=test), which takes precedence over .env.test's sqlite
         // value. Force a fresh in-memory SQLite database for this process
         // before booting the kernel so these tests stay fast and isolated.
+        $this->previousDatabaseUrl = getenv('DATABASE_URL');
         putenv('DATABASE_URL=sqlite:///:memory:');
         $_ENV['DATABASE_URL'] = 'sqlite:///:memory:';
         $_SERVER['DATABASE_URL'] = 'sqlite:///:memory:';
@@ -48,6 +50,14 @@ final class UserInformationsRepositoryTest extends KernelTestCase
     protected function tearDown(): void
     {
         parent::tearDown();
+        if (false === $this->previousDatabaseUrl) {
+            putenv('DATABASE_URL');
+            unset($_ENV['DATABASE_URL'], $_SERVER['DATABASE_URL']);
+        } else {
+            putenv('DATABASE_URL=' . $this->previousDatabaseUrl);
+            $_ENV['DATABASE_URL'] = $this->previousDatabaseUrl;
+            $_SERVER['DATABASE_URL'] = $this->previousDatabaseUrl;
+        }
         unset($this->entityManager, $this->repository);
     }
 
@@ -183,6 +193,8 @@ final class UserInformationsRepositoryTest extends KernelTestCase
 
         $user1 = $this->repository->find(1001);
         $user2 = $this->repository->find(2002);
+        $this->assertNotNull($user1);
+        $this->assertNotNull($user2);
 
         // Per seedUsersDocumentsAndReferences(): user 1001 owns references at
         // order 0, 2 and 3; user 2002 owns references at order 1 and 4.

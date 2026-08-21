@@ -551,4 +551,29 @@ class BibtexTest extends TestCase
         $this->assertIsArray($result);
         $this->assertEquals($refData, $result);
     }
+
+    #[Test]
+    public function testGenerateCSL_CapitalizedArticleType_PopulatesArticleFields(): void
+    {
+        $entry = [
+            'type' => 'Article',
+            'title' => 'Sample Title',
+            'journal' => 'Sample Journal',
+            'volume' => '42',
+            'number' => '3',
+            'pages' => '100-110',
+            'year' => '2024',
+            'author' => [
+                ['first' => 'Jane', 'last' => 'Doe'],
+            ],
+        ];
+
+        $csl = Bibtex::generateCSL($entry);
+
+        $this->assertSame('article', $csl['type']);
+        $this->assertSame('Sample Journal', $csl['container-title']);
+        $this->assertSame('42', $csl['volume']);
+        $this->assertSame('3', $csl['issue']);
+        $this->assertSame('100-110', $csl['page']);
+    }
 }
