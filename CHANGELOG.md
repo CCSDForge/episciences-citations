@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CodeRabbit Integration**: Added CodeRabbit configuration (`.coderabbit.yaml`) for AI-assisted code reviews.
+- **Performance Test Fixtures**: Expanded `tests/Fixtures/large_sample.bib` to 50 fictitious article entries for performance and load testing.
+
+### Changed
+- **Dependency Upgrades**: Updated PHP Composer dependencies (`composer.lock`), including Symfony components patch releases.
+
 ### Fixed
 - **Reference Card Badge Overlap**: Moved the "Source" badge out of its absolutely positioned corner and into the same badge row as the PPS warning badges (Annulled, Clay Feet, Tortured phrases, etc.), preventing it from overlapping them when present.
 
