@@ -34,14 +34,33 @@ class DefaultController extends AbstractController
         return $this->redirect($url . $target . '/force?url='.$journalUrl.$bibExportAsked);
     }
 
+    /**
+     * phpCAS::logout()/logoutWithRedirectService() normally halts the request by
+     * redirecting to the CAS server. That requires the phpCAS client to have been
+     * initialized earlier in the request (done lazily by CasAuthenticator when the
+     * security context is actually consulted). If /logout is hit without that ever
+     * happening — e.g. a bookmarked or directly-typed logout URL — phpCAS throws
+     * CAS_OutOfSequenceBeforeClientException, which used to bubble up as an
+     * unhandled 500. We now catch that and fall back to a local redirect instead.
+     */
     #[Route('/logout', name: 'logout')]
-    public function logout(): void
+    public function logout(Request $request): RedirectResponse
     {
-        if (!empty($this->getParameter('cas_logout_target'))) {
-            \phpCAS::logoutWithRedirectService($this->getParameter('cas_logout_target'));
-        } else {
-            \phpCAS::logout();
+        try {
+            if (!empty($this->getParameter('cas_logout_target'))) {
+                \phpCAS::logoutWithRedirectService($this->getParameter('cas_logout_target'));
+            } else {
+                \phpCAS::logout();
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('CAS logout failed, falling back to local redirect', ['exception' => $e->getMessage()]);
         }
+
+        if ($request->hasSession()) {
+            $request->getSession()->invalidate();
+        }
+
+        return $this->redirectToRoute('index');
     }
 
     #[Route('/force', name: 'force')]

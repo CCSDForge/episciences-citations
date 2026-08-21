@@ -115,7 +115,7 @@ class DocumentType extends AbstractType
     private static function isDoi(string $value): bool
     {
         // DOI: 10.digits[.digits]*/suffix (also matches https://doi.org/10.xxx/yyy)
-        return (bool) preg_match('/10\.\d{4,}(?:\.\d+)*\/.+/i', $value);
+        return (bool) preg_match('/^(?:https?:\/\/(?:dx\.)?doi\.org\/)?10\.\d{4,}(?:\.\d+)*\/\S+$/i', $value);
     }
 
     private static function isUrl(string $value): bool

@@ -80,7 +80,10 @@ class References {
     private function applyReferenceChoice(PaperReferences $ref, array $paperReference, UserInformations $user): int
     {
         if (isset($paperReference['reference'])) {
-            $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
+            $normalized = $this->normalizeReferenceInput($paperReference['reference']);
+            if ($normalized !== null) {
+                $ref->setReference($this->sanitizeOpenAccessUrl($normalized));
+            }
         }
         if ($paperReference['isDirtyTextAreaModifyRef'] === "1") {
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
@@ -237,7 +240,7 @@ class References {
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
             if (is_null($user)) {
                 $user = new UserInformations();
-                $user->setId($userInfo['UID']);
+                $user->setId((int) $userInfo['UID']);
                 $user->setSurname($userInfo['FIRSTNAME']);
                 $user->setName($userInfo['LASTNAME']);
             }
@@ -341,9 +344,9 @@ class References {
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    private function normalizeReferenceInput(mixed $reference): array
+    private function normalizeReferenceInput(mixed $reference): ?array
     {
         if (is_array($reference)) {
             return $reference;
@@ -351,10 +354,10 @@ class References {
 
         if (is_string($reference)) {
             $decoded = json_decode($reference, true);
-            return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $decoded : null;
         }
 
-        return [];
+        return null;
     }
 
     /**

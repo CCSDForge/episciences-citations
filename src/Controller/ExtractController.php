@@ -172,8 +172,13 @@ class ExtractController extends AbstractController
     #[Route('/getpdf/{docId}', name: 'app_get_pdf')]
     public function getpdf(int $docId): BinaryFileResponse
     {
-        $this->logger->info('get PDF in cache => ', ['path' => $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf"]);
-        return new BinaryFileResponse($this->getParameter("deposit_pdf") . "/" . $docId . ".pdf", Response::HTTP_OK)
+        $path = $this->getParameter("deposit_pdf") . "/" . $docId . ".pdf";
+        $this->logger->info('get PDF in cache => ', ['path' => $path]);
+        if (!is_file($path)) {
+            $this->logger->error('PDF not found in cache', ['path' => $path]);
+            throw $this->createNotFoundException('PDF not found');
+        }
+        return new BinaryFileResponse($path, Response::HTTP_OK)
             ->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $docId . ".pdf");
     }
 }
