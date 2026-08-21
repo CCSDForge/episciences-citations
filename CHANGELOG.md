@@ -9,12 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **CodeRabbit Integration**: Added CodeRabbit configuration (`.coderabbit.yaml`) for AI-assisted code reviews.
+- **PHP Test Suite & High Coverage**: Raised PHP line test coverage from ~50% to ~94% with comprehensive unit, functional, and integration tests across controllers, repositories (in-memory SQLite), services, commands, security, and forms.
 - **Performance Test Fixtures**: Expanded `tests/Fixtures/large_sample.bib` to 50 fictitious article entries for performance and load testing.
+- **CI Assets Build**: Added Webpack assets build step to GitHub Actions test workflows.
 
 ### Changed
-- **Dependency Upgrades**: Updated PHP Composer dependencies (`composer.lock`), including Symfony components patch releases.
+- **Dependency Upgrades**: Updated PHP Composer dependencies (`composer.lock`, including Guzzle `7.15.2` and Symfony patch releases) and Yarn packages (`webpack` `5.109.2`, `postcss`, `svgo`, `immutable`, `tar`, `brace-expansion`, `js-yaml`, `fast-uri`, `undici`).
+- **Docker & Apache Configuration**: Built a custom Apache Docker image and removed obsolete SSL configuration.
+
+### Removed
+- **Unused Twig Extension**: Removed unused `EpiExtractExtension` Twig extension and its associated test.
 
 ### Fixed
+- **CAS Single Logout**: Target the intended session correctly in `CasAuthenticator::handleLogoutRequest()` by setting `session_id()` prior to `session_start()`.
+- **CAS Logout Fallback**: Handled uninitialized phpCAS client gracefully in `DefaultController::logout()` with a fallback redirect instead of a 500 error.
+- **Strict Types Safety**: Enforced string/int cast on CAS UID in `References::addNewReference()` and `DocumentAccessTrait` to prevent `TypeError`.
+- **PDF Cache Handling**: Returned a 404 response instead of 500 in `ExtractController::getpdf()` when the cached PDF file is missing.
+- **Semantic Scholar Importer**: Fixed empty DOI handling consistency and accurately counted only persisted references.
+- **Form Data Transformation**: Wrapped JSON decode errors in `TransformationFailedException` within `JsonTransformer::reverseTransform()` to prevent unhandled 500 errors.
+- **BibTeX & CSL Robustness**: Guarded against missing `type` keys and unreadable file paths in `Bibtex::generateCSL()` and `Bibtex::convertBibtexToArray()`.
+- **CSV Reference Grouping**: Trimmed CSV document IDs in `GetBibRefCommand::processCsv()` to avoid splitting references across separate groups due to whitespace.
+- **CI Test Compatibility**: Fixed PHPUnit test suite execution on PHP 8.4 and PHP 8.5 in GitHub Actions.
+- **Code Hygiene & Robustness**: Addressed CodeRabbit review findings across commands, forms, services, and test fixtures.
 - **Reference Card Badge Overlap**: Moved the "Source" badge out of its absolutely positioned corner and into the same badge row as the PPS warning badges (Annulled, Clay Feet, Tortured phrases, etc.), preventing it from overlapping them when present.
 
 ## v1.3.1 - 2026-07-20
