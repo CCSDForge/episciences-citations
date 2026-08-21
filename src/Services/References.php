@@ -303,6 +303,19 @@ class References {
         $this->entityManager->flush();
     }
 
+    public function autosaveDeleteReference(int $refId): bool
+    {
+        $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
+        if ($ref === null) {
+            return false;
+        }
+
+        $this->entityManager->remove($ref);
+        $this->entityManager->flush();
+
+        return true;
+    }
+
     /**
      * @param array<string, mixed> $userInfo
      * @return array<string, mixed>

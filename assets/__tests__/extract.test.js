@@ -85,6 +85,7 @@ describe('extract.js', () => {
                         <input id="accepted-1" value="0">
                         <input data-dirty-ref="1" value="0">
                         <input type="checkbox" id="toggle-input-1" value="1">
+                        <button class="delete-single-ref-btn" data-idref="1" type="button"></button>
                         <div class="ms-auto d-flex align-items-center gap-1 flex-wrap">
                              <span class="badge source-color-1">Source</span>
                         </div>
@@ -97,6 +98,7 @@ describe('extract.js', () => {
                         <input id="reference-2" value='{}'>
                         <input id="accepted-2" value="1">
                         <input data-dirty-ref="2" value="0">
+                        <button class="delete-single-ref-btn" data-idref="2" type="button"></button>
                     </div>
                     <div class="container-reference" data-idref="3">
                         <div class="ref-position-wrapper">
@@ -106,6 +108,7 @@ describe('extract.js', () => {
                         <input id="reference-3" value='{}'>
                         <input id="accepted-3" value="1">
                         <input data-dirty-ref="3" value="0">
+                        <button class="delete-single-ref-btn" data-idref="3" type="button"></button>
                     </div>
                 </div>
                 <div id="reorder-live-region"></div>
@@ -130,6 +133,10 @@ describe('extract.js', () => {
                 <div id="modal-autofix-all">
                     <p id="autofix-all-confirm-text"></p>
                     <button id="autofix-all-confirm-btn" type="button"></button>
+                </div>
+
+                <div id="modal-delete-ref">
+                    <button id="delete-ref-confirm-btn" type="button"></button>
                 </div>
 
                 <button id="btn-import-semantic-scholar" type="button"></button>
@@ -830,6 +837,47 @@ describe('extract.js', () => {
             fireEvent.click(badge);
 
             expect(badge.parentElement.querySelectorAll('input').length).toBe(1);
+        });
+    });
+
+    describe('manageDeleteSingleReference', () => {
+        test('clicking a single delete button triggers modal show and confirming deletes the reference', async () => {
+            window.translations = { 'Reference deleted.': 'Reference deleted.' };
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            expect(deleteBtn).not.toBeNull();
+
+            fireEvent.click(deleteBtn);
+
+            const confirmBtn = document.getElementById('delete-ref-confirm-btn');
+            expect(confirmBtn).not.toBeNull();
+
+            fireEvent.click(confirmBtn);
+
+            // Verify element was removed from DOM
+            expect(document.querySelector('.container-reference[data-idref="2"]')).toBeNull();
+
+            // Verify remaining references and updated badges
+            const remaining = Array.from(document.querySelectorAll('.container-reference')).map(
+                (el) => el.dataset.idref
+            );
+            expect(remaining).toEqual(['1', '3']);
+
+            const badge1 = document.querySelector('.container-reference[data-idref="1"] .ref-position-badge');
+            const badge3 = document.querySelector('.container-reference[data-idref="3"] .ref-position-badge');
+            expect(badge1.textContent).toBe('1');
+            expect(badge3.textContent).toBe('2');
+
+            // Verify fetch was called with deleteRefId and orderRef
+            await waitFor(() => {
+                expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.objectContaining({
+                    method: 'POST',
+                    body: expect.any(Object),
+                }));
+            });
+
+            // Verify live region announcement
+            const liveRegion = document.getElementById('reorder-live-region');
+            expect(liveRegion.textContent).toBe('Reference deleted.');
         });
     });
 });

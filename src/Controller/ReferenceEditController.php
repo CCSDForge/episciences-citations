@@ -235,7 +235,12 @@ class ReferenceEditController extends AbstractController
     private function processAutosaveData(int $docId, Request $request): JsonResponse
     {
         $data = $request->request->all();
-        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
+        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef', 'deleteRefId']))]);
+
+        if (isset($data['deleteRefId'])) {
+            $deleted = $this->references->autosaveDeleteReference((int) $data['deleteRefId']);
+            return new JsonResponse(['success' => $deleted]);
+        }
 
         if (isset($data['orderRef'])) {
             $this->references->autosaveOrder($data['orderRef']);

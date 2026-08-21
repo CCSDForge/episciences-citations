@@ -1235,4 +1235,49 @@ class ReferencesTest extends TestCase
         // Assert
         $this->assertSame([], $result);
     }
+
+    #[Test]
+    public function testAutosaveDeleteReference_WhenReferenceExists_DeletesAndFlushes(): void
+    {
+        // Arrange
+        $refId = 42;
+        $ref = new PaperReferences();
+        $this->refRepository->method('find')->with($refId)->willReturn($ref);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+            ]);
+
+        $this->entityManager->expects($this->once())->method('remove')->with($ref);
+        $this->entityManager->expects($this->once())->method('flush');
+
+        // Act
+        $result = $this->service->autosaveDeleteReference($refId);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    #[Test]
+    public function testAutosaveDeleteReference_WhenReferenceNotFound_ReturnsFalse(): void
+    {
+        // Arrange
+        $refId = 999;
+        $this->refRepository->method('find')->with($refId)->willReturn(null);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+            ]);
+
+        $this->entityManager->expects($this->never())->method('remove');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        // Act
+        $result = $this->service->autosaveDeleteReference($refId);
+
+        // Assert
+        $this->assertFalse($result);
+    }
 }

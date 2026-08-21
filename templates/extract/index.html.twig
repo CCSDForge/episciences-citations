@@ -24,7 +24,10 @@
             'Invalid DOI, URL or SWHID format': '{{ 'Invalid DOI, URL or SWHID format'|trans }}',
             'New position (1 to {total})': '{{ 'New position (1 to {total})'|trans }}',
             'Reference moved to position {position} of {total}.': '{{ 'Reference moved to position {position} of {total}.'|trans }}',
-            'Reference order updated.': '{{ 'Reference order updated.'|trans }}'
+            'Reference order updated.': '{{ 'Reference order updated.'|trans }}',
+            'Delete reference': '{{ 'Delete reference'|trans }}',
+            'Are you sure you want to delete this reference?': '{{ 'Are you sure you want to delete this reference?'|trans }}',
+            'Reference deleted.': '{{ 'Reference deleted.'|trans }}'
         };
     </script>
     {{ encore_entry_script_tags('extract') }}
@@ -95,6 +98,36 @@
                         <button type="button" id="autofix-all-confirm-btn" class="btn btn-info text-white">
                             <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>
                             {{ 'Confirm'|trans }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Delete single reference confirmation modal #}
+        <div class="modal fade" id="modal-delete-ref" tabindex="-1"
+             aria-labelledby="deleteRefModalTitle" aria-describedby="delete-ref-confirm-text" aria-modal="true" role="dialog">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteRefModalTitle">
+                            <i class="fas fa-trash me-2 text-danger" aria-hidden="true"></i>
+                            {{ 'Delete reference'|trans }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="{{ 'Close'|trans }}"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="delete-ref-confirm-text" class="mb-0">
+                            {{ 'Are you sure you want to delete this reference?'|trans }}
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary"
+                                data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                        <button type="button" id="delete-ref-confirm-btn" class="btn btn-danger">
+                            <i class="fas fa-trash me-2" aria-hidden="true"></i>
+                            {{ 'Delete'|trans }}
                         </button>
                     </div>
                 </div>
@@ -354,6 +387,17 @@
                                             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                                         </button>
                                     {% endif %}
+
+                                    {# Delete button #}
+                                    <button type="button"
+                                            id="deleteBtn-{{ paperReferences.id.vars.value }}"
+                                            data-idref="{{ paperReferences.id.vars.value }}"
+                                            class="btn btn-sm btn-danger delete-single-ref-btn"
+                                            title="{{ 'Delete reference'|trans }}"
+                                            aria-label="{{ 'Delete reference'|trans }}">
+                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                        <span class="ms-1 d-none d-xl-inline">{{ 'Delete'|trans }}</span>
+                                    </button>
 
                                 </div>
 

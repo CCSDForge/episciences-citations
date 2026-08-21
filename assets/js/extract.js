@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     manageDoiEnrichment();
     removeReference();
     manageAutofixAll();
+    manageDeleteSingleReference();
 });
 
 function manageDoiEnrichment() {
@@ -1147,4 +1148,69 @@ function manageAutofixAll() {
             form.submit();
         }
     });
+}
+
+function manageDeleteSingleReference() {
+    const modalEl = document.getElementById('modal-delete-ref');
+    if (!modalEl) return;
+
+    const deleteModal = new Modal(modalEl);
+    const confirmBtn = document.getElementById('delete-ref-confirm-btn');
+    let targetRefId = null;
+    let targetElement = null;
+
+    document.addEventListener('click', (event) => {
+        const deleteBtn = event.target.closest('.delete-single-ref-btn');
+        if (!deleteBtn) return;
+
+        targetRefId = deleteBtn.dataset.idref;
+        targetElement = deleteBtn.closest('.container-reference');
+        deleteModal.show();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            deleteModal.hide();
+            if (!targetRefId || !targetElement) return;
+
+            const idToDelete = targetRefId;
+            const elToDelete = targetElement;
+
+            // Determine next element to focus for accessibility
+            const nextFocusTarget =
+                elToDelete.nextElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+                elToDelete.previousElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+                document.getElementById('btn-modal-addref') ||
+                document.getElementById('sortref');
+
+            targetRefId = null;
+            targetElement = null;
+
+            // Remove reference card from DOM
+            elToDelete.remove();
+
+            // Recalculate remaining references and their order
+            const remainingRefs = Array.from(document.querySelectorAll('.container-reference'));
+            const newOrder = remainingRefs.map((el) => el.dataset.idref).join(';');
+            const hiddenRefNode = document.getElementById('document_orderRef');
+            if (hiddenRefNode) hiddenRefNode.value = newOrder;
+
+            // Persist deletion and order
+            autosave({ deleteRefId: idToDelete });
+            if (remainingRefs.length > 0) {
+                autosave({ orderRef: newOrder });
+            }
+
+            // Update position badges
+            updateBadges();
+
+            // Screen reader live region announcement and visual toast
+            const deletedMessage = translate('Reference deleted.');
+            announceLiveRegion(deletedMessage);
+            showImportToast('success', deletedMessage);
+
+            // Shift focus for keyboard users
+            nextFocusTarget?.focus();
+        });
+    }
 }
