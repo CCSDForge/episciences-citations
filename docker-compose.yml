@@ -1,6 +1,5 @@
 services:
   epi-citations-httpd:
-    image: httpd:2.4-bookworm
     container_name: epi-citations-httpd
     build:
       context: .
