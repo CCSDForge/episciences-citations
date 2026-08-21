@@ -760,7 +760,7 @@ function resetToggleAllBtn(btn) {
 function autosave(data) {
     const form = document.getElementById('form-extraction');
     const body = new URLSearchParams({ ...data, _token: form.dataset.csrfToken });
-    fetch(form.dataset.autosaveUrl, {
+    return fetch(form.dataset.autosaveUrl, {
         method: 'POST',
         body,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -772,14 +772,17 @@ function autosave(data) {
                 if (json.reference && data.refId) {
                     updateReferenceUI(data.refId, json.reference);
                 }
+                return true;
             } else {
                 console.error('Autosave failed:', json.error || r.statusText);
                 showAutosaveToast(true, json.error || 'Failed to save changes');
+                return false;
             }
         })
         .catch((err) => {
             console.error('Autosave network error:', err);
             showAutosaveToast(true, 'Network error while saving');
+            return false;
         });
 }
 
@@ -1169,12 +1172,20 @@ function manageDeleteSingleReference() {
     });
 
     if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
+        confirmBtn.addEventListener('click', async () => {
             deleteModal.hide();
             if (!targetRefId || !targetElement) return;
 
             const idToDelete = targetRefId;
             const elToDelete = targetElement;
+
+            targetRefId = null;
+            targetElement = null;
+
+            const success = await autosave({ deleteRefId: idToDelete });
+            if (!success) {
+                return;
+            }
 
             // Determine next element to focus for accessibility
             const nextFocusTarget =
@@ -1182,9 +1193,6 @@ function manageDeleteSingleReference() {
                 elToDelete.previousElementSibling?.querySelector('button, input, [tabindex="0"]') ||
                 document.getElementById('btn-modal-addref') ||
                 document.getElementById('sortref');
-
-            targetRefId = null;
-            targetElement = null;
 
             // Remove reference card from DOM
             elToDelete.remove();
@@ -1195,8 +1203,7 @@ function manageDeleteSingleReference() {
             const hiddenRefNode = document.getElementById('document_orderRef');
             if (hiddenRefNode) hiddenRefNode.value = newOrder;
 
-            // Persist deletion and order
-            autosave({ deleteRefId: idToDelete });
+            // Persist updated order if references remain
             if (remainingRefs.length > 0) {
                 autosave({ orderRef: newOrder });
             }

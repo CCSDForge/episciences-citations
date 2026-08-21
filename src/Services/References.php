@@ -303,10 +303,10 @@ class References {
         $this->entityManager->flush();
     }
 
-    public function autosaveDeleteReference(int $refId): bool
+    public function autosaveDeleteReference(int $refId, int $docId): bool
     {
         $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
-        if ($ref === null) {
+        if ($ref === null || $ref->getDocument()?->getId() !== $docId) {
             return false;
         }
 

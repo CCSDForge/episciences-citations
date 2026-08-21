@@ -854,7 +854,9 @@ describe('extract.js', () => {
             fireEvent.click(confirmBtn);
 
             // Verify element was removed from DOM
-            expect(document.querySelector('.container-reference[data-idref="2"]')).toBeNull();
+            await waitFor(() => {
+                expect(document.querySelector('.container-reference[data-idref="2"]')).toBeNull();
+            });
 
             // Verify remaining references and updated badges
             const remaining = Array.from(document.querySelectorAll('.container-reference')).map(
@@ -867,17 +869,46 @@ describe('extract.js', () => {
             expect(badge1.textContent).toBe('1');
             expect(badge3.textContent).toBe('2');
 
-            // Verify fetch was called with deleteRefId and orderRef
-            await waitFor(() => {
-                expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.objectContaining({
-                    method: 'POST',
-                    body: expect.any(Object),
-                }));
+            // Verify fetch calls with specific URLSearchParams payloads
+            const calls = global.fetch.mock.calls.filter((c) => c[0] === '/autosave');
+            const hasDeleteCall = calls.some((c) => {
+                const body = c[1]?.body;
+                return body instanceof URLSearchParams && body.get('deleteRefId') === '2';
             });
+            const hasOrderCall = calls.some((c) => {
+                const body = c[1]?.body;
+                return body instanceof URLSearchParams && body.get('orderRef') === '1;3';
+            });
+
+            expect(hasDeleteCall).toBe(true);
+            expect(hasOrderCall).toBe(true);
 
             // Verify live region announcement
             const liveRegion = document.getElementById('reorder-live-region');
             expect(liveRegion.textContent).toBe('Reference deleted.');
+        });
+
+        test('retains card in DOM when autosave deletion fails', async () => {
+            global.fetch.mockImplementationOnce(() =>
+                Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({ success: false, error: 'Database error' }),
+                })
+            );
+
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            fireEvent.click(deleteBtn);
+
+            const confirmBtn = document.getElementById('delete-ref-confirm-btn');
+            fireEvent.click(confirmBtn);
+
+            await waitFor(() => {
+                expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.any(Object));
+            });
+
+            // Card should still be present in the DOM
+            expect(document.querySelector('.container-reference[data-idref="2"]')).not.toBeNull();
         });
     });
 });

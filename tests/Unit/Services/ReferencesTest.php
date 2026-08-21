@@ -1237,11 +1237,16 @@ class ReferencesTest extends TestCase
     }
 
     #[Test]
-    public function testAutosaveDeleteReference_WhenReferenceExists_DeletesAndFlushes(): void
+    public function testAutosaveDeleteReference_WhenReferenceExistsAndDocumentMatches_DeletesAndFlushes(): void
     {
         // Arrange
+        $docId = 100;
         $refId = 42;
+        $doc = new Document();
+        $doc->setId($docId);
+
         $ref = new PaperReferences();
+        $ref->setDocument($doc);
         $this->refRepository->method('find')->with($refId)->willReturn($ref);
 
         $this->entityManager->method('getRepository')
@@ -1253,16 +1258,47 @@ class ReferencesTest extends TestCase
         $this->entityManager->expects($this->once())->method('flush');
 
         // Act
-        $result = $this->service->autosaveDeleteReference($refId);
+        $result = $this->service->autosaveDeleteReference($refId, $docId);
 
         // Assert
         $this->assertTrue($result);
     }
 
     #[Test]
+    public function testAutosaveDeleteReference_WhenReferenceBelongsToDifferentDocument_ReturnsFalse(): void
+    {
+        // Arrange
+        $expectedDocId = 100;
+        $differentDocId = 200;
+        $refId = 42;
+
+        $doc = new Document();
+        $doc->setId($differentDocId);
+
+        $ref = new PaperReferences();
+        $ref->setDocument($doc);
+        $this->refRepository->method('find')->with($refId)->willReturn($ref);
+
+        $this->entityManager->method('getRepository')
+            ->willReturnMap([
+                [PaperReferences::class, $this->refRepository],
+            ]);
+
+        $this->entityManager->expects($this->never())->method('remove');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        // Act
+        $result = $this->service->autosaveDeleteReference($refId, $expectedDocId);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
     public function testAutosaveDeleteReference_WhenReferenceNotFound_ReturnsFalse(): void
     {
         // Arrange
+        $docId = 100;
         $refId = 999;
         $this->refRepository->method('find')->with($refId)->willReturn(null);
 
@@ -1275,7 +1311,7 @@ class ReferencesTest extends TestCase
         $this->entityManager->expects($this->never())->method('flush');
 
         // Act
-        $result = $this->service->autosaveDeleteReference($refId);
+        $result = $this->service->autosaveDeleteReference($refId, $docId);
 
         // Assert
         $this->assertFalse($result);
