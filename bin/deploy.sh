@@ -48,6 +48,7 @@ Arguments:
   <branch-or-tag>                 Git branch or tag to deploy (e.g. main, preprod, v1.3.1)
 
 Options:
+  --php-bin=<path>                Path to specific PHP binary (default: auto-detected from .php-version)
   --migrate, --with-migrations    Run Doctrine database migrations (skipped by default)
   --skip-assets                   Skip JS/CSS dependencies install and build
   --app-env=<env>                 Set Symfony environment (default: prod)
@@ -61,6 +62,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 TARGET=""
+CUSTOM_PHP_BIN="${PHP_BIN:-}"
 RUN_MIGRATIONS=0
 SKIP_ASSETS=0
 APP_ENV="prod"
@@ -69,6 +71,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             usage 0
+            ;;
+        --php-bin=*)
+            CUSTOM_PHP_BIN="${1#*=}"
+            shift
             ;;
         --migrate|--with-migrations|--run-migrations)
             RUN_MIGRATIONS=1
@@ -152,30 +158,73 @@ CURRENT_COMMIT="$(git rev-parse --short HEAD)"
 log_success "Now at commit: ${CURRENT_COMMIT}"
 
 # ==============================================================================
-# 3. Composer (PHP dependencies)
+# 3. Detect PHP & Composer Binaries
 # ==============================================================================
-log_step "3. Installing PHP dependencies (Composer)..."
+log_step "3. Detecting PHP and Composer..."
 
-COMPOSER_BIN="$(command -v composer || echo "${PROJECT_ROOT}/composer.phar")"
+PHP_TARGET_VERSION=""
+if [[ -f "${PROJECT_ROOT}/.php-version" ]]; then
+    PHP_TARGET_VERSION="$(tr -d '[:space:]' < "${PROJECT_ROOT}/.php-version")"
+fi
 
-if [[ ! -x "${COMPOSER_BIN}" ]] && ! command -v composer >/dev/null 2>&1; then
+PHP_BIN=""
+if [[ -n "${CUSTOM_PHP_BIN}" ]]; then
+    if [[ -x "${CUSTOM_PHP_BIN}" ]]; then
+        PHP_BIN="${CUSTOM_PHP_BIN}"
+    else
+        log_error "Specified PHP binary is not executable: ${CUSTOM_PHP_BIN}"
+        exit 1
+    fi
+elif [[ -n "${PHP_TARGET_VERSION}" ]] && command -v "php${PHP_TARGET_VERSION}" >/dev/null 2>&1; then
+    PHP_BIN="$(command -v "php${PHP_TARGET_VERSION}")"
+elif [[ -n "${PHP_TARGET_VERSION}" ]] && [[ -x "/usr/bin/php${PHP_TARGET_VERSION}" ]]; then
+    PHP_BIN="/usr/bin/php${PHP_TARGET_VERSION}"
+elif [[ -n "${PHP_TARGET_VERSION}" ]] && [[ -x "/usr/local/bin/php${PHP_TARGET_VERSION}" ]]; then
+    PHP_BIN="/usr/local/bin/php${PHP_TARGET_VERSION}"
+elif command -v php >/dev/null 2>&1; then
+    PHP_BIN="$(command -v php)"
+else
+    log_error "No PHP binary found on the system."
+    exit 1
+fi
+
+PHP_ACTIVE_VERSION="$("${PHP_BIN}" -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION.".".PHP_RELEASE_VERSION;' 2>/dev/null || echo "unknown")"
+log_info "Using PHP binary: ${BOLD}${PHP_BIN}${NC} (version: ${BOLD}${PHP_ACTIVE_VERSION}${NC})"
+
+if [[ -n "${PHP_TARGET_VERSION}" && "${PHP_ACTIVE_VERSION}" != "${PHP_TARGET_VERSION}"* ]]; then
+    log_warn "Active PHP version (${PHP_ACTIVE_VERSION}) does not match .php-version (${PHP_TARGET_VERSION})."
+fi
+
+COMPOSER_BIN=""
+if [[ -f "${PROJECT_ROOT}/composer.phar" ]]; then
+    COMPOSER_BIN="${PROJECT_ROOT}/composer.phar"
+elif command -v composer >/dev/null 2>&1; then
+    COMPOSER_BIN="$(command -v composer)"
+else
     log_error "Composer not found! Please install composer or place composer.phar in project root."
     exit 1
 fi
 
+log_info "Using Composer: ${BOLD}${COMPOSER_BIN}${NC}"
+
+# ==============================================================================
+# 4. Composer (PHP dependencies)
+# ==============================================================================
+log_step "4. Installing PHP dependencies (Composer)..."
+
 if [[ "${APP_ENV}" == "prod" ]]; then
-    "${COMPOSER_BIN}" install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+    "${PHP_BIN}" "${COMPOSER_BIN}" install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 else
-    "${COMPOSER_BIN}" install --optimize-autoloader --no-interaction --prefer-dist
+    "${PHP_BIN}" "${COMPOSER_BIN}" install --optimize-autoloader --no-interaction --prefer-dist
 fi
 
 log_success "Composer dependencies installed."
 
 # ==============================================================================
-# 4. Frontend Assets (Yarn / npm)
+# 5. Frontend Assets (Yarn / npm)
 # ==============================================================================
 if [[ ${SKIP_ASSETS} -eq 0 ]]; then
-    log_step "4. Installing assets and building frontend..."
+    log_step "5. Installing assets and building frontend..."
     if command -v yarn >/dev/null 2>&1; then
         yarn install
         yarn build
@@ -191,31 +240,31 @@ else
 fi
 
 # ==============================================================================
-# 5. Database Migrations (skipped by default)
+# 6. Database Migrations (skipped by default)
 # ==============================================================================
 if [[ ${RUN_MIGRATIONS} -eq 1 ]]; then
-    log_step "5. Running Doctrine database migrations..."
-    php bin/console doctrine:migrations:migrate --no-interaction --env="${APP_ENV}"
+    log_step "6. Running Doctrine database migrations..."
+    "${PHP_BIN}" bin/console doctrine:migrations:migrate --no-interaction --env="${APP_ENV}"
     log_success "Database migrations executed."
 else
     log_info "Database migrations skipped by default (use --migrate to execute)."
 fi
 
 # ==============================================================================
-# 6. Symfony Cache & Optimization
+# 7. Symfony Cache & Optimization
 # ==============================================================================
-log_step "6. Clearing and warming up Symfony cache..."
+log_step "7. Clearing and warming up Symfony cache..."
 
-php bin/console cache:clear --env="${APP_ENV}" --no-debug
-php bin/console cache:warmup --env="${APP_ENV}" --no-debug
+"${PHP_BIN}" bin/console cache:clear --env="${APP_ENV}" --no-debug
+"${PHP_BIN}" bin/console cache:warmup --env="${APP_ENV}" --no-debug
 
 # ==============================================================================
-# 7. Permissions
+# 8. Permissions
 # ==============================================================================
-log_step "7. Setting directory permissions on var/..."
+log_step "8. Setting directory permissions on var/..."
 
 mkdir -p var/cache var/log
 chmod -R 775 var/cache var/log 2>/dev/null || true
 
 log_step "Deployment completed successfully! 🎉"
-log_info "Deployed: ${TARGET} (${CURRENT_COMMIT}) [env: ${APP_ENV}]"
+log_info "Deployed: ${TARGET} (${CURRENT_COMMIT}) [env: ${APP_ENV}, php: ${PHP_ACTIVE_VERSION}]"
