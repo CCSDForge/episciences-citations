@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Server Deployment Script**: Added `bin/deploy.sh` script to automate server deployments (Git fetch/checkout, Composer dependencies, Yarn assets build, cache warmup, permissions, and optional database migrations).
 - **CodeRabbit Integration**: Added CodeRabbit configuration (`.coderabbit.yaml`) for AI-assisted code reviews.
 - **PHP Test Suite & High Coverage**: Raised PHP line test coverage from ~50% to ~94% with comprehensive unit, functional, and integration tests across controllers, repositories (in-memory SQLite), services, commands, security, and forms.
 - **Performance Test Fixtures**: Expanded `tests/Fixtures/large_sample.bib` to 50 fictitious article entries for performance and load testing.
