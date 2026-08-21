@@ -31,8 +31,9 @@ class DefaultControllerTest extends WebTestCase
         $client->request(Request::METHOD_GET, '/login');
 
         $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
-        $location = $client->getResponse()->headers->get('Location');
-        $this->assertStringContainsString('cas.ccsd.cnrs.fr', $location);
+        $location = (string) $client->getResponse()->headers->get('Location');
+        $casHost = (string) static::getContainer()->getParameter('cas_host');
+        $this->assertStringContainsString($casHost, $location);
         $this->assertStringContainsString('/cas/login?service=', $location);
         $this->assertStringContainsString('/force?url=', $location);
     }

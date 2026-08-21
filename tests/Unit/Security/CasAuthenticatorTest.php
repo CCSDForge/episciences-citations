@@ -198,10 +198,11 @@ class CasAuthenticatorTest extends TestCase
      */
     private function runHandleLogoutRequestInSubprocess(string $logoutRequest): ?string
     {
-        $script = <<<'PHP'
+        $autoloadPath = var_export(dirname(__DIR__, 3) . '/vendor/autoload.php', true);
+        $scriptTemplate = <<<'PHP'
             <?php
             ob_start();
-            require '/var/www/htdocs/vendor/autoload.php';
+            require %s;
 
             $logoutRequest = base64_decode((string) getenv('CAS_TEST_LOGOUT_REQUEST'));
 
@@ -232,6 +233,7 @@ class CasAuthenticatorTest extends TestCase
             echo 'CAPTURED_VALUE=' . ($handler->capturedId ?? '') . \PHP_EOL;
             PHP;
 
+        $script = sprintf($scriptTemplate, $autoloadPath);
         $scriptPath = tempnam(sys_get_temp_dir(), 'cas_logout_') . '.php';
         file_put_contents($scriptPath, $script);
 

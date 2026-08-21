@@ -609,14 +609,27 @@ class ExtractControllerTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $client->request(Request::METHOD_GET, '/getpdf/11493');
+        $depositPdfDir = (string) static::getContainer()->getParameter('deposit_pdf');
+        if (!is_dir($depositPdfDir)) {
+            mkdir($depositPdfDir, 0777, true);
+        }
+        $testPdfPath = $depositPdfDir . '/11493.pdf';
+        file_put_contents($testPdfPath, '%PDF-1.4 mock pdf content');
 
-        $this->assertResponseIsSuccessful();
-        $this->assertResponseHeaderSame('content-type', 'application/pdf');
-        $this->assertStringContainsString(
-            'inline; filename=11493.pdf',
-            $client->getResponse()->headers->get('content-disposition')
-        );
+        try {
+            $client->request(Request::METHOD_GET, '/getpdf/11493');
+
+            $this->assertResponseIsSuccessful();
+            $this->assertResponseHeaderSame('content-type', 'application/pdf');
+            $this->assertStringContainsString(
+                'inline; filename=11493.pdf',
+                (string) $client->getResponse()->headers->get('content-disposition')
+            );
+        } finally {
+            if (file_exists($testPdfPath)) {
+                unlink($testPdfPath);
+            }
+        }
     }
 
     #[Test]
