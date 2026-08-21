@@ -364,40 +364,43 @@
                                         </label>
                                     </div>
 
-                                    {# Edit button #}
-                                    <button type="button"
-                                            id="modifyBtn-{{ paperReferences.id.vars.value }}"
-                                            data-idref="{{ paperReferences.id.vars.value }}"
-                                            class="btn btn-sm btn-secondary"
-                                            title="{{ 'Double-click to edit'|trans }}">
-                                        <i class="fas fa-pen" aria-hidden="true"></i>
-                                        <span class="ms-1 d-none d-xl-inline">{{ 'Edit'|trans }}</span>
-                                    </button>
-
-                                    {# Enrich button #}
-                                    {% if doiDecodedRef != '' %}
+                                    {# Actions container (Edit, Enrich, Delete) #}
+                                    <div class="d-flex align-items-center gap-2 ref-actions">
+                                        {# Edit button #}
                                         <button type="button"
-                                                class="btn btn-sm btn-info enrich-doi-btn text-white"
+                                                id="modifyBtn-{{ paperReferences.id.vars.value }}"
                                                 data-idref="{{ paperReferences.id.vars.value }}"
-                                                data-doi="{{ doiDecodedRef }}"
-                                                title="{{ 'Enrich from DOI'|trans }}"
-                                                aria-label="{{ 'Enrich from DOI'|trans }}">
-                                            <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
-                                            <span class="ms-1 enrich-text d-none d-xl-inline">{{ 'Enrich'|trans }}</span>
-                                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                                class="btn btn-sm btn-secondary"
+                                                title="{{ 'Double-click to edit'|trans }}">
+                                            <i class="fas fa-pen" aria-hidden="true"></i>
+                                            <span class="ms-1 d-none d-xl-inline">{{ 'Edit'|trans }}</span>
                                         </button>
-                                    {% endif %}
 
-                                    {# Delete button #}
-                                    <button type="button"
-                                            id="deleteBtn-{{ paperReferences.id.vars.value }}"
-                                            data-idref="{{ paperReferences.id.vars.value }}"
-                                            class="btn btn-sm btn-danger delete-single-ref-btn"
-                                            title="{{ 'Delete reference'|trans }}"
-                                            aria-label="{{ 'Delete reference'|trans }}">
-                                        <i class="fas fa-trash" aria-hidden="true"></i>
-                                        <span class="ms-1 d-none d-xl-inline">{{ 'Delete'|trans }}</span>
-                                    </button>
+                                        {# Enrich button #}
+                                        {% if doiDecodedRef != '' %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-info enrich-doi-btn text-white"
+                                                    data-idref="{{ paperReferences.id.vars.value }}"
+                                                    data-doi="{{ doiDecodedRef }}"
+                                                    title="{{ 'Enrich from DOI'|trans }}"
+                                                    aria-label="{{ 'Enrich from DOI'|trans }}">
+                                                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                                <span class="ms-1 enrich-text d-none d-xl-inline">{{ 'Enrich'|trans }}</span>
+                                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                            </button>
+                                        {% endif %}
+
+                                        {# Delete button #}
+                                        <button type="button"
+                                                id="deleteBtn-{{ paperReferences.id.vars.value }}"
+                                                data-idref="{{ paperReferences.id.vars.value }}"
+                                                class="btn btn-sm btn-danger delete-single-ref-btn"
+                                                title="{{ 'Delete reference'|trans }}"
+                                                aria-label="{{ 'Delete reference'|trans }}">
+                                            <i class="fas fa-trash" aria-hidden="true"></i>
+                                            <span class="ms-1 d-none d-xl-inline">{{ 'Delete'|trans }}</span>
+                                        </button>
+                                    </div>
 
                                 </div>
 
