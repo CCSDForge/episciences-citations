@@ -411,10 +411,14 @@ class ReferencesTest extends TestCase
     public function testAutosaveReference_WithMissingUserInfoKeys_HandlesGracefully(): void
     {
         // Arrange
+        $docId = 100;
         $refId = 1;
+        $doc = new Document();
+        $doc->setId($docId);
         $ref = new PaperReferences();
+        $ref->setDocument($doc);
         $this->refRepository->method('find')->willReturn($ref);
-        
+
         $this->entityManager->method('getRepository')
             ->willReturnMap([
                 [PaperReferences::class, $this->refRepository],
@@ -428,7 +432,7 @@ class ReferencesTest extends TestCase
         $userInfo = ['UID' => 1001]; // Missing FIRSTNAME, LASTNAME
 
         // Act
-        $result = $this->service->autosaveReference($refId, '{}', 1, false, $userInfo);
+        $result = $this->service->autosaveReference($refId, '{}', 1, false, $userInfo, $docId);
 
         // Assert
         $this->assertIsArray($result);
@@ -445,8 +449,12 @@ class ReferencesTest extends TestCase
     public function testAutosaveReference_WithMaliciousOpenAccessUrl_IsDropped(): void
     {
         // Arrange
+        $docId = 100;
         $refId = 1;
+        $doc = new Document();
+        $doc->setId($docId);
         $ref = new PaperReferences();
+        $ref->setDocument($doc);
         $this->refRepository->method('find')->willReturn($ref);
 
         $this->entityManager->method('getRepository')
@@ -462,7 +470,7 @@ class ReferencesTest extends TestCase
         ]);
 
         // Act
-        $result = $this->service->autosaveReference($refId, $referenceJson, 1, true, $userInfo);
+        $result = $this->service->autosaveReference($refId, $referenceJson, 1, true, $userInfo, $docId);
 
         // Assert
         $this->assertArrayNotHasKey('open-access', $result);
@@ -1173,8 +1181,12 @@ class ReferencesTest extends TestCase
     public function testAutosaveOrder_PersistsOrderAndFlushes(): void
     {
         // Arrange
+        $docId = 100;
+        $doc = new Document();
+        $doc->setId($docId);
         $ref = new PaperReferences();
         $ref->setId(1);
+        $ref->setDocument($doc);
         $ref->setReferenceOrder(999);
 
         $this->entityManager->expects($this->once())
@@ -1190,7 +1202,7 @@ class ReferencesTest extends TestCase
         $this->entityManager->expects($this->once())->method('flush');
 
         // Act
-        $this->service->autosaveOrder('1');
+        $this->service->autosaveOrder('1', $docId);
 
         // Assert
         $this->assertEquals(0, $ref->getReferenceOrder());
@@ -1198,7 +1210,7 @@ class ReferencesTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
-    public function testAutosaveReference_ReferenceNotFound_ReturnsEmptyArray(): void
+    public function testAutosaveReference_ReferenceNotFound_ReturnsNull(): void
     {
         // Arrange - exercises the early "$ref === null" return branch
         $this->refRepository->method('find')->willReturn(null);
@@ -1207,19 +1219,46 @@ class ReferencesTest extends TestCase
             ->willReturn($this->refRepository);
 
         // Act
-        $result = $this->service->autosaveReference(999, '{}', 1, false, ['UID' => 1001]);
+        $result = $this->service->autosaveReference(999, '{}', 1, false, ['UID' => 1001], 100);
 
         // Assert
-        $this->assertSame([], $result);
+        $this->assertNull($result);
     }
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
-    public function testAutosaveReference_NoUidInUserInfo_ReturnsEmptyArray(): void
+    public function testAutosaveReference_WrongDocument_ReturnsNull(): void
     {
-        // Arrange - exercises the "$user === null" fallback branch: no UID at all is provided
+        // Arrange - exercises the IDOR guard: the reference belongs to a different document
         $ref = new PaperReferences();
         $ref->setId(1);
+        $otherDoc = new Document();
+        $otherDoc->setId(200);
+        $ref->setDocument($otherDoc);
+        $this->refRepository->method('find')->willReturn($ref);
+
+        $this->entityManager->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturn($this->refRepository);
+
+        // Act
+        $result = $this->service->autosaveReference(1, '{}', 1, false, ['UID' => 1001], 100);
+
+        // Assert
+        $this->assertNull($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testAutosaveReference_NoUidInUserInfo_ReturnsNull(): void
+    {
+        // Arrange - exercises the "$user === null" fallback branch: no UID at all is provided
+        $docId = 100;
+        $doc = new Document();
+        $doc->setId($docId);
+        $ref = new PaperReferences();
+        $ref->setId(1);
+        $ref->setDocument($doc);
         $this->refRepository->method('find')->willReturn($ref);
 
         $this->userRepository->method('find')->willReturn(null);
@@ -1230,10 +1269,10 @@ class ReferencesTest extends TestCase
         ]);
 
         // Act
-        $result = $this->service->autosaveReference(1, '{}', 1, false, []);
+        $result = $this->service->autosaveReference(1, '{}', 1, false, [], $docId);
 
         // Assert
-        $this->assertSame([], $result);
+        $this->assertNull($result);
     }
 
     #[Test]

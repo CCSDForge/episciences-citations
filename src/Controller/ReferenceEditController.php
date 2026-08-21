@@ -239,11 +239,17 @@ class ReferenceEditController extends AbstractController
 
         if (isset($data['deleteRefId'])) {
             $deleted = $this->references->autosaveDeleteReference((int) $data['deleteRefId'], $docId);
-            return new JsonResponse(['success' => $deleted]);
+            if (!$deleted) {
+                return new JsonResponse(['success' => false, 'error' => 'Reference not found or access denied']);
+            }
+            if (isset($data['orderRef'])) {
+                $this->references->autosaveOrder($data['orderRef'], $docId);
+            }
+            return new JsonResponse(['success' => true]);
         }
 
         if (isset($data['orderRef'])) {
-            $this->references->autosaveOrder($data['orderRef']);
+            $this->references->autosaveOrder($data['orderRef'], $docId);
             return new JsonResponse(['success' => true]);
         }
 
@@ -254,8 +260,12 @@ class ReferenceEditController extends AbstractController
                 $data['reference'] ?? '{}',
                 (int) ($data['accepted'] ?? 0),
                 ($data['isDirty'] ?? '0') === '1',
-                $userInfo
+                $userInfo,
+                $docId
             );
+            if ($enrichedReference === null) {
+                return new JsonResponse(['success' => false, 'error' => 'Reference not found or access denied']);
+            }
             return new JsonResponse(['success' => true, 'reference' => $enrichedReference]);
         }
 

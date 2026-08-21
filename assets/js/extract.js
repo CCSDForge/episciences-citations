@@ -757,7 +757,7 @@ function resetToggleAllBtn(btn) {
     setToggleAllBtnState(btn, false);
 }
 
-function autosave(data) {
+function autosave(data, { silent = false } = {}) {
     const form = document.getElementById('form-extraction');
     const body = new URLSearchParams({ ...data, _token: form.dataset.csrfToken });
     return fetch(form.dataset.autosaveUrl, {
@@ -768,7 +768,7 @@ function autosave(data) {
         .then(async (r) => {
             const json = await r.json();
             if (r.ok && json.success) {
-                showAutosaveToast();
+                if (!silent) showAutosaveToast();
                 if (json.reference && data.refId) {
                     updateReferenceUI(data.refId, json.reference);
                 }
@@ -1110,31 +1110,30 @@ function manageEditablePosition() {
     });
 }
 
+// Wires a confirmation modal's confirm button to run `onConfirm` after hiding the
+// modal. Returns the Modal instance so the caller can `.show()` it, or null if the
+// modal markup isn't present on the page.
+function setupConfirmModal(modalElId, confirmBtnId, onConfirm) {
+    const modalEl = document.getElementById(modalElId);
+    if (!modalEl) return null;
+
+    const modal = new Modal(modalEl);
+    const confirmBtn = document.getElementById(confirmBtnId);
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            modal.hide();
+            await onConfirm();
+        });
+    }
+    return modal;
+}
+
 function manageAutofixAll() {
     const triggerBtn = document.getElementById('btn-autofix-all');
     if (!triggerBtn) return;
 
-    const modalEl = document.getElementById('modal-autofix-all');
-    if (!modalEl) return;
-
-    const autofixModal = new Modal(modalEl);
-    const confirmBtn = document.getElementById('autofix-all-confirm-btn');
     const confirmText = document.getElementById('autofix-all-confirm-text');
-
-    triggerBtn.addEventListener('click', () => {
-        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
-        if (enrichBtns.length === 0) {
-            showImportToast('danger', window.translations?.['No references with DOI found'] ?? 'No references with a DOI were found');
-            return;
-        }
-        const bodyTemplate = window.translations?.['autofix-all-confirm-body'] ?? 'This will automatically correct {count} reference(s) with a DOI. Do you want to continue?';
-        confirmText.textContent = bodyTemplate.replace('{count}', enrichBtns.length);
-        autofixModal.show();
-    });
-
-    confirmBtn.addEventListener('click', async () => {
-        autofixModal.hide();
-
+    const autofixModal = setupConfirmModal('modal-autofix-all', 'autofix-all-confirm-btn', async () => {
         const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
         let done = 0;
         for (const btn of enrichBtns) {
@@ -1151,16 +1150,75 @@ function manageAutofixAll() {
             form.submit();
         }
     });
+    if (!autofixModal) return;
+
+    triggerBtn.addEventListener('click', () => {
+        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
+        if (enrichBtns.length === 0) {
+            showImportToast('danger', window.translations?.['No references with DOI found'] ?? 'No references with a DOI were found');
+            return;
+        }
+        const bodyTemplate = window.translations?.['autofix-all-confirm-body'] ?? 'This will automatically correct {count} reference(s) with a DOI. Do you want to continue?';
+        confirmText.textContent = bodyTemplate.replace('{count}', enrichBtns.length);
+        autofixModal.show();
+    });
 }
 
 function manageDeleteSingleReference() {
-    const modalEl = document.getElementById('modal-delete-ref');
-    if (!modalEl) return;
-
-    const deleteModal = new Modal(modalEl);
-    const confirmBtn = document.getElementById('delete-ref-confirm-btn');
     let targetRefId = null;
     let targetElement = null;
+
+    const deleteModal = setupConfirmModal('modal-delete-ref', 'delete-ref-confirm-btn', async () => {
+        if (!targetRefId || !targetElement) return;
+
+        const idToDelete = targetRefId;
+        const elToDelete = targetElement;
+
+        targetRefId = null;
+        targetElement = null;
+
+        // Recalculate what the order will be once this reference is removed, and
+        // persist the deletion and the new order in a single autosave request.
+        const remainingRefs = Array.from(document.querySelectorAll('.container-reference')).filter(
+            (el) => el !== elToDelete
+        );
+        const newOrder = remainingRefs.map((el) => el.dataset.idref).join(';');
+
+        const payload = { deleteRefId: idToDelete };
+        if (remainingRefs.length > 0) {
+            payload.orderRef = newOrder;
+        }
+
+        const success = await autosave(payload, { silent: true });
+        if (!success) {
+            return;
+        }
+
+        // Determine next element to focus for accessibility
+        const nextFocusTarget =
+            elToDelete.nextElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+            elToDelete.previousElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+            document.getElementById('btn-modal-addref') ||
+            document.getElementById('sortref');
+
+        // Remove reference card from DOM
+        elToDelete.remove();
+
+        const hiddenRefNode = document.getElementById('document_orderRef');
+        if (hiddenRefNode) hiddenRefNode.value = newOrder;
+
+        // Update position badges
+        updateBadges();
+
+        // Screen reader live region announcement and visual toast
+        const deletedMessage = translate('Reference deleted.');
+        announceLiveRegion(deletedMessage);
+        showImportToast('success', deletedMessage);
+
+        // Shift focus for keyboard users
+        nextFocusTarget?.focus();
+    });
+    if (!deleteModal) return;
 
     document.addEventListener('click', (event) => {
         const deleteBtn = event.target.closest('.delete-single-ref-btn');
@@ -1170,54 +1228,4 @@ function manageDeleteSingleReference() {
         targetElement = deleteBtn.closest('.container-reference');
         deleteModal.show();
     });
-
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', async () => {
-            deleteModal.hide();
-            if (!targetRefId || !targetElement) return;
-
-            const idToDelete = targetRefId;
-            const elToDelete = targetElement;
-
-            targetRefId = null;
-            targetElement = null;
-
-            const success = await autosave({ deleteRefId: idToDelete });
-            if (!success) {
-                return;
-            }
-
-            // Determine next element to focus for accessibility
-            const nextFocusTarget =
-                elToDelete.nextElementSibling?.querySelector('button, input, [tabindex="0"]') ||
-                elToDelete.previousElementSibling?.querySelector('button, input, [tabindex="0"]') ||
-                document.getElementById('btn-modal-addref') ||
-                document.getElementById('sortref');
-
-            // Remove reference card from DOM
-            elToDelete.remove();
-
-            // Recalculate remaining references and their order
-            const remainingRefs = Array.from(document.querySelectorAll('.container-reference'));
-            const newOrder = remainingRefs.map((el) => el.dataset.idref).join(';');
-            const hiddenRefNode = document.getElementById('document_orderRef');
-            if (hiddenRefNode) hiddenRefNode.value = newOrder;
-
-            // Persist updated order if references remain
-            if (remainingRefs.length > 0) {
-                autosave({ orderRef: newOrder });
-            }
-
-            // Update position badges
-            updateBadges();
-
-            // Screen reader live region announcement and visual toast
-            const deletedMessage = translate('Reference deleted.');
-            announceLiveRegion(deletedMessage);
-            showImportToast('success', deletedMessage);
-
-            // Shift focus for keyboard users
-            nextFocusTarget?.focus();
-        });
-    }
 }
