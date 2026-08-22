@@ -576,4 +576,29 @@ class BibtexTest extends TestCase
         $this->assertSame('3', $csl['issue']);
         $this->assertSame('100-110', $csl['page']);
     }
+
+    #[Test]
+    public function testGetCslRefText_WithCSLAndDoi_StripsTrailingDoiFromRawReference(): void
+    {
+        $refData = [
+            'csl' => [
+                'type' => 'article-journal',
+                'title' => 'Deformation and cavitation at the spherulite scale',
+                'author' => [
+                    ['family' => 'Laiarinandrasana', 'given' => 'Lucien'],
+                ],
+                'issued' => ['date-parts' => [[2024]]],
+                'container-title' => 'Journal of Theoretical, Computational and Applied Mechanics',
+                'DOI' => '10.46298/jtcam.11335',
+            ],
+            'doi' => '10.46298/jtcam.11335',
+        ];
+
+        $result = $this->service->getCslRefText($refData);
+
+        $this->assertArrayHasKey('raw_reference', $result);
+        $this->assertStringNotContainsString('https://doi.org', $result['raw_reference']);
+        $this->assertStringNotContainsString('10.46298/jtcam.11335', $result['raw_reference']);
+        $this->assertSame('10.46298/jtcam.11335', $result['doi']);
+    }
 }

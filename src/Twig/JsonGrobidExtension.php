@@ -7,6 +7,7 @@ namespace App\Twig;
 
 use Twig\Attribute\AsTwigFunction;
 use App\Services\Bibtex;
+use App\Services\Doi;
 use JsonException;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
@@ -112,7 +113,12 @@ class JsonGrobidExtension
             /** @var array<string, mixed> $reference */
             $reference = $this->unwrapLegacyEncoding($jsonReference);
 
-            return $this->bibtex->getCslRefText($reference);
+            $formatted = $this->bibtex->getCslRefText($reference);
+            if (isset($formatted['raw_reference']) && isset($formatted['doi'])) {
+                $formatted['raw_reference'] = Doi::stripTrailingDoi($formatted['raw_reference'], (string) $formatted['doi']);
+            }
+
+            return $formatted;
         } catch (JsonException|CiteProcException) {
             return [];
         }

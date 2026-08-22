@@ -306,4 +306,41 @@ class DoiTest extends TestCase
         // Assert
         $this->assertSame('', $result);
     }
+
+    #[Test]
+    public function testStripTrailingDoi_WithSpecificDoi_StripsVariousPrefixes(): void
+    {
+        $doi = '10.46298/jtcam.11335';
+
+        // https://doi.org/...
+        $text1 = 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text1, $doi));
+
+        // http://dx.doi.org/... with trailing period
+        $text2 = 'Author, A. (2024). Title. Journal. http://dx.doi.org/10.46298/jtcam.11335.';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text2, $doi));
+
+        // doi:...
+        $text3 = 'Author, A. (2024). Title. Journal. doi:10.46298/jtcam.11335';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text3, $doi));
+
+        // DOI: ...
+        $text4 = 'Author, A. (2024). Title. Journal. DOI: 10.46298/jtcam.11335.';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text4, $doi));
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_WithoutSpecificDoi_StripsGeneralTrailingDoi(): void
+    {
+        $text = 'Author, A. (2024). Title. Journal. https://doi.org/10.1234/some-article-5678';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text));
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_NoDoiInText_ReturnsUnmodified(): void
+    {
+        $text = 'Author, A. (2024). Title. Journal of Science, 12(3), 45-56.';
+        $this->assertSame($text, Doi::stripTrailingDoi($text, '10.1234/some-doi'));
+        $this->assertSame($text, Doi::stripTrailingDoi($text));
+    }
 }

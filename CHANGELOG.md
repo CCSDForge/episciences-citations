@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CSV Reference Grouping**: Trimmed CSV document IDs in `GetBibRefCommand::processCsv()` to avoid splitting references across separate groups due to whitespace.
 - **CI Test Compatibility**: Fixed PHPUnit test suite execution on PHP 8.4 and PHP 8.5 in GitHub Actions.
 - **Code Hygiene & Robustness**: Addressed CodeRabbit review findings across commands, forms, services, and test fixtures.
+- **Duplicate DOI in Extracted/Formatted References**: Stripped redundant trailing DOI URLs from generated citation text in `Doi::getFormattedCitation()`, `Bibtex::getCslRefText()`, and `JsonGrobidExtension::prettyReference()` to prevent duplicate DOI entries on reference cards (#27).
 - **Reference Card Badge Overlap**: Moved the "Source" badge out of its absolutely positioned corner and into the same badge row as the PPS warning badges (Annulled, Clay Feet, Tortured phrases, etc.), preventing it from overlapping them when present.
 
 ## v1.3.1 - 2026-07-20
