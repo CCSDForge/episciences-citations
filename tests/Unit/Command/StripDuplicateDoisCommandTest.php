@@ -134,4 +134,94 @@ class StripDuplicateDoisCommandTest extends TestCase
         $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
         $this->assertStringContainsString('stripped=0', $tester->getDisplay());
     }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testReferenceWithoutStructuredDoiIsNeverStripped(): void
+    {
+        // Regression test: a raw_reference ending in a DOI-looking URL but with no
+        // top-level 'doi' key (a normal GROBID extraction gap) must be left alone —
+        // stripping it here would erase the reference's only DOI representation
+        // with no way to recover it.
+        $ref = new PaperReferences();
+        $ref->setReference([
+            'raw_reference' => 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335',
+        ]);
+
+        $this->stubReferenceIds([1]);
+        $this->entityManager->method('getRepository')->willReturn($this->repository);
+        $this->repository->method('findBy')->willReturn([$ref]);
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        $tester = new CommandTester($this->command);
+        $tester->execute([]);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+        $this->assertStringContainsString('scanned=1', $tester->getDisplay());
+        $this->assertStringContainsString('stripped=0', $tester->getDisplay());
+        $this->assertSame(
+            'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335',
+            $ref->getReference()['raw_reference']
+        );
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testReferenceWithBlankDoiIsNeverStripped(): void
+    {
+        // A blank/whitespace-only 'doi' value must be treated the same as "no DOI".
+        $ref = new PaperReferences();
+        $ref->setReference([
+            'raw_reference' => 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335',
+            'doi' => '  ',
+        ]);
+
+        $this->stubReferenceIds([1]);
+        $this->entityManager->method('getRepository')->willReturn($this->repository);
+        $this->repository->method('findBy')->willReturn([$ref]);
+
+        $this->entityManager->expects($this->never())->method('persist');
+        $this->entityManager->expects($this->never())->method('flush');
+
+        $tester = new CommandTester($this->command);
+        $tester->execute([]);
+
+        $this->assertStringContainsString('stripped=0', $tester->getDisplay());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testScannedAndStrippedCountsAccumulateAcrossBatches(): void
+    {
+        // Regression test: scanned/stripped counts must aggregate across multiple
+        // batches now that processBatch() returns its own stats instead of
+        // mutating a shared by-reference accumulator.
+        $strippableRef = new PaperReferences();
+        $strippableRef->setReference([
+            'raw_reference' => 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335',
+            'doi' => '10.46298/jtcam.11335',
+        ]);
+        $untouchedRef = new PaperReferences();
+        $untouchedRef->setReference([
+            'raw_reference' => 'Author, B. (2023). Other Title. Journal.',
+            'doi' => '10.1234/other',
+        ]);
+
+        $this->stubReferenceIds([1, 2]);
+        $this->entityManager->method('getRepository')->willReturn($this->repository);
+        $this->repository->method('findBy')
+            ->willReturnMap([
+                [['id' => [1]], null, [$strippableRef]],
+                [['id' => [2]], null, [$untouchedRef]],
+            ]);
+
+        $tester = new CommandTester($this->command);
+        $tester->execute(['--batch-size' => 1]);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+        $this->assertStringContainsString('scanned=2', $tester->getDisplay());
+        $this->assertStringContainsString('stripped=1', $tester->getDisplay());
+    }
 }

@@ -113,6 +113,10 @@ class JsonGrobidExtension
             /** @var array<string, mixed> $reference */
             $reference = $this->unwrapLegacyEncoding($jsonReference);
 
+            // getCslRefText() only strips the DOI when the reference carries a 'csl'
+            // payload; plain GROBID/user references skip that branch entirely, so this
+            // call is still needed here as the strip path for those. It is a no-op
+            // (idempotent) when getCslRefText() already stripped it.
             $formatted = $this->bibtex->getCslRefText($reference);
             if (isset($formatted['raw_reference']) && isset($formatted['doi'])) {
                 $formatted['raw_reference'] = Doi::stripTrailingDoi($formatted['raw_reference'], (string) $formatted['doi']);

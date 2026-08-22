@@ -62,10 +62,10 @@ class Doi
     {
         if ($doi !== null && $doi !== '') {
             $pattern = '#\s*(?:https?://(?:dx\.)?doi\.org/|doi:\s*)' . preg_quote($doi, '#') . '\.?$#i';
-            return (string) preg_replace($pattern, '', $text);
+            return preg_replace($pattern, '', $text) ?? $text;
         }
         $generalPattern = '#\s*(?:https?://(?:dx\.)?doi\.org/|doi:\s*)10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+?\.?$#i';
-        return (string) preg_replace($generalPattern, '', $text);
+        return preg_replace($generalPattern, '', $text) ?? $text;
     }
 
 

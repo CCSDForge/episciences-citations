@@ -53,7 +53,9 @@ class StripDuplicateDoisCommand extends Command
         $stats = ['scanned' => 0, 'stripped' => 0];
 
         foreach (array_chunk($referenceIds, $batchSize) as $idBatch) {
-            $this->processBatch($idBatch, $dryRun, $output, $stats);
+            $batchStats = $this->processBatch($idBatch, $dryRun, $output);
+            $stats['scanned'] += $batchStats['scanned'];
+            $stats['stripped'] += $batchStats['stripped'];
         }
 
         $output->writeln(sprintf(
@@ -69,11 +71,12 @@ class StripDuplicateDoisCommand extends Command
 
     /**
      * @param array<int, int> $idBatch
-     * @param array<string, int> $stats
+     * @return array{scanned: int, stripped: int}
      */
-    private function processBatch(array $idBatch, bool $dryRun, OutputInterface $output, array &$stats): void
+    private function processBatch(array $idBatch, bool $dryRun, OutputInterface $output): array
     {
         $paperReferences = $this->entityManager->getRepository(PaperReferences::class)->findBy(['id' => $idBatch]);
+        $stats = ['scanned' => 0, 'stripped' => 0];
         $changed = false;
 
         foreach ($paperReferences as $paperReference) {
@@ -84,7 +87,13 @@ class StripDuplicateDoisCommand extends Command
                 continue;
             }
 
-            $doi = $this->hasDoi($reference) ? (string) $reference['doi'] : null;
+            // Only strip against a known structured DOI: without one, the general
+            // pattern would delete DOI-looking text with no way to recover it later.
+            if (!$this->hasDoi($reference)) {
+                continue;
+            }
+
+            $doi = (string) $reference['doi'];
             $cleanedRawRef = Doi::stripTrailingDoi($reference['raw_reference'], $doi);
 
             if ($cleanedRawRef === $reference['raw_reference']) {
@@ -96,7 +105,7 @@ class StripDuplicateDoisCommand extends Command
                 $output->writeln(sprintf(
                     'Stripping trailing DOI for reference id %d (DOI: %s)',
                     $paperReference->getId(),
-                    $doi ?? 'none'
+                    $doi
                 ));
             }
 
@@ -113,5 +122,7 @@ class StripDuplicateDoisCommand extends Command
             $this->entityManager->flush();
             $this->entityManager->clear();
         }
+
+        return $stats;
     }
 }

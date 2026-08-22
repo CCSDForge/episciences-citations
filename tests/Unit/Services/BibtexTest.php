@@ -601,4 +601,30 @@ class BibtexTest extends TestCase
         $this->assertStringNotContainsString('10.46298/jtcam.11335', $result['raw_reference']);
         $this->assertSame('10.46298/jtcam.11335', $result['doi']);
     }
+
+    #[Test]
+    public function testGetCslRefText_WithMismatchedCslDoi_LeavesCslDoiInRenderedText(): void
+    {
+        // Regression test: the CSL-source DOI is only dropped before rendering when
+        // it exactly matches the top-level 'doi' — a mismatched value (data
+        // inconsistency) must be left untouched rather than silently discarded.
+        $refData = [
+            'csl' => [
+                'type' => 'article-journal',
+                'title' => 'Deformation and cavitation at the spherulite scale',
+                'author' => [
+                    ['family' => 'Laiarinandrasana', 'given' => 'Lucien'],
+                ],
+                'issued' => ['date-parts' => [[2024]]],
+                'container-title' => 'Journal of Theoretical, Computational and Applied Mechanics',
+                'DOI' => '10.99999/mismatched',
+            ],
+            'doi' => '10.46298/jtcam.11335',
+        ];
+
+        $result = $this->service->getCslRefText($refData);
+
+        $this->assertArrayHasKey('raw_reference', $result);
+        $this->assertStringContainsString('10.99999/mismatched', $result['raw_reference']);
+    }
 }

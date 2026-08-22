@@ -257,13 +257,18 @@ class Bibtex
             if (!isset($refData['csl']['type'])) {
                 $refData['csl']['type'] = isset($refData['csl']['container-title']) ? 'article-journal' : 'article';
             }
+            $doi = isset($refData['doi']) ? (string) $refData['doi'] : null;
+            // Drop the DOI from the CSL source so CiteProc never renders it in the
+            // first place, instead of relying only on regex-stripping its output.
+            if ($doi !== null && isset($refData['csl']['DOI']) && (string) $refData['csl']['DOI'] === $doi) {
+                unset($refData['csl']['DOI']);
+            }
             $jsonArray = json_encode([$refData['csl']], JSON_THROW_ON_ERROR);
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");
             $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR), "bibliography");
             $rawRef = trim(htmlspecialchars_decode(strip_tags($bibliography)));
             $rawRef = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $rawRef);
-            $doi = isset($refData['doi']) ? (string) $refData['doi'] : null;
             $refData['raw_reference'] = Doi::stripTrailingDoi($rawRef, $doi);
             unset($refData['csl']);
         }
