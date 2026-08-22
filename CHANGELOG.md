@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CodeRabbit Integration**: Added CodeRabbit configuration (`.coderabbit.yaml`) for AI-assisted code reviews.
 - **PHP Test Suite & High Coverage**: Raised PHP line test coverage from ~50% to ~94% with comprehensive unit, functional, and integration tests across controllers, repositories (in-memory SQLite), services, commands, security, and forms.
 - **Performance Test Fixtures**: Expanded `tests/Fixtures/large_sample.bib` to 50 fictitious article entries for performance and load testing.
+- **Duplicate DOI Cleanup Command**: Added `app:references:strip-duplicate-dois` command to strip redundant trailing DOI URLs from database-stored `raw_reference` strings with support for `--dry-run`, `--docid`, `--source`, and `--batch-size` options.
 - **CI Assets Build**: Added Webpack assets build step to GitHub Actions test workflows.
 
 ### Changed
