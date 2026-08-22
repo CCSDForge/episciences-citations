@@ -261,8 +261,10 @@ class Bibtex
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");
             $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR), "bibliography");
-            $refData['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-            $refData['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $refData['raw_reference']);
+            $rawRef = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+            $rawRef = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $rawRef);
+            $doi = isset($refData['doi']) ? (string) $refData['doi'] : null;
+            $refData['raw_reference'] = Doi::stripTrailingDoi($rawRef, $doi);
             unset($refData['csl']);
         }
         return $refData;
