@@ -238,12 +238,13 @@ class ReferenceEditController extends AbstractController
         $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef', 'deleteRefId']))]);
 
         if (isset($data['deleteRefId'])) {
-            $deleted = $this->references->autosaveDeleteReference((int) $data['deleteRefId'], $docId);
+            $deleted = $this->references->autosaveDeleteReference(
+                (int) $data['deleteRefId'],
+                $docId,
+                $data['orderRef'] ?? null
+            );
             if (!$deleted) {
                 return new JsonResponse(['success' => false, 'error' => 'Reference not found or access denied']);
-            }
-            if (isset($data['orderRef'])) {
-                $this->references->autosaveOrder($data['orderRef'], $docId);
             }
             return new JsonResponse(['success' => true]);
         }

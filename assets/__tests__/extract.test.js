@@ -909,6 +909,22 @@ describe('extract.js', () => {
 
             // Card should still be present in the DOM
             expect(document.querySelector('.container-reference[data-idref="2"]')).not.toBeNull();
+
+            // Simulate Bootstrap firing hidden.bs.modal once the (mocked) hide completes
+            document.getElementById('modal-delete-ref').dispatchEvent(new Event('hidden.bs.modal'));
+            expect(document.activeElement).toBe(deleteBtn);
+        });
+
+        test('restores focus to the trigger button when the modal is dismissed without confirming', () => {
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            fireEvent.click(deleteBtn);
+
+            // Simulate Cancel/Escape/backdrop dismissal: Bootstrap fires hidden.bs.modal
+            // without the confirm handler ever running.
+            document.getElementById('modal-delete-ref').dispatchEvent(new Event('hidden.bs.modal'));
+
+            expect(document.activeElement).toBe(deleteBtn);
+            expect(document.querySelector('.container-reference[data-idref="2"]')).not.toBeNull();
         });
     });
 });

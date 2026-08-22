@@ -1167,6 +1167,7 @@ function manageAutofixAll() {
 function manageDeleteSingleReference() {
     let targetRefId = null;
     let targetElement = null;
+    let triggerBtn = null;
 
     const deleteModal = setupConfirmModal('modal-delete-ref', 'delete-ref-confirm-btn', async () => {
         if (!targetRefId || !targetElement) return;
@@ -1220,12 +1221,22 @@ function manageDeleteSingleReference() {
     });
     if (!deleteModal) return;
 
+    // `deleteModal.show()` is called programmatically (no relatedTarget), so
+    // Bootstrap can't auto-restore focus on Cancel/Escape/backdrop dismissal.
+    // Restore it manually, unless the reference was actually deleted.
+    document.getElementById('modal-delete-ref')?.addEventListener('hidden.bs.modal', () => {
+        if (triggerBtn && document.contains(triggerBtn)) {
+            triggerBtn.focus();
+        }
+    });
+
     document.addEventListener('click', (event) => {
         const deleteBtn = event.target.closest('.delete-single-ref-btn');
         if (!deleteBtn) return;
 
         targetRefId = deleteBtn.dataset.idref;
         targetElement = deleteBtn.closest('.container-reference');
+        triggerBtn = deleteBtn;
         deleteModal.show();
     });
 }

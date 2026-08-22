@@ -1355,4 +1355,40 @@ class ReferencesTest extends TestCase
         // Assert
         $this->assertFalse($result);
     }
+
+    #[Test]
+    public function testAutosaveDeleteReference_WithOrderRef_PersistsOrderAndFlushesOnce(): void
+    {
+        // Arrange
+        $docId = 100;
+        $refId = 42;
+        $doc = new Document();
+        $doc->setId($docId);
+
+        $refToDelete = new PaperReferences();
+        $refToDelete->setDocument($doc);
+
+        $remainingRef = new PaperReferences();
+        $remainingRef->setDocument($doc);
+        $remainingRef->setReferenceOrder(999);
+
+        $this->entityManager->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturnCallback(function () use ($refToDelete, $remainingRef) {
+                $repo = $this->refRepository;
+                $repo->method('find')->willReturnOnConsecutiveCalls($refToDelete, $remainingRef);
+                return $repo;
+            });
+
+        $this->entityManager->expects($this->once())->method('remove')->with($refToDelete);
+        $this->entityManager->expects($this->once())->method('persist')->with($remainingRef);
+        $this->entityManager->expects($this->once())->method('flush');
+
+        // Act
+        $result = $this->service->autosaveDeleteReference($refId, $docId, '7');
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertEquals(0, $remainingRef->getReferenceOrder());
+    }
 }

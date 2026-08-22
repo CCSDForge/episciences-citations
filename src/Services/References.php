@@ -306,7 +306,7 @@ class References {
         $this->entityManager->flush();
     }
 
-    public function autosaveDeleteReference(int $refId, int $docId): bool
+    public function autosaveDeleteReference(int $refId, int $docId, ?string $orderRef = null): bool
     {
         $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
         if ($ref === null || $ref->getDocument()?->getId() !== $docId) {
@@ -314,6 +314,9 @@ class References {
         }
 
         $this->entityManager->remove($ref);
+        if ($orderRef !== null) {
+            $this->persistOrderRef($orderRef, 0, $docId);
+        }
         $this->entityManager->flush();
 
         return true;
