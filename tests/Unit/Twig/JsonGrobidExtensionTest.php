@@ -48,6 +48,23 @@ class JsonGrobidExtensionTest extends TestCase
     }
 
     #[Test]
+    public function testPrettyReference_FlatReferenceWithTrailingDoi_StripsTrailingDoi(): void
+    {
+        $refData = [
+            'raw_reference' => 'Laiarinandrasana, L. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335',
+            'doi' => '10.46298/jtcam.11335'
+        ];
+        $this->bibtex->method('getCslRefText')->willReturnArgument(0);
+        $jsonInput = json_encode($refData);
+
+        $result = $this->extension->prettyReference($jsonInput);
+
+        $this->assertIsArray($result);
+        $this->assertSame('Laiarinandrasana, L. (2024). Title. Journal.', $result['raw_reference']);
+        $this->assertSame('10.46298/jtcam.11335', $result['doi']);
+    }
+
+    #[Test]
     public function testPrettyReference_ReferenceWithCsl_RendersReference(): void
     {
         // Arrange — reference with CSL data

@@ -306,4 +306,76 @@ class DoiTest extends TestCase
         // Assert
         $this->assertSame('', $result);
     }
+
+    #[Test]
+    public function testStripTrailingDoi_WithSpecificDoi_StripsVariousPrefixes(): void
+    {
+        $doi = '10.46298/jtcam.11335';
+
+        // https://doi.org/...
+        $text1 = 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text1, $doi));
+
+        // http://dx.doi.org/... with trailing period
+        $text2 = 'Author, A. (2024). Title. Journal. http://dx.doi.org/10.46298/jtcam.11335.';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text2, $doi));
+
+        // doi:...
+        $text3 = 'Author, A. (2024). Title. Journal. doi:10.46298/jtcam.11335';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text3, $doi));
+
+        // DOI: ...
+        $text4 = 'Author, A. (2024). Title. Journal. DOI: 10.46298/jtcam.11335.';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text4, $doi));
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_WithoutSpecificDoi_StripsGeneralTrailingDoi(): void
+    {
+        $text = 'Author, A. (2024). Title. Journal. https://doi.org/10.1234/some-article-5678';
+        $this->assertSame('Author, A. (2024). Title. Journal.', Doi::stripTrailingDoi($text));
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_NoDoiInText_ReturnsUnmodified(): void
+    {
+        $text = 'Author, A. (2024). Title. Journal of Science, 12(3), 45-56.';
+        $this->assertSame($text, Doi::stripTrailingDoi($text, '10.1234/some-doi'));
+        $this->assertSame($text, Doi::stripTrailingDoi($text));
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_WithSpecificDoi_WhenRegexEngineFails_ReturnsOriginalTextUnchanged(): void
+    {
+        // Regression test: preg_replace() returns null (instead of throwing) when the
+        // regex engine hits pcre.backtrack_limit. Casting that null to string used to
+        // silently wipe the whole reference; it must now fall back to the input text.
+        $originalLimit = ini_get('pcre.backtrack_limit');
+        ini_set('pcre.backtrack_limit', '1');
+
+        try {
+            $text = 'Author, A. (2024). Title. Journal. https://doi.org/10.46298/jtcam.11335';
+            $result = Doi::stripTrailingDoi($text, '10.46298/jtcam.11335');
+
+            $this->assertSame($text, $result);
+        } finally {
+            ini_set('pcre.backtrack_limit', $originalLimit);
+        }
+    }
+
+    #[Test]
+    public function testStripTrailingDoi_WithoutSpecificDoi_WhenRegexEngineFails_ReturnsOriginalTextUnchanged(): void
+    {
+        $originalLimit = ini_get('pcre.backtrack_limit');
+        ini_set('pcre.backtrack_limit', '1');
+
+        try {
+            $text = 'Author, A. (2024). Title. Journal. https://doi.org/10.1234/some-article-5678';
+            $result = Doi::stripTrailingDoi($text);
+
+            $this->assertSame($text, $result);
+        } finally {
+            ini_set('pcre.backtrack_limit', $originalLimit);
+        }
+    }
 }
