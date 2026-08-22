@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     manageDoiEnrichment();
     removeReference();
     manageAutofixAll();
+    manageDeleteSingleReference();
 });
 
 function manageDoiEnrichment() {
@@ -756,10 +757,10 @@ function resetToggleAllBtn(btn) {
     setToggleAllBtnState(btn, false);
 }
 
-function autosave(data) {
+function autosave(data, { silent = false } = {}) {
     const form = document.getElementById('form-extraction');
     const body = new URLSearchParams({ ...data, _token: form.dataset.csrfToken });
-    fetch(form.dataset.autosaveUrl, {
+    return fetch(form.dataset.autosaveUrl, {
         method: 'POST',
         body,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -767,18 +768,21 @@ function autosave(data) {
         .then(async (r) => {
             const json = await r.json();
             if (r.ok && json.success) {
-                showAutosaveToast();
+                if (!silent) showAutosaveToast();
                 if (json.reference && data.refId) {
                     updateReferenceUI(data.refId, json.reference);
                 }
+                return true;
             } else {
                 console.error('Autosave failed:', json.error || r.statusText);
                 showAutosaveToast(true, json.error || 'Failed to save changes');
+                return false;
             }
         })
         .catch((err) => {
             console.error('Autosave network error:', err);
             showAutosaveToast(true, 'Network error while saving');
+            return false;
         });
 }
 
@@ -1106,31 +1110,30 @@ function manageEditablePosition() {
     });
 }
 
+// Wires a confirmation modal's confirm button to run `onConfirm` after hiding the
+// modal. Returns the Modal instance so the caller can `.show()` it, or null if the
+// modal markup isn't present on the page.
+function setupConfirmModal(modalElId, confirmBtnId, onConfirm) {
+    const modalEl = document.getElementById(modalElId);
+    if (!modalEl) return null;
+
+    const modal = new Modal(modalEl);
+    const confirmBtn = document.getElementById(confirmBtnId);
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            modal.hide();
+            await onConfirm();
+        });
+    }
+    return modal;
+}
+
 function manageAutofixAll() {
     const triggerBtn = document.getElementById('btn-autofix-all');
     if (!triggerBtn) return;
 
-    const modalEl = document.getElementById('modal-autofix-all');
-    if (!modalEl) return;
-
-    const autofixModal = new Modal(modalEl);
-    const confirmBtn = document.getElementById('autofix-all-confirm-btn');
     const confirmText = document.getElementById('autofix-all-confirm-text');
-
-    triggerBtn.addEventListener('click', () => {
-        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
-        if (enrichBtns.length === 0) {
-            showImportToast('danger', window.translations?.['No references with DOI found'] ?? 'No references with a DOI were found');
-            return;
-        }
-        const bodyTemplate = window.translations?.['autofix-all-confirm-body'] ?? 'This will automatically correct {count} reference(s) with a DOI. Do you want to continue?';
-        confirmText.textContent = bodyTemplate.replace('{count}', enrichBtns.length);
-        autofixModal.show();
-    });
-
-    confirmBtn.addEventListener('click', async () => {
-        autofixModal.hide();
-
+    const autofixModal = setupConfirmModal('modal-autofix-all', 'autofix-all-confirm-btn', async () => {
         const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
         let done = 0;
         for (const btn of enrichBtns) {
@@ -1146,5 +1149,94 @@ function manageAutofixAll() {
             document.getElementById('loading-screen')?.classList.remove('d-none');
             form.submit();
         }
+    });
+    if (!autofixModal) return;
+
+    triggerBtn.addEventListener('click', () => {
+        const enrichBtns = Array.from(document.querySelectorAll('.enrich-doi-btn'));
+        if (enrichBtns.length === 0) {
+            showImportToast('danger', window.translations?.['No references with DOI found'] ?? 'No references with a DOI were found');
+            return;
+        }
+        const bodyTemplate = window.translations?.['autofix-all-confirm-body'] ?? 'This will automatically correct {count} reference(s) with a DOI. Do you want to continue?';
+        confirmText.textContent = bodyTemplate.replace('{count}', enrichBtns.length);
+        autofixModal.show();
+    });
+}
+
+function manageDeleteSingleReference() {
+    let targetRefId = null;
+    let targetElement = null;
+    let triggerBtn = null;
+
+    const deleteModal = setupConfirmModal('modal-delete-ref', 'delete-ref-confirm-btn', async () => {
+        if (!targetRefId || !targetElement) return;
+
+        const idToDelete = targetRefId;
+        const elToDelete = targetElement;
+
+        targetRefId = null;
+        targetElement = null;
+
+        // Recalculate what the order will be once this reference is removed, and
+        // persist the deletion and the new order in a single autosave request.
+        const remainingRefs = Array.from(document.querySelectorAll('.container-reference')).filter(
+            (el) => el !== elToDelete
+        );
+        const newOrder = remainingRefs.map((el) => el.dataset.idref).join(';');
+
+        const payload = { deleteRefId: idToDelete };
+        if (remainingRefs.length > 0) {
+            payload.orderRef = newOrder;
+        }
+
+        const success = await autosave(payload, { silent: true });
+        if (!success) {
+            return;
+        }
+
+        // Determine next element to focus for accessibility
+        const nextFocusTarget =
+            elToDelete.nextElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+            elToDelete.previousElementSibling?.querySelector('button, input, [tabindex="0"]') ||
+            document.getElementById('btn-modal-addref') ||
+            document.getElementById('sortref');
+
+        // Remove reference card from DOM
+        elToDelete.remove();
+
+        const hiddenRefNode = document.getElementById('document_orderRef');
+        if (hiddenRefNode) hiddenRefNode.value = newOrder;
+
+        // Update position badges
+        updateBadges();
+
+        // Screen reader live region announcement and visual toast
+        const deletedMessage = translate('Reference deleted.');
+        announceLiveRegion(deletedMessage);
+        showImportToast('success', deletedMessage);
+
+        // Shift focus for keyboard users
+        nextFocusTarget?.focus();
+    });
+    if (!deleteModal) return;
+
+    // `deleteModal.show()` is called programmatically (no relatedTarget), so
+    // Bootstrap can't auto-restore focus on Cancel/Escape/backdrop dismissal.
+    // Restore it manually, unless the reference was actually deleted.
+    document.getElementById('modal-delete-ref')?.addEventListener('hidden.bs.modal', () => {
+        if (triggerBtn && document.contains(triggerBtn)) {
+            triggerBtn.focus();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        const deleteBtn = event.target.closest('.delete-single-ref-btn');
+        if (!deleteBtn) return;
+
+        targetRefId = deleteBtn.dataset.idref;
+        targetElement = deleteBtn.closest('.container-reference');
+        triggerBtn = deleteBtn;
+        deleteModal.show();
     });
 }

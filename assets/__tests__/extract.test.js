@@ -85,6 +85,7 @@ describe('extract.js', () => {
                         <input id="accepted-1" value="0">
                         <input data-dirty-ref="1" value="0">
                         <input type="checkbox" id="toggle-input-1" value="1">
+                        <button class="delete-single-ref-btn" data-idref="1" type="button"></button>
                         <div class="ms-auto d-flex align-items-center gap-1 flex-wrap">
                              <span class="badge source-color-1">Source</span>
                         </div>
@@ -97,6 +98,7 @@ describe('extract.js', () => {
                         <input id="reference-2" value='{}'>
                         <input id="accepted-2" value="1">
                         <input data-dirty-ref="2" value="0">
+                        <button class="delete-single-ref-btn" data-idref="2" type="button"></button>
                     </div>
                     <div class="container-reference" data-idref="3">
                         <div class="ref-position-wrapper">
@@ -106,6 +108,7 @@ describe('extract.js', () => {
                         <input id="reference-3" value='{}'>
                         <input id="accepted-3" value="1">
                         <input data-dirty-ref="3" value="0">
+                        <button class="delete-single-ref-btn" data-idref="3" type="button"></button>
                     </div>
                 </div>
                 <div id="reorder-live-region"></div>
@@ -130,6 +133,10 @@ describe('extract.js', () => {
                 <div id="modal-autofix-all">
                     <p id="autofix-all-confirm-text"></p>
                     <button id="autofix-all-confirm-btn" type="button"></button>
+                </div>
+
+                <div id="modal-delete-ref">
+                    <button id="delete-ref-confirm-btn" type="button"></button>
                 </div>
 
                 <button id="btn-import-semantic-scholar" type="button"></button>
@@ -830,6 +837,94 @@ describe('extract.js', () => {
             fireEvent.click(badge);
 
             expect(badge.parentElement.querySelectorAll('input').length).toBe(1);
+        });
+    });
+
+    describe('manageDeleteSingleReference', () => {
+        test('clicking a single delete button triggers modal show and confirming deletes the reference', async () => {
+            window.translations = { 'Reference deleted.': 'Reference deleted.' };
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            expect(deleteBtn).not.toBeNull();
+
+            fireEvent.click(deleteBtn);
+
+            const confirmBtn = document.getElementById('delete-ref-confirm-btn');
+            expect(confirmBtn).not.toBeNull();
+
+            fireEvent.click(confirmBtn);
+
+            // Verify element was removed from DOM
+            await waitFor(() => {
+                expect(document.querySelector('.container-reference[data-idref="2"]')).toBeNull();
+            });
+
+            // Verify remaining references and updated badges
+            const remaining = Array.from(document.querySelectorAll('.container-reference')).map(
+                (el) => el.dataset.idref
+            );
+            expect(remaining).toEqual(['1', '3']);
+
+            const badge1 = document.querySelector('.container-reference[data-idref="1"] .ref-position-badge');
+            const badge3 = document.querySelector('.container-reference[data-idref="3"] .ref-position-badge');
+            expect(badge1.textContent).toBe('1');
+            expect(badge3.textContent).toBe('2');
+
+            // Verify fetch calls with specific URLSearchParams payloads
+            const calls = global.fetch.mock.calls.filter((c) => c[0] === '/autosave');
+            const hasDeleteCall = calls.some((c) => {
+                const body = c[1]?.body;
+                return body instanceof URLSearchParams && body.get('deleteRefId') === '2';
+            });
+            const hasOrderCall = calls.some((c) => {
+                const body = c[1]?.body;
+                return body instanceof URLSearchParams && body.get('orderRef') === '1;3';
+            });
+
+            expect(hasDeleteCall).toBe(true);
+            expect(hasOrderCall).toBe(true);
+
+            // Verify live region announcement
+            const liveRegion = document.getElementById('reorder-live-region');
+            expect(liveRegion.textContent).toBe('Reference deleted.');
+        });
+
+        test('retains card in DOM when autosave deletion fails', async () => {
+            global.fetch.mockImplementationOnce(() =>
+                Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({ success: false, error: 'Database error' }),
+                })
+            );
+
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            fireEvent.click(deleteBtn);
+
+            const confirmBtn = document.getElementById('delete-ref-confirm-btn');
+            fireEvent.click(confirmBtn);
+
+            await waitFor(() => {
+                expect(global.fetch).toHaveBeenCalledWith('/autosave', expect.any(Object));
+            });
+
+            // Card should still be present in the DOM
+            expect(document.querySelector('.container-reference[data-idref="2"]')).not.toBeNull();
+
+            // Simulate Bootstrap firing hidden.bs.modal once the (mocked) hide completes
+            document.getElementById('modal-delete-ref').dispatchEvent(new Event('hidden.bs.modal'));
+            expect(document.activeElement).toBe(deleteBtn);
+        });
+
+        test('restores focus to the trigger button when the modal is dismissed without confirming', () => {
+            const deleteBtn = document.querySelector('.delete-single-ref-btn[data-idref="2"]');
+            fireEvent.click(deleteBtn);
+
+            // Simulate Cancel/Escape/backdrop dismissal: Bootstrap fires hidden.bs.modal
+            // without the confirm handler ever running.
+            document.getElementById('modal-delete-ref').dispatchEvent(new Event('hidden.bs.modal'));
+
+            expect(document.activeElement).toBe(deleteBtn);
+            expect(document.querySelector('.container-reference[data-idref="2"]')).not.toBeNull();
         });
     });
 });

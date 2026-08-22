@@ -115,3 +115,21 @@
     padding: 0.1rem 0.25rem;
     text-align: center;
 }
+
+// Contextual action buttons (Edit, Enrich, Delete):
+// On devices with fine pointers and hover capability (mouse/trackpad), hide by default
+// and reveal on card hover or keyboard focus-within.
+// On touch devices, they remain always visible.
+@media (hover: hover) and (pointer: fine) {
+    .ref-actions {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+    }
+
+    .container-reference:hover .ref-actions,
+    .container-reference:focus-within .ref-actions {
+        opacity: 1;
+        visibility: visible;
+    }
+}

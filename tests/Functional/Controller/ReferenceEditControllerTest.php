@@ -588,7 +588,70 @@ class ReferenceEditControllerTest extends WebTestCase
     }
 
     #[Test]
-    public function testAutosave_WithUnknownRefId_ReturnsEmptyReferenceWithoutError(): void
+    public function testAutosave_WithOrderRef_IgnoresReferencesFromOtherDocument(): void
+    {
+        $ownDocument = $this->persistDocument(123456);
+        $ownRef = $this->persistReference($ownDocument, ['raw_reference' => 'Own'], order: 0);
+
+        $otherDocument = $this->persistDocument(999000);
+        $otherRef = $this->persistReference($otherDocument, ['raw_reference' => 'Other'], order: 0);
+        $this->flush();
+        $ownId = $ownRef->getId();
+        $otherId = $otherRef->getId();
+
+        $this->authenticate('1001');
+        $this->mockAuthorization(true);
+        $token = $this->fetchAutosaveCsrfToken(123456);
+
+        // Authorized only for docId 123456, but the orderRef payload also targets
+        // a reference belonging to a different document (999000).
+        $this->client->request(Request::METHOD_POST, '/en/viewref/123456/autosave', [
+            '_token' => $token,
+            'orderRef' => $otherId . ';' . $ownId,
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertTrue($data['success']);
+
+        $this->entityManager->clear();
+        // The reference from the other document must keep its original order.
+        $this->assertSame(0, $this->entityManager->getRepository(PaperReferences::class)->find($otherId)->getReferenceOrder());
+        $this->assertSame(1, $this->entityManager->getRepository(PaperReferences::class)->find($ownId)->getReferenceOrder());
+    }
+
+    #[Test]
+    public function testAutosave_WithRefId_FromOtherDocument_ReturnsError(): void
+    {
+        $otherDocument = $this->persistDocument(999000);
+        $otherRef = $this->persistReference($otherDocument, ['raw_reference' => 'Other'], order: 0);
+        $this->flush();
+        $otherId = $otherRef->getId();
+
+        $this->authenticate('1001');
+        $this->mockAuthorization(true);
+        $token = $this->fetchAutosaveCsrfToken(123456);
+
+        // Authorized only for docId 123456, but refId targets a reference
+        // belonging to a different document (999000).
+        $this->client->request(Request::METHOD_POST, '/en/viewref/123456/autosave', [
+            '_token' => $token,
+            'refId' => (string) $otherId,
+            'reference' => json_encode(['raw_reference' => 'Tampered']),
+            'accepted' => '1',
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertFalse($data['success']);
+        $this->assertSame('Reference not found or access denied', $data['error']);
+
+        $this->entityManager->clear();
+        $this->assertSame('Other', $this->entityManager->getRepository(PaperReferences::class)->find($otherId)->getReference()['raw_reference']);
+    }
+
+    #[Test]
+    public function testAutosave_WithUnknownRefId_ReturnsError(): void
     {
         $this->authenticate('1001');
         $this->mockAuthorization(true);
@@ -603,8 +666,8 @@ class ReferenceEditControllerTest extends WebTestCase
 
         $this->assertResponseIsSuccessful();
         $data = json_decode((string) $this->client->getResponse()->getContent(), true);
-        $this->assertTrue($data['success']);
-        $this->assertSame([], $data['reference']);
+        $this->assertFalse($data['success']);
+        $this->assertSame('Reference not found or access denied', $data['error']);
     }
 
     #[Test]

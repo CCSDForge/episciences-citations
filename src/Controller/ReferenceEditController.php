@@ -235,10 +235,22 @@ class ReferenceEditController extends AbstractController
     private function processAutosaveData(int $docId, Request $request): JsonResponse
     {
         $data = $request->request->all();
-        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef']))]);
+        $this->logger->info('Autosave triggered', ['docId' => $docId, 'data' => array_intersect_key($data, array_flip(['refId', 'accepted', 'isDirty', 'orderRef', 'deleteRefId']))]);
+
+        if (isset($data['deleteRefId'])) {
+            $deleted = $this->references->autosaveDeleteReference(
+                (int) $data['deleteRefId'],
+                $docId,
+                $data['orderRef'] ?? null
+            );
+            if (!$deleted) {
+                return new JsonResponse(['success' => false, 'error' => 'Reference not found or access denied']);
+            }
+            return new JsonResponse(['success' => true]);
+        }
 
         if (isset($data['orderRef'])) {
-            $this->references->autosaveOrder($data['orderRef']);
+            $this->references->autosaveOrder($data['orderRef'], $docId);
             return new JsonResponse(['success' => true]);
         }
 
@@ -249,8 +261,12 @@ class ReferenceEditController extends AbstractController
                 $data['reference'] ?? '{}',
                 (int) ($data['accepted'] ?? 0),
                 ($data['isDirty'] ?? '0') === '1',
-                $userInfo
+                $userInfo,
+                $docId
             );
+            if ($enrichedReference === null) {
+                return new JsonResponse(['success' => false, 'error' => 'Reference not found or access denied']);
+            }
             return new JsonResponse(['success' => true, 'reference' => $enrichedReference]);
         }
 
