@@ -1,5 +1,14 @@
 @use "bootstrap/scss/bootstrap" as *;
 
+// This app is a single full-viewport shell (navbar + one panel that fills the
+// rest of the screen); every panel scrolls internally via its own
+// overflow-y-auto. Without this, any sub-pixel rounding in the flex layout
+// leaves the <html> element scrollable, exposing blank space below the panel.
+html,
+body {
+    overflow: hidden;
+}
+
 // Reference states
 .declinedRef {
     // Opacity removed as requested
