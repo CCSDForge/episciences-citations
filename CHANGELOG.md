@@ -7,7 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Single Reference Deletion**: Added a per-reference "Delete" button adjacent to the Edit and Auto-fix actions with a confirmation modal, real-time autosave persistence, automatic position badge renumbering, and full screen-reader accessibility support.
+- **Reference Card Actions Visibility**: Reveal reference card actions (Delete, Edit, Auto-fix) on card hover and keyboard focus (`focus-within`) for a cleaner interface.
+- **Server Deployment Script**: Added `bin/deploy.sh` script to automate server deployments (PHP version auto-detection/selection, Git fetch/checkout, Composer dependencies, Yarn assets build, cache warmup, file permissions, and optional database migrations).
+- **CodeRabbit Integration**: Added CodeRabbit configuration (`.coderabbit.yaml`) for AI-assisted code reviews.
+- **PHP Test Suite & High Coverage**: Raised PHP line test coverage from ~50% to ~94% with comprehensive unit, functional, and integration tests across controllers, repositories (in-memory SQLite), services, commands, security, and forms.
+- **Performance Test Fixtures**: Expanded `tests/Fixtures/large_sample.bib` to 50 fictitious article entries for performance and load testing.
+- **Duplicate DOI Cleanup Command**: Added `app:references:strip-duplicate-dois` command to strip redundant trailing DOI URLs from database-stored `raw_reference` strings with support for `--dry-run`, `--docid`, `--source`, and `--batch-size` options.
+- **CI Assets Build**: Added Webpack assets build step to GitHub Actions test workflows.
+
+### Changed
+- **Dependency Upgrades**: Updated PHP Composer dependencies (`composer.lock`, including Guzzle `7.15.5` and Symfony patch releases), Yarn packages (`webpack` `5.109.2`, `postcss` `8.5.23`, `svgo` `4.0.2`, `immutable` `5.1.9`, `tar` `7.5.22`, `brace-expansion` `1.1.16`, `js-yaml` `3.15.1`, `fast-uri` `3.1.5`, `undici` `8.10.0`), and GitHub Actions (`actions/setup-node` v7).
+- **Docker & Apache Configuration**: Built a custom Apache Docker image and removed obsolete SSL configuration.
+
+### Removed
+- **Unused Twig Extension**: Removed unused `EpiExtractExtension` Twig extension and its associated test.
+
 ### Fixed
+- **Document Access Scoping in Autosave**: Scoped deletion, reordering, and reference editing operations strictly to the authorized document ID in `References` service to prevent unauthorized document modifications.
+- **UI Layout Gap**: Used full-height flex layout (`d-flex flex-column min-vh-100`) in base templates to remove the bottom viewport gap on short pages.
+- **Extract Panels Scroll**: Constrained page-level overflow in extraction view styling to prevent page-level scroll leaving blank space beneath the PDF viewer and reference list panels.
+- **CAS Single Logout**: Target the intended session correctly in `CasAuthenticator::handleLogoutRequest()` by setting `session_id()` prior to `session_start()`.
+- **CAS Logout Fallback**: Handled uninitialized phpCAS client gracefully in `DefaultController::logout()` with a fallback redirect instead of a 500 error.
+- **Strict Types Safety**: Enforced string/int cast on CAS UID in `References::addNewReference()` and `DocumentAccessTrait` to prevent `TypeError`.
+- **PDF Cache Handling**: Returned a 404 response instead of 500 in `ExtractController::getpdf()` when the cached PDF file is missing.
+- **Semantic Scholar Importer**: Fixed empty DOI handling consistency and accurately counted only persisted references.
+- **Form Data Transformation**: Wrapped JSON decode errors in `TransformationFailedException` within `JsonTransformer::reverseTransform()` to prevent unhandled 500 errors.
+- **BibTeX & CSL Robustness**: Guarded against missing `type` keys and unreadable file paths in `Bibtex::generateCSL()` and `Bibtex::convertBibtexToArray()`.
+- **CSV Reference Grouping**: Trimmed CSV document IDs in `GetBibRefCommand::processCsv()` to avoid splitting references across separate groups due to whitespace.
+- **CI Test Compatibility**: Fixed PHPUnit test suite execution on PHP 8.4 and PHP 8.5 in GitHub Actions.
+- **Code Hygiene & Robustness**: Addressed CodeRabbit review findings across commands, forms, services, and test fixtures.
+- **Duplicate DOI in Extracted/Formatted References**: Stripped redundant trailing DOI URLs from generated citation text in `Doi::getFormattedCitation()`, `Bibtex::getCslRefText()`, and `JsonGrobidExtension::prettyReference()`, while preserving DOI text when no structured DOI is present and handling regex edge cases (#27).
 - **Reference Card Badge Overlap**: Moved the "Source" badge out of its absolutely positioned corner and into the same badge row as the PPS warning badges (Annulled, Clay Feet, Tortured phrases, etc.), preventing it from overlapping them when present.
 
 ## v1.3.1 - 2026-07-20

@@ -24,7 +24,10 @@
             'Invalid DOI, URL or SWHID format': '{{ 'Invalid DOI, URL or SWHID format'|trans }}',
             'New position (1 to {total})': '{{ 'New position (1 to {total})'|trans }}',
             'Reference moved to position {position} of {total}.': '{{ 'Reference moved to position {position} of {total}.'|trans }}',
-            'Reference order updated.': '{{ 'Reference order updated.'|trans }}'
+            'Reference order updated.': '{{ 'Reference order updated.'|trans }}',
+            'Delete reference': '{{ 'Delete reference'|trans }}',
+            'Are you sure you want to delete this reference?': '{{ 'Are you sure you want to delete this reference?'|trans }}',
+            'Reference deleted.': '{{ 'Reference deleted.'|trans }}'
         };
     </script>
     {{ encore_entry_script_tags('extract') }}
@@ -49,7 +52,7 @@
 {% endif %}
 
 {# Exact 50/50 two-column layout #}
-<div class="row g-0" style="height:calc(100vh - 57px); overflow:hidden;">
+<div class="row g-0 flex-grow-1 overflow-hidden" style="min-height: 0;">
 
     {# Left column: PDF viewer #}
     <div class="col-6 p-0 h-100">
@@ -95,6 +98,36 @@
                         <button type="button" id="autofix-all-confirm-btn" class="btn btn-info text-white">
                             <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>
                             {{ 'Confirm'|trans }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Delete single reference confirmation modal #}
+        <div class="modal fade" id="modal-delete-ref" tabindex="-1"
+             aria-labelledby="deleteRefModalTitle" aria-describedby="delete-ref-confirm-text" aria-modal="true" role="dialog">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteRefModalTitle">
+                            <i class="fas fa-trash me-2 text-danger" aria-hidden="true"></i>
+                            {{ 'Delete reference'|trans }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="{{ 'Close'|trans }}"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="delete-ref-confirm-text" class="mb-0">
+                            {{ 'Are you sure you want to delete this reference?'|trans }}
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary"
+                                data-bs-dismiss="modal">{{ 'Cancel'|trans }}</button>
+                        <button type="button" id="delete-ref-confirm-btn" class="btn btn-danger">
+                            <i class="fas fa-trash me-2" aria-hidden="true"></i>
+                            {{ 'Delete'|trans }}
                         </button>
                     </div>
                 </div>
@@ -331,29 +364,43 @@
                                         </label>
                                     </div>
 
-                                    {# Edit button #}
-                                    <button type="button"
-                                            id="modifyBtn-{{ paperReferences.id.vars.value }}"
-                                            data-idref="{{ paperReferences.id.vars.value }}"
-                                            class="btn btn-sm btn-secondary"
-                                            title="{{ 'Double-click to edit'|trans }}">
-                                        <i class="fas fa-pen" aria-hidden="true"></i>
-                                        <span class="ms-1 d-none d-xl-inline">{{ 'Edit'|trans }}</span>
-                                    </button>
-
-                                    {# Enrich button #}
-                                    {% if doiDecodedRef != '' %}
+                                    {# Actions container (Edit, Enrich, Delete) #}
+                                    <div class="d-flex align-items-center gap-2 ref-actions">
+                                        {# Edit button #}
                                         <button type="button"
-                                                class="btn btn-sm btn-info enrich-doi-btn text-white"
+                                                id="modifyBtn-{{ paperReferences.id.vars.value }}"
                                                 data-idref="{{ paperReferences.id.vars.value }}"
-                                                data-doi="{{ doiDecodedRef }}"
-                                                title="{{ 'Enrich from DOI'|trans }}"
-                                                aria-label="{{ 'Enrich from DOI'|trans }}">
-                                            <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
-                                            <span class="ms-1 enrich-text d-none d-xl-inline">{{ 'Enrich'|trans }}</span>
-                                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                                class="btn btn-sm btn-secondary"
+                                                title="{{ 'Double-click to edit'|trans }}">
+                                            <i class="fas fa-pen" aria-hidden="true"></i>
+                                            <span class="ms-1 d-none d-xl-inline">{{ 'Edit'|trans }}</span>
                                         </button>
-                                    {% endif %}
+
+                                        {# Enrich button #}
+                                        {% if doiDecodedRef != '' %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-info enrich-doi-btn text-white"
+                                                    data-idref="{{ paperReferences.id.vars.value }}"
+                                                    data-doi="{{ doiDecodedRef }}"
+                                                    title="{{ 'Enrich from DOI'|trans }}"
+                                                    aria-label="{{ 'Enrich from DOI'|trans }}">
+                                                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                                <span class="ms-1 enrich-text d-none d-xl-inline">{{ 'Enrich'|trans }}</span>
+                                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                            </button>
+                                        {% endif %}
+
+                                        {# Delete button #}
+                                        <button type="button"
+                                                id="deleteBtn-{{ paperReferences.id.vars.value }}"
+                                                data-idref="{{ paperReferences.id.vars.value }}"
+                                                class="btn btn-sm btn-danger delete-single-ref-btn"
+                                                title="{{ 'Delete reference'|trans }}"
+                                                aria-label="{{ 'Delete reference'|trans }}">
+                                            <i class="fas fa-trash" aria-hidden="true"></i>
+                                            <span class="ms-1 d-none d-xl-inline">{{ 'Delete'|trans }}</span>
+                                        </button>
+                                    </div>
 
                                 </div>
 

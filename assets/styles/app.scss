@@ -1,5 +1,14 @@
 @use "bootstrap/scss/bootstrap" as *;
 
+// This app is a single full-viewport shell (navbar + one panel that fills the
+// rest of the screen); every panel scrolls internally via its own
+// overflow-y-auto. Without this, any sub-pixel rounding in the flex layout
+// leaves the <html> element scrollable, exposing blank space below the panel.
+html,
+body {
+    overflow: hidden;
+}
+
 // Reference states
 .declinedRef {
     // Opacity removed as requested
@@ -114,4 +123,22 @@
     width: 3.5rem;
     padding: 0.1rem 0.25rem;
     text-align: center;
+}
+
+// Contextual action buttons (Edit, Enrich, Delete):
+// On devices with fine pointers and hover capability (mouse/trackpad), hide by default
+// and reveal on card hover or keyboard focus-within.
+// On touch devices, they remain always visible.
+@media (hover: hover) and (pointer: fine) {
+    .ref-actions {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+    }
+
+    .container-reference:hover .ref-actions,
+    .container-reference:focus-within .ref-actions {
+        opacity: 1;
+        visibility: visible;
+    }
 }

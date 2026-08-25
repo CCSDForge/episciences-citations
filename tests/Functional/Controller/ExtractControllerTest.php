@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Controller;
 
+use App\Entity\Document;
+use App\Services\Episciences;
 use App\Services\Grobid;
+use App\Services\References;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -35,6 +38,24 @@ class ExtractControllerTest extends WebTestCase
     {
         $token = static::getContainer()->getParameter('api_extract_token');
         return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
+    }
+
+    /**
+     * Authenticates the client by setting the token directly on the container's
+     * `security.token_storage`. The `test` firewall config disables security
+     * entirely for `main` (`security: false`), so stuffing a token into the
+     * session cookie (see authenticateClient()) never reaches the token
+     * storage for the actual request — it's kept above only because existing
+     * tests rely on its (weak) `<500` assertions. Setting the token directly
+     * on the container works because the kernel isn't rebooted between
+     * getContainer() and request() within a single test, so #[IsGranted]
+     * checks are genuinely satisfied.
+     */
+    private function authenticateViaTokenStorage(array $roles = ['ROLE_USER']): void
+    {
+        $user = new InMemoryUser('test_user', 'test', $roles);
+        $token = new UsernamePasswordToken($user, 'main', $roles);
+        static::getContainer()->get('security.token_storage')->setToken($token);
     }
 
     // -------------------------------------------------------------------------
@@ -270,5 +291,356 @@ class ExtractControllerTest extends WebTestCase
         $client->request(Request::METHOD_GET, '/fr/viewref/123456');
 
         $this->assertLessThan(Response::HTTP_INTERNAL_SERVER_ERROR, $client->getResponse()->getStatusCode());
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /extract — genuinely authenticated branch coverage
+    // (see authenticateViaTokenStorage() docblock for why this differs from
+    // the session-cookie authenticateClient() used above)
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function testExtract_DisallowedUrlHostname_ThrowsAccessDenied(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://not-an-allowed-host.example.com/test/123');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    #[Test]
+    public function testExtract_PdfNotFound_ThrowsNotFound(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('4242');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 404, 'message' => 'not found']);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/4242');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+    }
+
+    #[Test]
+    public function testExtract_ExportBibParam_CreatesDocumentAndRedirectsToViewRef(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5001');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesMock = $this->createMock(References::class);
+        $referencesMock->method('getDocument')->willReturn(null);
+        $referencesMock->expects($this->once())->method('createDocumentId')->with(5001);
+        static::getContainer()->set(References::class, $referencesMock);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5001&exportbib=1');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $this->assertStringContainsString('/viewref/5001', $client->getResponse()->headers->get('Location'));
+    }
+
+    #[Test]
+    public function testExtract_ExportBibParam_DocumentAlreadyExists_DoesNotRecreateIt(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5002');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesMock = $this->createMock(References::class);
+        $referencesMock->method('getDocument')->willReturn(new Document());
+        $referencesMock->expects($this->never())->method('createDocumentId');
+        static::getContainer()->set(References::class, $referencesMock);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5002&exportbib=1');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
+    }
+
+    #[Test]
+    public function testExtract_FirstTimeExtraction_NoCache_ShowsProcessingPage(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5003');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesStub = $this->createStub(References::class);
+        $referencesStub->method('documentAlreadyExtracted')->willReturn(false);
+        static::getContainer()->set(References::class, $referencesStub);
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('hasCachedReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5003');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Extraction in progress', (string) $client->getResponse()->getContent());
+    }
+
+    #[Test]
+    public function testExtract_FirstTimeExtraction_CachedButInsertFails_RedirectsWithFlash(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5004');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesMock = $this->createMock(References::class);
+        $referencesMock->method('documentAlreadyExtracted')->willReturn(false);
+        $referencesMock->method('getDocument')->willReturn(null);
+        $referencesMock->expects($this->once())->method('createDocumentId')->with(5004);
+        static::getContainer()->set(References::class, $referencesMock);
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('hasCachedReferences')->willReturn(true);
+        $grobidStub->method('insertReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5004');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $this->assertStringContainsString('/viewref/5004', $client->getResponse()->headers->get('Location'));
+    }
+
+    #[Test]
+    public function testExtract_FirstTimeExtraction_CachedAndInsertSucceeds_RedirectsToViewRef(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5005');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesStub = $this->createStub(References::class);
+        $referencesStub->method('documentAlreadyExtracted')->willReturn(false);
+        static::getContainer()->set(References::class, $referencesStub);
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('hasCachedReferences')->willReturn(true);
+        $grobidStub->method('insertReferences')->willReturn(true);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5005');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $this->assertStringContainsString('/viewref/5005', $client->getResponse()->headers->get('Location'));
+    }
+
+    #[Test]
+    public function testExtract_AlreadyExtracted_WithRextractParam_ReExtracts(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5006');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesStub = $this->createStub(References::class);
+        $referencesStub->method('documentAlreadyExtracted')->willReturn(true);
+        static::getContainer()->set(References::class, $referencesStub);
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('hasCachedReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5006&rextract=1');
+
+        // rextract with no cache yet re-shows the processing page rather than
+        // redirecting straight to the (still empty) reference list.
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Extraction in progress', (string) $client->getResponse()->getContent());
+    }
+
+    #[Test]
+    public function testExtract_AlreadyExtracted_NoRefsYet_RetriesExtraction(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5007');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesStub = $this->createStub(References::class);
+        $referencesStub->method('documentAlreadyExtracted')->willReturn(true);
+        $referencesStub->method('getReferences')->willReturn([]);
+        static::getContainer()->set(References::class, $referencesStub);
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('hasCachedReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5007');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Extraction in progress', (string) $client->getResponse()->getContent());
+    }
+
+    #[Test]
+    public function testExtract_AlreadyExtracted_WithRefs_RedirectsDirectlyToViewRef(): void
+    {
+        $client = static::createClient();
+        $this->authenticateViaTokenStorage();
+
+        $episciencesStub = $this->createStub(Episciences::class);
+        $episciencesStub->method('isAllowedUrl')->willReturn(true);
+        $episciencesStub->method('getDocIdFromUrl')->willReturn('5008');
+        $episciencesStub->method('getPaperPDF')->willReturn(['status' => 200]);
+        static::getContainer()->set(Episciences::class, $episciencesStub);
+
+        $referencesStub = $this->createStub(References::class);
+        $referencesStub->method('documentAlreadyExtracted')->willReturn(true);
+        $referencesStub->method('getReferences')->willReturn([['title' => 'a reference']]);
+        static::getContainer()->set(References::class, $referencesStub);
+
+        $grobidMock = $this->createMock(Grobid::class);
+        $grobidMock->expects($this->never())->method('insertReferences');
+        static::getContainer()->set(Grobid::class, $grobidMock);
+
+        $client->request(Request::METHOD_GET, '/extract?url=https://episciences.org/test/5008');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $this->assertStringContainsString('/viewref/5008', $client->getResponse()->headers->get('Location'));
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /extract/run — no auth required (public AJAX endpoint polled by the
+    // processing page)
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function testExtractRun_Success_ReturnsSuccessTrue(): void
+    {
+        $client = static::createClient();
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('insertReferences')->willReturn(true);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $client->request(Request::METHOD_GET, '/extract/run?docId=6001');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertResponseHeaderSame('content-type', 'application/json');
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertTrue($data['success']);
+    }
+
+    #[Test]
+    public function testExtractRun_Failure_CreatesDocumentStubAndReturnsSuccessFalse(): void
+    {
+        $client = static::createClient();
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('insertReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $referencesMock = $this->createMock(References::class);
+        $referencesMock->method('getDocument')->willReturn(null);
+        $referencesMock->expects($this->once())->method('createDocumentId')->with(6002);
+        static::getContainer()->set(References::class, $referencesMock);
+
+        $client->request(Request::METHOD_GET, '/extract/run?docId=6002');
+
+        $this->assertResponseIsSuccessful();
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertFalse($data['success']);
+    }
+
+    #[Test]
+    public function testExtractRun_Failure_DocumentAlreadyExists_DoesNotRecreateIt(): void
+    {
+        $client = static::createClient();
+
+        $grobidStub = $this->createStub(Grobid::class);
+        $grobidStub->method('insertReferences')->willReturn(false);
+        static::getContainer()->set(Grobid::class, $grobidStub);
+
+        $referencesMock = $this->createMock(References::class);
+        $referencesMock->method('getDocument')->willReturn(new Document());
+        $referencesMock->expects($this->never())->method('createDocumentId');
+        static::getContainer()->set(References::class, $referencesMock);
+
+        $client->request(Request::METHOD_GET, '/extract/run?docId=6003');
+
+        $this->assertResponseIsSuccessful();
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertFalse($data['success']);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /getpdf/{docId}
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function testGetPdf_ExistingFile_ReturnsBinaryFileResponse(): void
+    {
+        $client = static::createClient();
+
+        $depositPdfDir = (string) static::getContainer()->getParameter('deposit_pdf');
+        if (!is_dir($depositPdfDir)) {
+            mkdir($depositPdfDir, 0777, true);
+        }
+        $testPdfPath = $depositPdfDir . '/11493.pdf';
+        file_put_contents($testPdfPath, '%PDF-1.4 mock pdf content');
+
+        try {
+            $client->request(Request::METHOD_GET, '/getpdf/11493');
+
+            $this->assertResponseIsSuccessful();
+            $this->assertResponseHeaderSame('content-type', 'application/pdf');
+            $this->assertStringContainsString(
+                'inline; filename=11493.pdf',
+                (string) $client->getResponse()->headers->get('content-disposition')
+            );
+        } finally {
+            if (file_exists($testPdfPath)) {
+                unlink($testPdfPath);
+            }
+        }
+    }
+
+    #[Test]
+    public function testGetPdf_MissingFile_ReturnsNotFound_NotServerError(): void
+    {
+        // Regression test: a docId with no cached PDF used to throw an unhandled
+        // FileNotFoundException (500) instead of a clean 404.
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_GET, '/getpdf/999999999');
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 }

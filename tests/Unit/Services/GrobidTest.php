@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -314,5 +315,121 @@ class GrobidTest extends TestCase
         $this->assertSame($expectedReferences, $result);
         $this->assertCount(1, $result);
         $this->assertEquals(1, $result[0]->getAccepted());
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testInsertReferences_HttpClientThrowsTransportException_ReturnsFalseAndLogs(): void
+    {
+        // Arrange
+        $docId = 123456;
+        $pathPdf = '/tmp/test.pdf';
+
+        // Cache is empty, so the HTTP call is attempted
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->willThrowException(new TransportException('GROBID unreachable'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('error')
+            ->with('GROBID request failed', $this->callback(
+                fn (array $context): bool => $context['docId'] === $docId && array_key_exists('message', $context)
+            ));
+
+        $this->service = new Grobid(
+            $this->httpClient,
+            $this->tei,
+            $this->entityManager,
+            $this->grobidUrl,
+            $this->grobidCache,
+            $logger
+        );
+
+        // Tei/insertReferencesInDB must never be reached
+        $this->tei->expects($this->never())->method('getReferencesInTei');
+        $this->tei->expects($this->never())->method('insertReferencesInDB');
+
+        // Act
+        $result = $this->service->insertReferences($docId, $pathPdf);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testPutGrobidReferencesInCache_InvalidKey_SwallowsInvalidArgumentException(): void
+    {
+        // Arrange - PSR-6 cache keys forbid characters like "{}()/\@:"
+        $invalidName = 'invalid/key{with}forbidden(chars)';
+
+        // Act - must not throw
+        $this->service->putGrobidReferencesInCache($invalidName, '<TEI>test</TEI>');
+
+        // Assert - nothing to assert beyond "no exception was thrown"
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetGrobidReferencesInCache_InvalidKey_ReturnsFalse(): void
+    {
+        // Arrange - PSR-6 cache keys forbid characters like "{}()/\@:"
+        $invalidName = 'invalid/key{with}forbidden(chars)';
+
+        // Act
+        $result = $this->service->getGrobidReferencesInCache($invalidName);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testHasCachedReferences_WhenCached_ReturnsTrue(): void
+    {
+        // Arrange
+        $docId = 123456;
+        $this->service->putGrobidReferencesInCache($docId . '.pdf', '<TEI>cached</TEI>');
+
+        // Act & Assert
+        $this->assertTrue($this->service->hasCachedReferences($docId));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testHasCachedReferences_WhenNotCached_ReturnsFalse(): void
+    {
+        // Arrange
+        $docId = 123456;
+
+        // Act & Assert
+        $this->assertFalse($this->service->hasCachedReferences($docId));
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testCountAllReferencesFromDB_ReturnsCount(): void
+    {
+        // Arrange
+        $docId = 123456;
+
+        $repository = $this->createMock(PaperReferencesRepository::class);
+        $repository->expects($this->once())
+            ->method('count')
+            ->with(['document' => $docId])
+            ->willReturn(7);
+
+        $this->entityManager->expects($this->once())
+            ->method('getRepository')
+            ->with(PaperReferences::class)
+            ->willReturn($repository);
+
+        // Act
+        $result = $this->service->countAllReferencesFromDB($docId);
+
+        // Assert
+        $this->assertSame(7, $result);
     }
 }

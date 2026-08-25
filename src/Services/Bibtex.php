@@ -54,7 +54,7 @@ class Bibtex
 
         try {
             static::logger();
-            $bibtexLog = ($isFile) ? file_get_contents($bibtexFile) : $bibtexFile;
+            $bibtexLog = ($isFile) ? (is_readable((string) $bibtexFile) ? file_get_contents($bibtexFile) : '') : $bibtexFile;
             ($isFile) ? $parser->parseFile($bibtexFile) : $parser->parseString($bibtexFile) ;
             $entries = $listener->export();
             self::logger()->info('bibtexImport => ', ['entries' => $entries,
@@ -91,8 +91,9 @@ class Bibtex
      */
     public static function generateCSL(array $entry): array
     {
+        $type = strtolower((string) ($entry['type'] ?? 'misc'));
         $csl = [
-            'type' => lcfirst((string) ($entry['type'] ?? 'misc')),
+            'type' => lcfirst($type),
             'author' => [],
             'title' => $entry['title'] ?? '',
             'issued' => [
@@ -110,7 +111,7 @@ class Bibtex
         if (isset($entry['publisher'])){
             $csl['publisher'] = $entry['publisher'];
         }
-        if ($entry['type'] === 'article') {
+        if ($type === 'article') {
             if (isset($entry['journal'])){
                 $csl['container-title'] = $entry['journal'];
             }
@@ -256,12 +257,19 @@ class Bibtex
             if (!isset($refData['csl']['type'])) {
                 $refData['csl']['type'] = isset($refData['csl']['container-title']) ? 'article-journal' : 'article';
             }
+            $doi = isset($refData['doi']) ? (string) $refData['doi'] : null;
+            // Drop the DOI from the CSL source so CiteProc never renders it in the
+            // first place, instead of relying only on regex-stripping its output.
+            if ($doi !== null && isset($refData['csl']['DOI']) && (string) $refData['csl']['DOI'] === $doi) {
+                unset($refData['csl']['DOI']);
+            }
             $jsonArray = json_encode([$refData['csl']], JSON_THROW_ON_ERROR);
             $style = StyleSheet::loadStyleSheet("apa");
             $citeProc = new CiteProc($style, "en-US");
             $bibliography = $citeProc->render(json_decode($jsonArray, false, 512, JSON_THROW_ON_ERROR), "bibliography");
-            $refData['raw_reference'] = trim(htmlspecialchars_decode(strip_tags($bibliography)));
-            $refData['raw_reference'] = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $refData['raw_reference']);
+            $rawRef = trim(htmlspecialchars_decode(strip_tags($bibliography)));
+            $rawRef = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $rawRef);
+            $refData['raw_reference'] = Doi::stripTrailingDoi($rawRef, $doi);
             unset($refData['csl']);
         }
         return $refData;

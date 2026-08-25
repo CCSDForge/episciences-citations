@@ -13,10 +13,10 @@
             {{ encore_entry_script_tags('app') }}
         {% endblock %}
     </head>
-    <body>
+    <body class="d-flex flex-column vh-100">
         {% include('navbar.html.twig') %}
         {% block body %}
-            <div class="d-flex vh-100">
+            <div class="d-flex flex-grow-1">
                 <div class="m-auto">
                     <p class="fs-4">{{ 'Welcome to Episciences citation manager'|trans }}</p>
                 </div>

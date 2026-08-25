@@ -51,10 +51,21 @@ class Doi
                     'lang' => $lang
                 ]
             ]);
-            return trim($response->getBody()->getContents());
+            $citation = trim($response->getBody()->getContents());
+            return self::stripTrailingDoi($citation, $doi);
         } catch (GuzzleException) {
             return "";
         }
+    }
+
+    public static function stripTrailingDoi(string $text, ?string $doi = null): string
+    {
+        if ($doi !== null && $doi !== '') {
+            $pattern = '#\s*(?:https?://(?:dx\.)?doi\.org/|doi:\s*)' . preg_quote($doi, '#') . '\.?$#i';
+            return preg_replace($pattern, '', $text) ?? $text;
+        }
+        $generalPattern = '#\s*(?:https?://(?:dx\.)?doi\.org/|doi:\s*)10\.\d{4,}(?:\.\d+)*\/(?:(?!["&\'\s])\S)+?\.?$#i';
+        return preg_replace($generalPattern, '', $text) ?? $text;
     }
 
 

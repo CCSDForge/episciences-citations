@@ -80,7 +80,10 @@ class References {
     private function applyReferenceChoice(PaperReferences $ref, array $paperReference, UserInformations $user): int
     {
         if (isset($paperReference['reference'])) {
-            $ref->setReference($this->sanitizeOpenAccessUrl($this->normalizeReferenceInput($paperReference['reference'])));
+            $normalized = $this->normalizeReferenceInput($paperReference['reference']);
+            if ($normalized !== null) {
+                $ref->setReference($this->sanitizeOpenAccessUrl($normalized));
+            }
         }
         if ($paperReference['isDirtyTextAreaModifyRef'] === "1") {
             $ref->setSource(PaperReferences::SOURCE_METADATA_EPI_USER);
@@ -237,7 +240,7 @@ class References {
             $user = $this->entityManager->getRepository(UserInformations::class)->find($userInfo['UID']);
             if (is_null($user)) {
                 $user = new UserInformations();
-                $user->setId($userInfo['UID']);
+                $user->setId((int) $userInfo['UID']);
                 $user->setSurname($userInfo['FIRSTNAME']);
                 $user->setName($userInfo['LASTNAME']);
             }
@@ -255,17 +258,20 @@ class References {
         return false;
     }
 
-    public function persistOrderRef(string $orderRef, int $orderChanged): int
+    public function persistOrderRef(string $orderRef, int $orderChanged, ?int $docId = null): int
     {
         $orderRefArray = explode(";", $orderRef);
         foreach ($orderRefArray as $order => $pkRef) {
             $ref = $this->entityManager->getRepository(PaperReferences::class)->find($pkRef);
-            if (!is_null($ref)) {
-                $ref->setReferenceOrder($order);
-                $this->entityManager->persist($ref);
-                $orderChanged++;
+            if ($ref === null) {
+                continue;
             }
-
+            if ($docId !== null && $ref->getDocument()?->getId() !== $docId) {
+                continue;
+            }
+            $ref->setReferenceOrder($order);
+            $this->entityManager->persist($ref);
+            $orderChanged++;
         }
         return $orderChanged;
     }
@@ -294,27 +300,43 @@ class References {
         return $result !== null ? (int) $result : -1;
     }
 
-    public function autosaveOrder(string $orderRef): void
+    public function autosaveOrder(string $orderRef, int $docId): void
     {
-        $this->persistOrderRef($orderRef, 0);
+        $this->persistOrderRef($orderRef, 0, $docId);
         $this->entityManager->flush();
+    }
+
+    public function autosaveDeleteReference(int $refId, int $docId, ?string $orderRef = null): bool
+    {
+        $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
+        if ($ref === null || $ref->getDocument()?->getId() !== $docId) {
+            return false;
+        }
+
+        $this->entityManager->remove($ref);
+        if ($orderRef !== null) {
+            $this->persistOrderRef($orderRef, 0, $docId);
+        }
+        $this->entityManager->flush();
+
+        return true;
     }
 
     /**
      * @param array<string, mixed> $userInfo
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null null if the reference does not exist, does not belong to $docId, or the user could not be resolved
      */
-    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo): array
+    public function autosaveReference(int $refId, string $referenceJson, int $accepted, bool $isDirty, array $userInfo, int $docId): ?array
     {
         $ref = $this->entityManager->getRepository(PaperReferences::class)->find($refId);
-        if ($ref === null) {
-            return [];
+        if ($ref === null || $ref->getDocument()?->getId() !== $docId) {
+            return null;
         }
 
         $user = $this->resolveOrCreateUser($userInfo);
         if ($user === null) {
              // Fallback or handle error if UID is missing
-             return [];
+             return null;
         }
 
         $refData = json_decode($referenceJson, true) ?? [];
@@ -341,9 +363,9 @@ class References {
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    private function normalizeReferenceInput(mixed $reference): array
+    private function normalizeReferenceInput(mixed $reference): ?array
     {
         if (is_array($reference)) {
             return $reference;
@@ -351,10 +373,10 @@ class References {
 
         if (is_string($reference)) {
             $decoded = json_decode($reference, true);
-            return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $decoded : null;
         }
 
-        return [];
+        return null;
     }
 
     /**
