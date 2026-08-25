@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.3.2 - 2026-08-25
+
 ### Added
 - **Single Reference Deletion**: Added a per-reference "Delete" button adjacent to the Edit and Auto-fix actions with a confirmation modal, real-time autosave persistence, automatic position badge renumbering, and full screen-reader accessibility support.
 - **Reference Card Actions Visibility**: Reveal reference card actions (Delete, Edit, Auto-fix) on card hover and keyboard focus (`focus-within`) for a cleaner interface.
