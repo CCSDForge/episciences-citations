@@ -2178,18 +2178,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@symfony/stimulus-bridge@npm:^3.2.0":
-  version: 3.2.3
-  resolution: "@symfony/stimulus-bridge@npm:3.2.3"
+"@symfony/stimulus-bridge@npm:^4.0.0":
+  version: 4.0.1
+  resolution: "@symfony/stimulus-bridge@npm:4.0.1"
   dependencies:
     "@hotwired/stimulus-webpack-helpers": "npm:^1.0.1"
     "@types/webpack-env": "npm:^1.16.4"
-    acorn: "npm:^8.0.5"
-    loader-utils: "npm:^2.0.0"
-    schema-utils: "npm:^3.0.0"
+    loader-utils: "npm:^2.0.0 || ^3.0.0"
+    schema-utils: "npm:^3.0.0 || ^4.0.0"
   peerDependencies:
     "@hotwired/stimulus": ^3.0
-  checksum: 10c0/adc979c6cd4b599326d7e5f937cbcc22499625d989a795eea50f4591c321513840c55ad12fe3d9701fc67249a1b25e9c7f3d87a91624ad490fe25711f8947652
+  checksum: 10c0/c904619b00cfb75a1b95d746c55ef853309ce74c6ec25e3edcaa1532a04f68ecb9e28045b8663d0743445ce3a6090561e3d07fb010df636b1b9bbb2740321ec3
   languageName: node
   linkType: hard
 
@@ -2443,7 +2442,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.8, @types/json-schema@npm:^7.0.9":
+"@types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.9":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10c0/a996a745e6c5d60292f36731dd41341339d4eeed8180bb09226e5c8d23759067692b1d88e5d91d72ee83dfc00d3aca8e7bd43ea120516c17922cbcb7c3e252db
@@ -2842,7 +2841,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn@npm:^8.0.5, acorn@npm:^8.15.0, acorn@npm:^8.16.0":
+"acorn@npm:^8.15.0, acorn@npm:^8.16.0":
   version: 8.18.0
   resolution: "acorn@npm:8.18.0"
   bin:
@@ -2882,15 +2881,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv-keywords@npm:^3.5.2":
-  version: 3.5.2
-  resolution: "ajv-keywords@npm:3.5.2"
-  peerDependencies:
-    ajv: ^6.9.1
-  checksum: 10c0/0c57a47cbd656e8cdfd99d7c2264de5868918ffa207c8d7a72a7f63379d4333254b2ba03d69e3c035e996a3fd3eb6d5725d7a1597cca10694296e32510546360
-  languageName: node
-  linkType: hard
-
 "ajv-keywords@npm:^5.1.0":
   version: 5.1.0
   resolution: "ajv-keywords@npm:5.1.0"
@@ -2902,7 +2892,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^6.12.5, ajv@npm:^6.14.0":
+"ajv@npm:^6.14.0":
   version: 6.15.0
   resolution: "ajv@npm:6.15.0"
   dependencies:
@@ -5520,6 +5510,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"loader-utils@npm:^2.0.0 || ^3.0.0":
+  version: 3.3.1
+  resolution: "loader-utils@npm:3.3.1"
+  checksum: 10c0/f2af4eb185ac5bf7e56e1337b666f90744e9f443861ac521b48f093fb9e8347f191c8960b4388a3365147d218913bc23421234e7788db69f385bacfefa0b4758
+  languageName: node
+  linkType: hard
+
 "locate-path@npm:^5.0.0":
   version: 5.0.0
   resolution: "locate-path@npm:5.0.0"
@@ -6751,7 +6748,7 @@ __metadata:
     "@fortawesome/fontawesome-free": "npm:^7.3"
     "@hotwired/stimulus": "npm:^3.0.0"
     "@popperjs/core": "npm:^2.11.8"
-    "@symfony/stimulus-bridge": "npm:^3.2.0"
+    "@symfony/stimulus-bridge": "npm:^4.0.0"
     "@symfony/webpack-encore": "npm:^5.3.1"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"
@@ -6845,18 +6842,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"schema-utils@npm:^3.0.0":
-  version: 3.3.0
-  resolution: "schema-utils@npm:3.3.0"
-  dependencies:
-    "@types/json-schema": "npm:^7.0.8"
-    ajv: "npm:^6.12.5"
-    ajv-keywords: "npm:^3.5.2"
-  checksum: 10c0/fafdbde91ad8aa1316bc543d4b61e65ea86970aebbfb750bfb6d8a6c287a23e415e0e926c2498696b242f63af1aab8e585252637fabe811fd37b604351da6500
-  languageName: node
-  linkType: hard
-
-"schema-utils@npm:^4.0.0, schema-utils@npm:^4.2.0, schema-utils@npm:^4.3.0, schema-utils@npm:^4.3.3":
+"schema-utils@npm:^3.0.0 || ^4.0.0, schema-utils@npm:^4.0.0, schema-utils@npm:^4.2.0, schema-utils@npm:^4.3.0, schema-utils@npm:^4.3.3":
   version: 4.3.3
   resolution: "schema-utils@npm:4.3.3"
   dependencies:
