@@ -18,8 +18,6 @@ services:
     networks:
       epi-citations-network:
       epi-network:
-        aliases:
-          - citations-dev.episciences.org
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.epi-citations-httpd.loadbalancer.server.port=80"
