@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Dependency Upgrades**: Updated PHP Composer dependencies (`composer.lock`), including Symfony 7.4 patch releases (`v7.4.18`/`v7.4.19`), PHPUnit (`12.5.35`), and Doctrine/Twig components.
+
+### Fixed
+- **Docker Network Resolution via Traefik**: Removed the `citations-dev.episciences.org` network alias from the `epi-citations-httpd` container in `docker-compose.yml` so server-to-server HTTPS calls resolve through Traefik with proper TLS termination instead of failing with connection refused on plain HTTP (#211).
+
+## v1.3.2 - 2026-08-25
+
 ### Added
 - **Single Reference Deletion**: Added a per-reference "Delete" button adjacent to the Edit and Auto-fix actions with a confirmation modal, real-time autosave persistence, automatic position badge renumbering, and full screen-reader accessibility support.
 - **Reference Card Actions Visibility**: Reveal reference card actions (Delete, Edit, Auto-fix) on card hover and keyboard focus (`focus-within`) for a cleaner interface.
