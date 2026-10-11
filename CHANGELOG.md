@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.3.3 - 2026-10-11
+
 ### Changed
 - **Dependency Upgrades**:
   - Updated PHP Composer dependencies (`composer.lock`), including Symfony 7.4 patch releases (`v7.4.20`), PHPUnit (`12.5.38`), Rector (`2.7.0`), and Doctrine/Twig components.
