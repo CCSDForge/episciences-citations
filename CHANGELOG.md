@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Asset Bundle Optimization**:
+  - Optimized FontAwesome imports in `assets/app.js` to load only core and solid CSS stylesheets instead of the entire JS/SVG runtime, drastically reducing production bundle size from ~1.96 MiB to 416 KiB (#215).
+  - Pinned `sass-loader` to `^16.0.4` in `package.json` to maintain compatibility with Webpack Encore requirements.
+
+### Fixed
+- **Webpack Build Warnings**: Disabled SVGO processing for CSS minimizer in `webpack.config.js` to prevent parse errors on URL-encoded Bootstrap SVGs (#215).
+
+## v1.3.3 - 2026-10-11
+
+### Changed
 - **Dependency Upgrades**:
   - Updated PHP Composer dependencies (`composer.lock`), including Symfony 7.4 patch releases (`v7.4.20`), PHPUnit (`12.5.38`), Rector (`2.7.0`), and Doctrine/Twig components.
   - Updated JavaScript dependencies (`package.json`, `yarn.lock`), including Webpack (`5.111.1`), Webpack CLI (`7.2.3`), Babel (`7.29.7`), ESLint (`9.39.5`), Prettier (`3.9.10`), Jest (`30.5.2`), Testing Library, Stimulus (`3.2.2`), Sass (`1.105.1`), and PostCSS (`8.5.29`).

@@ -77,6 +77,16 @@ Encore
             silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function'],
         };
     })
+    .configureCssMinimizerPlugin((options) => {
+        options.minimizerOptions = {
+            preset: [
+                'default',
+                {
+                    svgo: false,
+                },
+            ],
+        };
+    })
 ;
 
 
