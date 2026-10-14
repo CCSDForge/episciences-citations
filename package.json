@@ -20,7 +20,7 @@
         "prettier": "^3.9.10",
         "regenerator-runtime": "^0.14.1",
         "sass": "^1.105.1",
-        "sass-loader": "^17.0.1",
+        "sass-loader": "^16.0.4",
         "webpack": "^5.111.1",
         "webpack-cli": "^7.2.3",
         "webpack-notifier": "^1.17.0"

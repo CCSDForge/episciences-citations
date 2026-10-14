@@ -2,8 +2,8 @@ import './styles/app.scss';
 import 'bootstrap';
 import './bootstrap';
 
-require('@fortawesome/fontawesome-free/css/all.min.css');
-require('@fortawesome/fontawesome-free/js/all.js');
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
+import '@fortawesome/fontawesome-free/css/solid.min.css';
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.flash-toast').forEach((el) => {
