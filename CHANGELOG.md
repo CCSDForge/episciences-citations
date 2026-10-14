@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Asset Bundle Optimization**:
+  - Optimized FontAwesome imports in `assets/app.js` to load only core and solid CSS stylesheets instead of the entire JS/SVG runtime, drastically reducing production bundle size from ~1.96 MiB to 416 KiB (#215).
+  - Pinned `sass-loader` to `^16.0.4` in `package.json` to maintain compatibility with Webpack Encore requirements.
+
+### Fixed
+- **Webpack Build Warnings**: Disabled SVGO processing for CSS minimizer in `webpack.config.js` to prevent parse errors on URL-encoded Bootstrap SVGs (#215).
+
 ## v1.3.3 - 2026-10-11
 
 ### Changed
