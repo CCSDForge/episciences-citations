@@ -357,8 +357,8 @@ class EpisciencesTest extends TestCase
     {
         // Arrange
         $docId = 123456;
-        $uid = 789;
-        $expectedUrl = $this->apiRight . "/api/users/$uid/is-allowed-to-edit-citations?documentId=$docId";
+        $uuid = '0fcb4f30-5b79-49bb-baaf-a3063c12c1a9';
+        $expectedUrl = $this->apiRight . "/api/users/$uuid/is-allowed-to-edit-citations?documentId=$docId";
 
         // Mock HTTP response returning "true" (as string)
         $response = $this->createMock(ResponseInterface::class);
@@ -370,7 +370,7 @@ class EpisciencesTest extends TestCase
             ->willReturn($response);
 
         // Act
-        $result = $this->service->getRightUser((string) $docId, (string) $uid);
+        $result = $this->service->getRightUser((string) $docId, $uuid);
 
         // Assert
         $this->assertTrue($result);
@@ -382,7 +382,7 @@ class EpisciencesTest extends TestCase
     {
         // Arrange
         $docId = 123456;
-        $uid = 789;
+        $uuid = '0fcb4f30-5b79-49bb-baaf-a3063c12c1a9';
 
         // Mock HTTP response returning "false" (as string)
         $response = $this->createMock(ResponseInterface::class);
@@ -393,7 +393,7 @@ class EpisciencesTest extends TestCase
             ->willReturn($response);
 
         // Act
-        $result = $this->service->getRightUser((string) $docId, (string) $uid);
+        $result = $this->service->getRightUser((string) $docId, $uuid);
 
         // Assert
         $this->assertFalse($result);
@@ -405,7 +405,7 @@ class EpisciencesTest extends TestCase
     {
         // Arrange
         $docId = 123456;
-        $uid = 789;
+        $uuid = '0fcb4f30-5b79-49bb-baaf-a3063c12c1a9';
 
         // Mock HTTP exception
         $exception = new class('Internal Server Error', 500) extends \Exception implements ClientExceptionInterface {
@@ -420,7 +420,7 @@ class EpisciencesTest extends TestCase
             ->willThrowException($exception);
 
         // Act
-        $result = $this->service->getRightUser((string) $docId, (string) $uid);
+        $result = $this->service->getRightUser((string) $docId, $uuid);
 
         // Assert
         $this->assertFalse($result);

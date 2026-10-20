@@ -141,9 +141,9 @@ class Episciences {
      * @throws RedirectionExceptionInterface
      * @throws ClientExceptionInterface
      */
-    public function getRightUser(string $docId, string $uid): bool {
+    public function getRightUser(string $docId, string $uuid): bool {
         try {
-            $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
+            $response = $this->client->request('GET', $this->apiRight."/api/users/" . $uuid . "/is-allowed-to-edit-citations?documentId=" . $docId)->getContent();
             // Convert string response ("true"/"false") to boolean
             return $response === 'true';
         } catch (ClientExceptionInterface|RedirectionExceptionInterface|ServerExceptionInterface|TransportExceptionInterface) {
