@@ -99,7 +99,7 @@ install-deps: composer-install npm-install ## Install all dependencies (PHP + JS
 
 npm-install: ## Install npm dependencies
 	@echo "$(YELLOW)Installing npm dependencies...$(NC)"
-	npm install
+	corepack yarn install --immutable
 	@echo "$(GREEN)✓ npm dependencies installed$(NC)"
 
 npm-build: ## Build production assets
