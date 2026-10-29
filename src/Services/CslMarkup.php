@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace App\Services;
 
 /**
- * Flattens the rich-text markup allowed in CSL-JSON fields (e.g. Crossref titles such as
- * "G <sup>1</sup>-conforming") into plain text, since citeproc-php escapes it instead of
- * interpreting it and the escaped tags would end up displayed in the formatted reference.
+ * Flattens the rich-text markup found in Crossref metadata (CSL-JSON fields such as titles,
+ * e.g. "G <sup>1</sup>-conforming", and "unstructured" reference strings) into plain text,
+ * since citeproc-php escapes it instead of interpreting it and the tags would end up
+ * displayed in the formatted reference.
  */
 final class CslMarkup
 {
+    /**
+     * Known inline markup only: CSL rich text, Crossref face markup and namespaced JATS/MathML.
+     * strip_tags() is not used because it also swallows text after a bare "<" (e.g. "p<0.05").
+     */
+    private const string TAG_PATTERN = '#</?(?:i|b|u|em|strong|sup|sub|sc|scp|tt|ovl|span|font|[a-z]+:[\w.-]+)(?:\s[^<>]*)?/?>#i';
+
     private const array SUPERSCRIPTS = [
         '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
         '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹',
@@ -59,15 +66,20 @@ final class CslMarkup
         $text = preg_replace_callback(
             '#<(su[bp])\b[^>]*>(.*?)</\1>#is',
             static fn(array $m): string => self::toScript(
-                strip_tags($m[2]),
+                self::stripTags($m[2]),
                 strtolower($m[1]) === 'sup' ? self::SUPERSCRIPTS : self::SUBSCRIPTS
             ),
             $text
         ) ?? $text;
 
-        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = html_entity_decode(self::stripTags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    }
+
+    private static function stripTags(string $text): string
+    {
+        return preg_replace(self::TAG_PATTERN, '', $text) ?? $text;
     }
 
     /**

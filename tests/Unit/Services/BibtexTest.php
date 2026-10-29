@@ -260,6 +260,24 @@ class BibtexTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_UnstructuredReferenceWithoutCsl_IsFlattened(): void
+    {
+        // Arrange - Crossref "unstructured" reference as stored by GetBibRefCommand
+        $refData = [
+            'raw_reference' => 'Greco L. An accurate G<sup>1</sup>-conforming formulation. <i>Math Mech Solids</i> 2023',
+            'doi' => '10.1177/10812865231204972',
+        ];
+
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert
+        $this->assertSame('Greco L. An accurate G¹-conforming formulation. Math Mech Solids 2023', $result['raw_reference']);
+        $this->assertSame('10.1177/10812865231204972', $result['doi']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testProcessBibtex_InvalidBibtexFile_ReturnsError(): void
     {
         // Arrange - invalid BibTeX content written to a real file (processBibtex always parses as a file)

@@ -34,6 +34,9 @@ final class CslMarkupTest extends TestCase
         yield 'entities are decoded' => ['Mechanics &amp; Solids', 'Mechanics & Solids'];
         yield 'escaped tags are decoded, not stripped' => ['x &lt;sup&gt; y', 'x <sup> y'];
         yield 'lone comparison sign is kept' => ['Effect for p < 0.05 and q > 1', 'Effect for p < 0.05 and q > 1'];
+        yield 'glued comparison signs are kept' => ['Effect p<0.05 when x<y and y>z', 'Effect p<0.05 when x<y and y>z'];
+        yield 'crossref face markup is dropped' => ['<scp>Rna</scp> and <ovl>x</ovl>', 'Rna and x'];
+        yield 'jats markup is dropped' => ['<jats:italic>In vivo</jats:italic> data', 'In vivo data'];
     }
 
     #[Test]

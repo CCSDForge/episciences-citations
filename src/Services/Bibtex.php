@@ -272,6 +272,9 @@ class Bibtex
             $rawRef = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $rawRef);
             $refData['raw_reference'] = Doi::stripTrailingDoi($rawRef, $doi);
             unset($refData['csl']);
+        } elseif (isset($refData['raw_reference']) && is_string($refData['raw_reference'])) {
+            // Crossref "unstructured" references (GetBibRefCommand) carry the same markup.
+            $refData['raw_reference'] = CslMarkup::toPlainText($refData['raw_reference']);
         }
         return $refData;
     }
