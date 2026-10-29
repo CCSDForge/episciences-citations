@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.3.4 - 2026-10-29
+
 ### Changed
 - **Asset Bundle Optimization**:
   - Optimized FontAwesome imports in `assets/app.js` to load only core and solid CSS stylesheets instead of the entire JS/SVG runtime, drastically reducing production bundle size from ~1.96 MiB to 416 KiB (#215).
