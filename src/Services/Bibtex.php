@@ -246,6 +246,9 @@ class Bibtex
     }
 
     /**
+     * Renders the CSL data into a plain-text raw_reference (APA style) and drops the csl key;
+     * without CSL data, flattens the markup of the existing raw_reference instead.
+     *
      * @param array<string, mixed> $refData
      * @return array<string, mixed>
      * @throws CiteProcException
@@ -253,7 +256,8 @@ class Bibtex
      */
     public function getCslRefText(array $refData): array
     {
-        if (array_key_exists('csl', $refData)) {
+        if (isset($refData['csl']) && is_array($refData['csl'])) {
+            $refData['csl'] = CslMarkup::toPlainTextRecursive($refData['csl']);
             if (!isset($refData['csl']['type'])) {
                 $refData['csl']['type'] = isset($refData['csl']['container-title']) ? 'article-journal' : 'article';
             }
@@ -271,6 +275,9 @@ class Bibtex
             $rawRef = str_replace(self::REPLACE_CSL_EXCEPTION_STRING, '', $rawRef);
             $refData['raw_reference'] = Doi::stripTrailingDoi($rawRef, $doi);
             unset($refData['csl']);
+        } elseif (isset($refData['raw_reference']) && is_string($refData['raw_reference'])) {
+            // Crossref "unstructured" references (GetBibRefCommand) carry the same markup.
+            $refData['raw_reference'] = CslMarkup::toPlainText($refData['raw_reference']);
         }
         return $refData;
     }

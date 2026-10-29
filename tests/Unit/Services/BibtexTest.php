@@ -237,6 +237,61 @@ class BibtexTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_CrossrefTitleMarkup_IsRenderedAsPlainText(): void
+    {
+        // Arrange - title as returned by Crossref for 10.1177/10812865231204972 (issue #221)
+        $refData = [
+            'csl' => [
+                'type' => 'article-journal',
+                'title' => "An objective and accurate G\n                    <sup>1</sup>\n                    -conforming mixed Bézier FE-formulation for Kirchhoff–Love rods",
+                'author' => [['family' => 'Greco', 'given' => 'Leopoldo']],
+                'issued' => ['date-parts' => [[2023]]],
+                'container-title' => 'Mathematics and Mechanics of Solids',
+            ],
+        ];
+
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert
+        $this->assertStringContainsString('G¹-conforming mixed', $result['raw_reference']);
+        $this->assertStringNotContainsString('<', $result['raw_reference']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_NullCsl_FallsBackToRawReference(): void
+    {
+        // Arrange - corrupted or partially decoded reference
+        $refData = ['csl' => null, 'raw_reference' => 'H<sub>2</sub>O transport'];
+
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert
+        $this->assertSame('H₂O transport', $result['raw_reference']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_UnstructuredReferenceWithoutCsl_IsFlattened(): void
+    {
+        // Arrange - Crossref "unstructured" reference as stored by GetBibRefCommand
+        $refData = [
+            'raw_reference' => 'Greco L. An accurate G<sup>1</sup>-conforming formulation. <i>Math Mech Solids</i> 2023',
+            'doi' => '10.1177/10812865231204972',
+        ];
+
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert
+        $this->assertSame('Greco L. An accurate G¹-conforming formulation. Math Mech Solids 2023', $result['raw_reference']);
+        $this->assertSame('10.1177/10812865231204972', $result['doi']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testProcessBibtex_InvalidBibtexFile_ReturnsError(): void
     {
         // Arrange - invalid BibTeX content written to a real file (processBibtex always parses as a file)
