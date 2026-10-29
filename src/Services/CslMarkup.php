@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+/**
+ * Flattens the rich-text markup allowed in CSL-JSON fields (e.g. Crossref titles such as
+ * "G <sup>1</sup>-conforming") into plain text, since citeproc-php escapes it instead of
+ * interpreting it and the escaped tags would end up displayed in the formatted reference.
+ */
+final class CslMarkup
+{
+    private const array SUPERSCRIPTS = [
+        '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
+        '5' => '⁵', '6' => '⁶', '7' => '⁷', '8' => '⁸', '9' => '⁹',
+        '+' => '⁺', '-' => '⁻', '−' => '⁻', '=' => '⁼', '(' => '⁽', ')' => '⁾',
+        'a' => 'ᵃ', 'b' => 'ᵇ', 'c' => 'ᶜ', 'd' => 'ᵈ', 'e' => 'ᵉ', 'f' => 'ᶠ',
+        'g' => 'ᵍ', 'h' => 'ʰ', 'i' => 'ⁱ', 'j' => 'ʲ', 'k' => 'ᵏ', 'l' => 'ˡ',
+        'm' => 'ᵐ', 'n' => 'ⁿ', 'o' => 'ᵒ', 'p' => 'ᵖ', 'r' => 'ʳ', 's' => 'ˢ',
+        't' => 'ᵗ', 'u' => 'ᵘ', 'v' => 'ᵛ', 'w' => 'ʷ', 'x' => 'ˣ', 'y' => 'ʸ', 'z' => 'ᶻ',
+    ];
+
+    private const array SUBSCRIPTS = [
+        '0' => '₀', '1' => '₁', '2' => '₂', '3' => '₃', '4' => '₄',
+        '5' => '₅', '6' => '₆', '7' => '₇', '8' => '₈', '9' => '₉',
+        '+' => '₊', '-' => '₋', '−' => '₋', '=' => '₌', '(' => '₍', ')' => '₎',
+        'a' => 'ₐ', 'e' => 'ₑ', 'h' => 'ₕ', 'i' => 'ᵢ', 'j' => 'ⱼ', 'k' => 'ₖ',
+        'l' => 'ₗ', 'm' => 'ₘ', 'n' => 'ₙ', 'o' => 'ₒ', 'p' => 'ₚ', 'r' => 'ᵣ',
+        's' => 'ₛ', 't' => 'ₜ', 'u' => 'ᵤ', 'v' => 'ᵥ', 'x' => 'ₓ',
+    ];
+
+    /**
+     * @param array<array-key, mixed> $csl
+     * @return array<array-key, mixed>
+     */
+    public static function toPlainTextRecursive(array $csl): array
+    {
+        array_walk_recursive($csl, static function (mixed &$value): void {
+            if (is_string($value)) {
+                $value = self::toPlainText($value);
+            }
+        });
+
+        return $csl;
+    }
+
+    public static function toPlainText(string $text): string
+    {
+        if (!str_contains($text, '<') && !str_contains($text, '&')) {
+            return $text;
+        }
+
+        // Crossref wraps inline tags in line breaks ("G\n    <sup>1</sup>\n    -conforming"):
+        // that whitespace is layout, not content, so glue super/subscripts to their neighbours.
+        $text = preg_replace('#\s*\n\s*(<(su[bp])\b[^>]*>)#i', '$1', $text) ?? $text;
+        $text = preg_replace('#(</su[bp]>)\s*\n\s*#i', '$1', $text) ?? $text;
+
+        $text = preg_replace_callback(
+            '#<(su[bp])\b[^>]*>(.*?)</\1>#is',
+            static fn(array $m): string => self::toScript(
+                strip_tags($m[2]),
+                strtolower($m[1]) === 'sup' ? self::SUPERSCRIPTS : self::SUBSCRIPTS
+            ),
+            $text
+        ) ?? $text;
+
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    }
+
+    /**
+     * Returns the Unicode super/subscript form when every character has one, the text unchanged otherwise.
+     *
+     * @param array<int|string, string> $map digit keys are cast to int by PHP
+     */
+    private static function toScript(string $text, array $map): string
+    {
+        $chars = mb_str_split(trim($text));
+        foreach ($chars as $char) {
+            if (!isset($map[$char])) {
+                return $text;
+            }
+        }
+
+        return implode('', array_map(static fn(string $char): string => $map[$char], $chars));
+    }
+}

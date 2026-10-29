@@ -254,6 +254,7 @@ class Bibtex
     public function getCslRefText(array $refData): array
     {
         if (array_key_exists('csl', $refData)) {
+            $refData['csl'] = CslMarkup::toPlainTextRecursive($refData['csl']);
             if (!isset($refData['csl']['type'])) {
                 $refData['csl']['type'] = isset($refData['csl']['container-title']) ? 'article-journal' : 'article';
             }
