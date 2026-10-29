@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Webpack Build Warnings**: Disabled SVGO processing for CSS minimizer in `webpack.config.js` to prevent parse errors on URL-encoded Bootstrap SVGs (#215).
+- **HTML Tags in Formatted References**: Added a `CslMarkup` service that flattens rich-text markup in CSL fields and Crossref "unstructured" references before display, so tags such as `<sup>`, `<i>` or `<scp>` no longer appear verbatim in `raw_reference` (#221):
+  - Converts superscripts and subscripts to their Unicode forms when possible (e.g. `G<sup>1</sup>-conforming` becomes `G¹-conforming`, `H<sub>2</sub>O` becomes `H₂O`).
+  - Strips only known inline markup (CSL rich text, Crossref face markup, namespaced MathML/JATS, `em`, `strong`, `sc`), so bare comparison signs such as `p<0.05` are kept.
+  - Decodes HTML entities first, so escaped markup such as `&lt;i&gt;` is flattened too.
+  - Applied at read time in `Bibtex::getCslRefText()`, which fixes existing references without a data migration.
 
 ## v1.3.3 - 2026-10-11
 
