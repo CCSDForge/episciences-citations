@@ -13,10 +13,12 @@ namespace App\Services;
 final class CslMarkup
 {
     /**
-     * Known inline markup only: CSL rich text, Crossref face markup and namespaced JATS/MathML.
-     * strip_tags() is not used because it also swallows text after a bare "<" (e.g. "p<0.05").
+     * Known inline markup only, so that a bare "<" (e.g. "p<0.05") is kept, unlike with strip_tags():
+     * - CSL rich text: https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html
+     * - Crossref face markup: https://www.crossref.org/documentation/schema-library/markup-guide-metadata-segments/face-markup/
+     * - namespaced MathML/JATS (mml:math, jats:italic...), allowed by Crossref in titles
      */
-    private const string TAG_PATTERN = '#</?(?:i|b|u|em|strong|sup|sub|sc|scp|tt|ovl|span|font|[a-z]+:[\w.-]+)(?:\s[^<>]*)?/?>#i';
+    private const string TAG_PATTERN = '#</?(?:i|b|u|sup|sub|scp|tt|ovl|span|[a-z]+:[\w.-]+)(?:\s[^<>]*)?/?>#i';
 
     private const array SUPERSCRIPTS = [
         '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
