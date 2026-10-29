@@ -28,6 +28,7 @@ final class CslMarkup
         'g' => 'ᵍ', 'h' => 'ʰ', 'i' => 'ⁱ', 'j' => 'ʲ', 'k' => 'ᵏ', 'l' => 'ˡ',
         'm' => 'ᵐ', 'n' => 'ⁿ', 'o' => 'ᵒ', 'p' => 'ᵖ', 'r' => 'ʳ', 's' => 'ˢ',
         't' => 'ᵗ', 'u' => 'ᵘ', 'v' => 'ᵛ', 'w' => 'ʷ', 'x' => 'ˣ', 'y' => 'ʸ', 'z' => 'ᶻ',
+        'T' => 'ᵀ',
     ];
 
     private const array SUBSCRIPTS = [
@@ -61,14 +62,16 @@ final class CslMarkup
         }
 
         // Crossref wraps inline tags in line breaks ("G\n    <sup>1</sup>\n    -conforming"):
-        // that whitespace is layout, not content, so glue super/subscripts to their neighbours.
+        // that whitespace is layout, not content, so glue super/subscripts to their neighbours,
+        // keeping a single space when a word follows ("virus<sup>1</sup>\nand" -> "virus¹ and").
         $text = preg_replace('#\s*\n\s*(<(su[bp])\b[^>]*>)#i', '$1', $text) ?? $text;
-        $text = preg_replace('#(</su[bp]>)\s*\n\s*#i', '$1', $text) ?? $text;
+        $text = preg_replace('#(</su[bp]\s*>)\s*\n\s*(?=\w)#iu', '$1 ', $text) ?? $text;
+        $text = preg_replace('#(</su[bp]\s*>)\s*\n\s*#i', '$1', $text) ?? $text;
 
         $text = preg_replace_callback(
-            '#<(su[bp])\b[^>]*>(.*?)</\1>#is',
+            '#<(su[bp])\b[^>]*>(.*?)</\1\s*>#is',
             static fn(array $m): string => self::toScript(
-                self::stripTags($m[2]),
+                html_entity_decode(self::stripTags($m[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                 strtolower($m[1]) === 'sup' ? self::SUPERSCRIPTS : self::SUBSCRIPTS
             ),
             $text

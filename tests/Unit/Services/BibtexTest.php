@@ -260,6 +260,20 @@ class BibtexTest extends TestCase
 
     #[Test]
     #[AllowMockObjectsWithoutExpectations]
+    public function testGetCslRefText_NullCsl_FallsBackToRawReference(): void
+    {
+        // Arrange - corrupted or partially decoded reference
+        $refData = ['csl' => null, 'raw_reference' => 'H<sub>2</sub>O transport'];
+
+        // Act
+        $result = $this->service->getCslRefText($refData);
+
+        // Assert
+        $this->assertSame('H₂O transport', $result['raw_reference']);
+    }
+
+    #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function testGetCslRefText_UnstructuredReferenceWithoutCsl_IsFlattened(): void
     {
         // Arrange - Crossref "unstructured" reference as stored by GetBibRefCommand

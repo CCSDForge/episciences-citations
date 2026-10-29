@@ -23,6 +23,13 @@ final class CslMarkupTest extends TestCase
         ];
         yield 'inline superscript' => ['G<sup>1</sup>-conforming', 'G¹-conforming'];
         yield 'subscript' => ['H<sub>2</sub>O', 'H₂O'];
+        yield 'word after superscript line break keeps its space' => [
+            "Study of virus<sup>1</sup>\n    and its spread",
+            'Study of virus¹ and its spread',
+        ];
+        yield 'entity inside superscript' => ['m s<sup>&minus;1</sup>', 'm s⁻¹'];
+        yield 'space in closing tag' => ['G<sup>1</sup >-conforming', 'G¹-conforming'];
+        yield 'transpose superscript' => ['A<sup>T</sup>x', 'Aᵀx'];
         yield 'superscript with sign' => ['Ca<sup>2+</sup> ions', 'Ca²⁺ ions'];
         yield 'unmappable superscript keeps its text' => ['Space W<sup>Q</sup>', 'Space WQ'];
         yield 'italic is dropped, spacing kept' => ['The <i>in vivo</i> study', 'The in vivo study'];
