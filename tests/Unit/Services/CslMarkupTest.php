@@ -32,6 +32,7 @@ final class CslMarkupTest extends TestCase
         yield 'transpose superscript' => ['A<sup>T</sup>x', 'Aᵀx'];
         yield 'superscript with sign' => ['Ca<sup>2+</sup> ions', 'Ca²⁺ ions'];
         yield 'unmappable superscript keeps its text' => ['Space W<sup>Q</sup>', 'Space WQ'];
+        yield 'tag-like word is not a tag' => ['An <input> and <bold> element', 'An <input> and <bold> element'];
         yield 'italic is dropped, spacing kept' => ['The <i>in vivo</i> study', 'The in vivo study'];
         yield 'nocase span is dropped' => ['<span class="nocase">iPhone</span> apps', 'iPhone apps'];
         yield 'mathml keeps its text' => [
@@ -39,7 +40,21 @@ final class CslMarkupTest extends TestCase
             'A C1 scheme',
         ];
         yield 'entities are decoded' => ['Mechanics &amp; Solids', 'Mechanics & Solids'];
-        yield 'escaped tags are decoded, not stripped' => ['x &lt;sup&gt; y', 'x <sup> y'];
+        yield 'escaped markup is decoded then flattened' => [
+            'Title with &lt;i&gt;italic&lt;/i&gt; and x&lt;sup&gt;2&lt;/sup&gt;',
+            'Title with italic and x²',
+        ];
+        yield 'escaped comparison sign is decoded' => ['Effect for p &lt; 0.05', 'Effect for p < 0.05'];
+        yield 'small caps, em and strong are dropped' => [
+            'The <sc>Unesco</sc> Courier and <em>science</em> <strong>now</strong>',
+            'The Unesco Courier and science now',
+        ];
+        yield 'bracket after superscript line break keeps its space' => [
+            "Study of virus<sup>1</sup>\n    (note)",
+            'Study of virus¹ (note)',
+        ];
+        yield 'punctuation after superscript line break is glued' => ["x<sup>2</sup>\n    , y", 'x², y'];
+        yield 'uppercase superscript' => ['10<sup>TM</sup> kit', '10ᵀᴹ kit'];
         yield 'lone comparison sign is kept' => ['Effect for p < 0.05 and q > 1', 'Effect for p < 0.05 and q > 1'];
         yield 'glued comparison signs are kept' => ['Effect p<0.05 when x<y and y>z', 'Effect p<0.05 when x<y and y>z'];
         yield 'crossref face markup is dropped' => ['<scp>Rna</scp> and <ovl>x</ovl>', 'Rna and x'];

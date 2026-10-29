@@ -246,6 +246,9 @@ class Bibtex
     }
 
     /**
+     * Renders the CSL data into a plain-text raw_reference (APA style) and drops the csl key;
+     * without CSL data, flattens the markup of the existing raw_reference instead.
+     *
      * @param array<string, mixed> $refData
      * @return array<string, mixed>
      * @throws CiteProcException

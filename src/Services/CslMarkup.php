@@ -17,8 +17,9 @@ final class CslMarkup
      * - CSL rich text: https://citeproc-js.readthedocs.io/en/latest/csl-json/markup.html
      * - Crossref face markup: https://www.crossref.org/documentation/schema-library/markup-guide-metadata-segments/face-markup/
      * - namespaced MathML/JATS (mml:math, jats:italic...), allowed by Crossref in titles
+     * - em, strong and sc (Zotero small caps), found in publisher and repository metadata
      */
-    private const string TAG_PATTERN = '#</?(?:i|b|u|sup|sub|scp|tt|ovl|span|[a-z]+:[\w.-]+)(?:\s[^<>]*)?/?>#i';
+    private const string TAG_PATTERN = '#</?(?:i|b|u|em|strong|sup|sub|sc|scp|tt|ovl|span|[a-z]+:[\w.-]+)(?:\s[^<>]*)?/?>#i';
 
     private const array SUPERSCRIPTS = [
         '0' => '⁰', '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴',
@@ -28,7 +29,9 @@ final class CslMarkup
         'g' => 'ᵍ', 'h' => 'ʰ', 'i' => 'ⁱ', 'j' => 'ʲ', 'k' => 'ᵏ', 'l' => 'ˡ',
         'm' => 'ᵐ', 'n' => 'ⁿ', 'o' => 'ᵒ', 'p' => 'ᵖ', 'r' => 'ʳ', 's' => 'ˢ',
         't' => 'ᵗ', 'u' => 'ᵘ', 'v' => 'ᵛ', 'w' => 'ʷ', 'x' => 'ˣ', 'y' => 'ʸ', 'z' => 'ᶻ',
-        'T' => 'ᵀ',
+        'A' => 'ᴬ', 'B' => 'ᴮ', 'D' => 'ᴰ', 'E' => 'ᴱ', 'G' => 'ᴳ', 'H' => 'ᴴ', 'I' => 'ᴵ',
+        'J' => 'ᴶ', 'K' => 'ᴷ', 'L' => 'ᴸ', 'M' => 'ᴹ', 'N' => 'ᴺ', 'O' => 'ᴼ', 'P' => 'ᴾ',
+        'R' => 'ᴿ', 'T' => 'ᵀ', 'U' => 'ᵁ', 'V' => 'ⱽ', 'W' => 'ᵂ',
     ];
 
     private const array SUBSCRIPTS = [
@@ -61,23 +64,25 @@ final class CslMarkup
             return $text;
         }
 
+        // Decode first: some sources escape their markup ("&lt;i&gt;"), which must be stripped too.
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
         // Crossref wraps inline tags in line breaks ("G\n    <sup>1</sup>\n    -conforming"):
-        // that whitespace is layout, not content, so glue super/subscripts to their neighbours,
-        // keeping a single space when a word follows ("virus<sup>1</sup>\nand" -> "virus¹ and").
+        // that whitespace is layout, not content, so glue super/subscripts to the preceding word
+        // and to following punctuation; other line breaks become a single space below.
         $text = preg_replace('#\s*\n\s*(<(su[bp])\b[^>]*>)#i', '$1', $text) ?? $text;
-        $text = preg_replace('#(</su[bp]\s*>)\s*\n\s*(?=\w)#iu', '$1 ', $text) ?? $text;
-        $text = preg_replace('#(</su[bp]\s*>)\s*\n\s*#i', '$1', $text) ?? $text;
+        $text = preg_replace('#(</su[bp]\s*>)\s*\n\s*(?=[\p{Pd}\p{Pe},.;:!?%])#iu', '$1', $text) ?? $text;
 
         $text = preg_replace_callback(
             '#<(su[bp])\b[^>]*>(.*?)</\1\s*>#is',
             static fn(array $m): string => self::toScript(
-                html_entity_decode(self::stripTags($m[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                self::stripTags($m[2]),
                 strtolower($m[1]) === 'sup' ? self::SUPERSCRIPTS : self::SUBSCRIPTS
             ),
             $text
         ) ?? $text;
 
-        $text = html_entity_decode(self::stripTags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = self::stripTags($text);
 
         return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
     }
